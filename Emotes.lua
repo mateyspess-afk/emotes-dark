@@ -5078,7 +5078,7 @@ function createGUIElements()
     UI.FavoritesTab.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     UI.FavoritesTab.BackgroundTransparency = 0.400
     UI.FavoritesTab.BorderSizePixel = 0
-    UI.FavoritesTab.Position = UDim2.new(0.115, 0, 1.021, 0)
+    UI.FavoritesTab.Position = UDim2.new(0.98, 0, 0, 0)
     UI.FavoritesTab.Size = UDim2.new(0.0875, 0, 0.0875, 0)
     UI.FavoritesTab.Image = State.favoriteIconId
     UI.FavoritesTab.ImageColor3 = Color3.fromRGB(255, 0, 0)
