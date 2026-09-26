@@ -6605,12 +6605,6 @@ function toggleFavoriteMode()
 
     if State.favoriteEnabled then
         ApplyFavoriteButtonVisual()
-        getgenv().Notify({
-            Title = '7yd7 | Favorite System',
-            Content = "🔒 Favorite ON",
-            Duration = 5
-        })
-
         updateScriptPriorityOverlay()
         setEmotesButtonsActiveForFavorites()
 
@@ -6621,12 +6615,7 @@ function toggleFavoriteMode()
         end
     else
         ApplyFavoriteButtonVisual()
-        getgenv().Notify({
-            Title = '7yd7 | Favorite System',
-            Content = '🔓 Favorite OFF',
-            Duration = 3
-        })
-        
+
         if State.currentMode == "emote" then
             stopEmoteClickDetection()
         else
