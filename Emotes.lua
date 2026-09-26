@@ -5025,8 +5025,8 @@ function createGUIElements()
     UI.Top.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     UI.Top.BackgroundTransparency = 0.400
     UI.Top.BorderSizePixel = 0
-    UI.Top.Position = UDim2.new(0.127499998, 0, -0.109999999, 0)
-    UI.Top.Size = UDim2.new(0.737500012, 0, 0.0949999914, 0)
+    UI.Top.Position = UDim2.new(0.22, 0, -0.109999999, 0)
+    UI.Top.Size = UDim2.new(0.645, 0, 0.0949999914, 0)
 
     UIListLayout_2.Parent = UI.Top
     UIListLayout_2.FillDirection = Enum.FillDirection.Horizontal
