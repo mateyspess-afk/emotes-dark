@@ -5066,7 +5066,7 @@ function createGUIElements()
     UI.Favorite.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     UI.Favorite.BackgroundTransparency = 0.400
     UI.Favorite.BorderSizePixel = 0
-    UI.Favorite.Position = UDim2.new(0.0189999994, 0, -0.108000003, 0)
+    UI.Favorite.Position = UDim2.new(0.1145, 0, -0.108000003, 0)
     UI.Favorite.Size = UDim2.new(0.0874999985, 0, 0.0874999985, 0)
     UI.Favorite.Image = "rbxassetid://124025954365505"
 
@@ -5078,7 +5078,7 @@ function createGUIElements()
     UI.FavoritesTab.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     UI.FavoritesTab.BackgroundTransparency = 0.400
     UI.FavoritesTab.BorderSizePixel = 0
-    UI.FavoritesTab.Position = UDim2.new(0.019, 0, 1.021, 0)
+    UI.FavoritesTab.Position = UDim2.new(0.019, 0, -0.108000003, 0)
     UI.FavoritesTab.Size = UDim2.new(0.0875, 0, 0.0875, 0)
     UI.FavoritesTab.Image = State.favoriteIconId
     UI.FavoritesTab.ImageColor3 = Color3.fromRGB(255, 0, 0)
