@@ -5,11 +5,12 @@ Uma reimplementação modular do script de emotes, criada para ser mais estável
 ## O que mudou
 
 - Não depende da estrutura interna `CoreGui.RobloxGui.EmotesMenu` para renderizar a interface.
-- Painel próprio com busca por nome ou ID.
+- Painel radial inspirado no menu original do Roblox, com oito posições numeradas ao redor do personagem.
+- Busca por nome ou ID no topo da roda.
 - Favoritos persistentes em `EmotesDarkV2/Favorites.json`.
 - Cache local do catálogo em `EmotesDarkV2/Emotes.json`.
 - Fallback com emotes básicos se o catálogo remoto estiver indisponível.
-- Paginação, emote aleatório e botão para parar a animação.
+- Paginação com navegação inferior, emote aleatório e botão para parar a animação.
 - Controle de velocidade de `0.1x` a `4x`.
 - Modo **Andar** para manter o emote ativo durante o movimento.
 - Atalhos para PC e botão flutuante para touch.

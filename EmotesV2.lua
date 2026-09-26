@@ -71,12 +71,17 @@ local State = {
     HeartbeatConnection = nil,
     InputConnection = nil,
     DragConnection = nil,
+    ViewportConnection = nil,
     Gui = nil,
     Panel = nil,
-    Grid = nil,
+    Wheel = nil,
+    Slots = nil,
+    PanelScale = nil,
     Search = nil,
     Status = nil,
     PageLabel = nil,
+    CenterTitle = nil,
+    CenterMeta = nil,
     AllTab = nil,
     FavoritesTab = nil,
     MobileButton = nil,
@@ -428,94 +433,150 @@ local function updateTabs()
     State.FavoritesTab.BackgroundColor3 = State.Tab == "favorites" and CONFIG.Theme.AccentDark or CONFIG.Theme.Surface
 end
 
+local function shortName(name, limit)
+    local text = tostring(name or "")
+    if #text <= limit then
+        return text
+    end
+    return text:sub(1, limit - 1) .. "…"
+end
+
 local function render()
-    if not State.Grid then
+    if not State.Slots then
         return
     end
 
     State.Filtered = filteredItems()
     local pages = pageCount()
     State.Page = math.clamp(State.Page, 1, pages)
-    State.PageLabel.Text = string.format("%d / %d", State.Page, pages)
-    State.Status.Text = string.format("%d emotes  •  %s", #State.Filtered, State.Tab == "all" and "Todos" or "Favoritos")
-    updateTabs()
-
-    for _, child in ipairs(State.Grid:GetChildren()) do
-        if not child:IsA("UIGridLayout") then
-            child:Destroy()
-        end
-    end
 
     local first = (State.Page - 1) * CONFIG.PageSize + 1
-    for index = first, math.min(first + CONFIG.PageSize - 1, #State.Filtered) do
+    local last = math.min(first + CONFIG.PageSize - 1, #State.Filtered)
+    local rangeText = #State.Filtered == 0 and "0" or string.format("%d ───── %d", first, last)
+
+    if State.PageLabel then
+        State.PageLabel.Text = rangeText
+    end
+    if State.Status then
+        State.Status.Text = string.format(
+            "%d emotes  •  %s",
+            #State.Filtered,
+            State.Tab == "all" and "Todos" or "Favoritos"
+        )
+    end
+    updateTabs()
+
+    if State.CenterTitle then
+        State.CenterTitle.Text = #State.Filtered == 0 and "Nenhum emote" or "Selecione um emote"
+    end
+    if State.CenterMeta then
+        State.CenterMeta.Text = #State.Filtered == 0 and "Tente outra busca" or "Escolha uma posição"
+    end
+
+    for _, child in ipairs(State.Slots:GetChildren()) do
+        child:Destroy()
+    end
+
+    local wheelCenter = Vector2.new(190, 148)
+    local radius = 112
+    local slotSize = 76
+    for slotIndex = 1, CONFIG.PageSize do
+        local index = first + slotIndex - 1
         local item = State.Filtered[index]
+        local angle = -math.pi / 2 + ((slotIndex - 1) / CONFIG.PageSize) * math.pi * 2
+        local position = wheelCenter + Vector2.new(math.cos(angle), math.sin(angle)) * radius
+
         local slot = new("TextButton", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
             AutoButtonColor = false,
-            BackgroundColor3 = CONFIG.Theme.Surface,
+            BackgroundColor3 = item and CONFIG.Theme.Surface or CONFIG.Theme.Background,
+            BackgroundTransparency = item and 0.08 or 0.38,
             BorderSizePixel = 0,
+            Position = UDim2.fromOffset(position.X, position.Y),
+            Size = UDim2.fromOffset(slotSize, slotSize),
             Text = "",
-        }, State.Grid)
-        round(slot, 12)
-        stroke(slot, State.Favorites[item.id] and CONFIG.Theme.Accent or CONFIG.Theme.Stroke, 0.05)
+            ZIndex = 4,
+        }, State.Slots)
+        round(slot, slotSize / 2)
+        stroke(
+            slot,
+            item and (State.Favorites[item.id] and CONFIG.Theme.Accent or CONFIG.Theme.Stroke) or CONFIG.Theme.Stroke,
+            item and 0.05 or 0.55
+        )
 
         new("TextLabel", {
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamBold,
-            Position = UDim2.fromScale(0.08, 0.12),
-            Size = UDim2.fromScale(0.84, 0.3),
-            Text = string.format("%02d", index),
-            TextColor3 = CONFIG.Theme.Accent,
+            Position = UDim2.fromOffset(0, 7),
+            Size = UDim2.new(1, 0, 0, 16),
+            Text = tostring(slotIndex),
+            TextColor3 = item and CONFIG.Theme.Accent or CONFIG.Theme.Muted,
             TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-        }, slot)
-        new("TextLabel", {
-            BackgroundTransparency = 1,
-            Font = Enum.Font.GothamSemibold,
-            Position = UDim2.fromScale(0.08, 0.38),
-            Size = UDim2.fromScale(0.84, 0.42),
-            Text = item.name,
-            TextColor3 = CONFIG.Theme.Text,
-            TextSize = 13,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            TextWrapped = true,
-            TextXAlignment = Enum.TextXAlignment.Left,
-        }, slot)
-        new("TextLabel", {
-            BackgroundTransparency = 1,
-            Font = Enum.Font.Code,
-            Position = UDim2.fromScale(0.08, 0.78),
-            Size = UDim2.fromScale(0.75, 0.16),
-            Text = tostring(item.id),
-            TextColor3 = CONFIG.Theme.Muted,
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 5,
         }, slot)
 
-        local favorite = new("TextButton", {
-            AutoButtonColor = false,
-            BackgroundTransparency = 1,
-            Font = Enum.Font.GothamBold,
-            Position = UDim2.fromScale(0.78, 0.08),
-            Size = UDim2.fromScale(0.18, 0.25),
-            Text = State.Favorites[item.id] and "★" or "☆",
-            TextColor3 = State.Favorites[item.id] and CONFIG.Theme.Good or CONFIG.Theme.Muted,
-            TextSize = 19,
-        }, slot)
-        favorite.Activated:Connect(function()
-            State.Favorites[item.id] = not State.Favorites[item.id] or nil
-            saveFavorites()
-            render()
-        end)
+        if item then
+            new("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Enum.Font.GothamSemibold,
+                Position = UDim2.fromOffset(5, 25),
+                Size = UDim2.new(1, -10, 0, 24),
+                Text = shortName(item.name, 14),
+                TextColor3 = CONFIG.Theme.Text,
+                TextSize = 10,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 5,
+            }, slot)
+            new("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Enum.Font.Code,
+                Position = UDim2.fromOffset(4, 52),
+                Size = UDim2.new(1, -8, 0, 14),
+                Text = State.Favorites[item.id] and "★" or tostring(item.id),
+                TextColor3 = State.Favorites[item.id] and CONFIG.Theme.Good or CONFIG.Theme.Muted,
+                TextSize = 9,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 5,
+            }, slot)
+            local favorite = new("TextButton", {
+                AutoButtonColor = false,
+                BackgroundTransparency = 1,
+                Font = Enum.Font.GothamBold,
+                Position = UDim2.fromOffset(51, 4),
+                Size = UDim2.fromOffset(20, 18),
+                Text = State.Favorites[item.id] and "★" or "☆",
+                TextColor3 = State.Favorites[item.id] and CONFIG.Theme.Good or CONFIG.Theme.Muted,
+                TextSize = 13,
+                ZIndex = 7,
+            }, slot)
+            favorite.Activated:Connect(function()
+                State.Favorites[item.id] = not State.Favorites[item.id] or nil
+                saveFavorites()
+                render()
+            end)
 
-        slot.MouseEnter:Connect(function()
-            slot.BackgroundColor3 = CONFIG.Theme.SurfaceHover
-        end)
-        slot.MouseLeave:Connect(function()
-            slot.BackgroundColor3 = CONFIG.Theme.Surface
-        end)
-        slot.Activated:Connect(function()
-            playItem(item)
-        end)
+            slot.MouseEnter:Connect(function()
+                slot.BackgroundColor3 = CONFIG.Theme.SurfaceHover
+                if State.CenterTitle then
+                    State.CenterTitle.Text = item.name
+                end
+                if State.CenterMeta then
+                    State.CenterMeta.Text = tostring(item.id)
+                end
+            end)
+            slot.MouseLeave:Connect(function()
+                slot.BackgroundColor3 = CONFIG.Theme.Surface
+                if State.CenterTitle then
+                    State.CenterTitle.Text = "Selecione um emote"
+                end
+                if State.CenterMeta then
+                    State.CenterMeta.Text = "Escolha uma posição"
+                end
+            end)
+            slot.Activated:Connect(function()
+                playItem(item)
+            end)
+        end
     end
 end
 
@@ -553,6 +614,20 @@ local function setSpeed(text)
     end
 end
 
+local function fitPanel()
+    if not State.PanelScale then
+        return
+    end
+
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
+    local viewport = camera.ViewportSize
+    State.PanelScale.Scale = math.clamp(math.min(viewport.X / 540, viewport.Y / 470), 0.72, 1)
+end
+
 local function createGui()
     local parent = CoreGui
     local getHui = canUse("gethui")
@@ -578,48 +653,39 @@ local function createGui()
 
     State.Panel = new("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = CONFIG.Theme.Background,
-        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(560, 440),
+        Size = UDim2.fromOffset(500, 430),
         Visible = false,
     }, State.Gui)
-    round(State.Panel, 18)
-    stroke(State.Panel, CONFIG.Theme.Stroke, 0)
-    new("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 29, 43)),
-            ColorSequenceKeypoint.new(1, CONFIG.Theme.Background),
-        }),
-        Rotation = 135,
-    }, State.Panel)
+    State.PanelScale = new("UIScale", { Scale = 1 }, State.Panel)
 
     local header = new("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -32, 0, 58),
-        Position = UDim2.fromOffset(16, 12),
+        Size = UDim2.new(1, 0, 0, 48),
+        Position = UDim2.fromOffset(0, 0),
     }, State.Panel)
     new("TextLabel", {
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBlack,
-        Position = UDim2.fromOffset(0, 1),
-        Size = UDim2.fromOffset(300, 25),
+        Position = UDim2.fromOffset(8, 1),
+        Size = UDim2.fromOffset(140, 18),
         Text = "EMOTES DARK",
         TextColor3 = CONFIG.Theme.Text,
-        TextSize = 18,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
     }, header)
     State.Status = new("TextLabel", {
         BackgroundTransparency = 1,
         Font = Enum.Font.Gotham,
-        Position = UDim2.fromOffset(0, 28),
-        Size = UDim2.fromOffset(300, 20),
+        Position = UDim2.fromOffset(8, 20),
+        Size = UDim2.fromOffset(220, 16),
         TextColor3 = CONFIG.Theme.Muted,
-        TextSize = 11,
+        TextSize = 9,
         TextXAlignment = Enum.TextXAlignment.Left,
     }, header)
-    local close = button(header, "×", UDim2.fromOffset(34, 34), UDim2.new(1, -34, 0, 0))
-    close.TextSize = 22
+    local close = button(header, "×", UDim2.fromOffset(30, 30), UDim2.new(1, -38, 0, 0))
+    close.TextSize = 18
     close.Activated:Connect(function()
         togglePanel(false)
     end)
@@ -630,16 +696,16 @@ local function createGui()
         ClearTextOnFocus = false,
         Font = Enum.Font.Gotham,
         PlaceholderColor3 = CONFIG.Theme.Muted,
-        PlaceholderText = "Buscar por nome ou ID...",
-        Position = UDim2.fromOffset(16, 78),
-        Size = UDim2.new(1, -32, 0, 36),
+        PlaceholderText = "Search/ID",
+        Position = UDim2.fromOffset(128, 4),
+        Size = UDim2.fromOffset(236, 34),
         Text = "",
         TextColor3 = CONFIG.Theme.Text,
-        TextSize = 13,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
     }, State.Panel)
-    round(State.Search, 10)
-    stroke(State.Search, CONFIG.Theme.Stroke, 0.1)
+    round(State.Search, 17)
+    stroke(State.Search, CONFIG.Theme.Stroke, 0.35)
     new("UIPadding", {
         PaddingLeft = UDim.new(0, 12),
         PaddingRight = UDim.new(0, 12),
@@ -650,8 +716,10 @@ local function createGui()
         render()
     end)
 
-    State.AllTab = button(State.Panel, "Todos", UDim2.fromOffset(90, 30), UDim2.fromOffset(16, 126))
-    State.FavoritesTab = button(State.Panel, "Favoritos", UDim2.fromOffset(90, 30), UDim2.fromOffset(112, 126))
+    State.AllTab = button(State.Panel, "Todos", UDim2.fromOffset(64, 26), UDim2.fromOffset(8, 52))
+    State.FavoritesTab = button(State.Panel, "★", UDim2.fromOffset(34, 26), UDim2.fromOffset(76, 52))
+    State.AllTab.TextSize = 10
+    State.FavoritesTab.TextSize = 14
     State.AllTab.Activated:Connect(function()
         State.Tab = "all"
         State.Page = 1
@@ -663,53 +731,97 @@ local function createGui()
         render()
     end)
 
-    State.Grid = new("Frame", {
+    State.Wheel = new("Frame", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(16, 168),
-        Size = UDim2.new(1, -32, 0, 190),
+        Position = UDim2.fromOffset(0, 78),
+        Size = UDim2.fromOffset(380, 296),
     }, State.Panel)
-    new("UIGridLayout", {
-        CellPadding = UDim2.fromOffset(10, 10),
-        CellSize = UDim2.new(0.25, -8, 0.5, -5),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, State.Grid)
+    local ring = new("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = CONFIG.Theme.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Position = UDim2.fromOffset(190, 148),
+        Size = UDim2.fromOffset(292, 292),
+        ZIndex = 1,
+    }, State.Wheel)
+    round(ring, 146)
+    stroke(ring, CONFIG.Theme.Stroke, 0.4)
+
+    State.Slots = new("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromOffset(380, 296),
+        ZIndex = 3,
+    }, State.Wheel)
+    State.CenterTitle = new("TextLabel", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.fromRGB(10, 11, 16),
+        BackgroundTransparency = 0.08,
+        BorderSizePixel = 0,
+        Position = UDim2.fromOffset(190, 142),
+        Size = UDim2.fromOffset(126, 98),
+        Font = Enum.Font.GothamSemibold,
+        Text = "Selecione um emote",
+        TextColor3 = CONFIG.Theme.Text,
+        TextSize = 13,
+        TextWrapped = true,
+        ZIndex = 6,
+    }, State.Wheel)
+    round(State.CenterTitle, 63)
+    stroke(State.CenterTitle, CONFIG.Theme.Stroke, 0.45)
+    State.CenterMeta = new("TextLabel", {
+        AnchorPoint = Vector2.new(0.5, 0),
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(190, 160),
+        Size = UDim2.fromOffset(112, 22),
+        Font = Enum.Font.Code,
+        Text = "Escolha uma posição",
+        TextColor3 = CONFIG.Theme.Muted,
+        TextSize = 9,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 7,
+    }, State.Wheel)
 
     local footer = new("Frame", {
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(16, 367),
-        Size = UDim2.new(1, -32, 0, 54),
+        Position = UDim2.fromOffset(8, 382),
+        Size = UDim2.fromOffset(484, 48),
     }, State.Panel)
-    local previous = button(footer, "‹", UDim2.fromOffset(42, 36), UDim2.fromOffset(0, 0))
-    local next = button(footer, "›", UDim2.fromOffset(42, 36), UDim2.fromOffset(48, 0))
+    local previous = button(footer, "◀", UDim2.fromOffset(36, 34), UDim2.fromOffset(60, 0))
+    local next = button(footer, "▶", UDim2.fromOffset(36, 34), UDim2.fromOffset(312, 0))
     State.PageLabel = new("TextLabel", {
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamSemibold,
-        Position = UDim2.fromOffset(96, 0),
-        Size = UDim2.fromOffset(70, 36),
+        Position = UDim2.fromOffset(100, 0),
+        Size = UDim2.fromOffset(208, 34),
         TextColor3 = CONFIG.Theme.Text,
-        TextSize = 12,
+        TextSize = 11,
     }, footer)
-    local random = button(footer, "Aleatório", UDim2.fromOffset(92, 36), UDim2.new(1, -286, 0, 0))
-    local stop = button(footer, "Parar", UDim2.fromOffset(72, 36), UDim2.new(1, -186, 0, 0))
+    State.PageLabel.TextXAlignment = Enum.TextXAlignment.Center
+    local random = button(footer, "↻", UDim2.fromOffset(36, 34), UDim2.fromOffset(358, 0))
+    random.TextSize = 18
+    local stop = button(footer, "■", UDim2.fromOffset(36, 34), UDim2.fromOffset(402, 0))
+    stop.TextSize = 12
     local speed = new("TextBox", {
         BackgroundColor3 = CONFIG.Theme.Surface,
         BorderSizePixel = 0,
         ClearTextOnFocus = false,
         Font = Enum.Font.GothamSemibold,
         PlaceholderText = "1.0x",
-        Position = UDim2.new(1, -104, 0, 0),
-        Size = UDim2.fromOffset(48, 36),
+        Position = UDim2.fromOffset(446, 0),
+        Size = UDim2.fromOffset(38, 34),
         Text = "1",
         TextColor3 = CONFIG.Theme.Text,
-        TextSize = 12,
+        TextSize = 10,
     }, footer)
-    round(speed, 9)
-    stroke(speed, CONFIG.Theme.Stroke, 0.1)
+    round(speed, 17)
+    stroke(speed, CONFIG.Theme.Stroke, 0.25)
     speed.FocusLost:Connect(function()
         setSpeed(speed.Text)
         speed.Text = tostring(State.Speed)
     end)
-    local walk = button(footer, "Andar", UDim2.fromOffset(72, 30), UDim2.new(1, -78, 0, 46))
+    local walk = button(State.Panel, "Andar", UDim2.fromOffset(66, 26), UDim2.new(1, -74, 0, 52))
+    walk.TextSize = 10
     walk.TextColor3 = CONFIG.Theme.Muted
 
     previous.Activated:Connect(function()
@@ -766,11 +878,35 @@ local function createGui()
             )
         end
     end)
+    fitPanel()
+    local camera = workspace.CurrentCamera
+    if camera then
+        State.ViewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitPanel)
+    end
 end
 
 local function bind()
     State.InputConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then
+            return
+        end
+        local slotKeys = {
+            [Enum.KeyCode.One] = 1,
+            [Enum.KeyCode.Two] = 2,
+            [Enum.KeyCode.Three] = 3,
+            [Enum.KeyCode.Four] = 4,
+            [Enum.KeyCode.Five] = 5,
+            [Enum.KeyCode.Six] = 6,
+            [Enum.KeyCode.Seven] = 7,
+            [Enum.KeyCode.Eight] = 8,
+        }
+        local slotIndex = slotKeys[input.KeyCode]
+        if slotIndex and State.PanelOpen then
+            State.Filtered = filteredItems()
+            local item = State.Filtered[(State.Page - 1) * CONFIG.PageSize + slotIndex]
+            if item then
+                playItem(item)
+            end
             return
         end
         if input.KeyCode == CONFIG.EmoteKey then
@@ -811,7 +947,7 @@ local function destroy()
     if State.Track then
         stopTrack()
     end
-    for _, connectionName in ipairs({ "InputConnection", "HeartbeatConnection", "CharacterConnection", "DragConnection" }) do
+    for _, connectionName in ipairs({ "InputConnection", "HeartbeatConnection", "CharacterConnection", "DragConnection", "ViewportConnection" }) do
         local connection = State[connectionName]
         if connection then
             connection:Disconnect()
