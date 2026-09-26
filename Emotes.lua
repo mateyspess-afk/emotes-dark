@@ -33,6 +33,8 @@ local State = {
     savedEmotePage = 1,
     emotesWalkEnabled = false,
     favoriteEnabled = false,
+    favoritesTabActive = false,
+    favoriteTabSavedPage = 1,
     hudEditorActive = false,
     speedEmoteEnabled = false,
     isLoading = false,
@@ -288,6 +290,7 @@ local UI = {
     EmoteWalkButton = nil,
     Search = nil, 
     Favorite = nil, 
+    FavoritesTab = nil,
     SpeedEmote = nil, 
     SpeedBox = nil, 
     Changepage = nil,
@@ -910,6 +913,7 @@ function ApplyUIVisibility()
     pcall(function()
         if UI.Search and UI.Top then UI.Top.Visible = Config.SearchVisible end
         if UI.Favorite then UI.Favorite.Visible = Config.FavVisible end
+        if UI.FavoritesTab then UI.FavoritesTab.Visible = Config.FavVisible end
         if UI.Changepage then UI.Changepage.Visible = Config.ModeVisible end
         if UI.EmoteWalkButton then UI.EmoteWalkButton.Visible = Config.FreezeVisible end
         if UI.SpeedEmote then UI.SpeedEmote.Visible = Config.SpeedVisible end
@@ -1504,6 +1508,13 @@ function updateGUIColors()
     if UI.Favorite then
         UI.Favorite.BackgroundColor3 = bgColor
         UI.Favorite.BackgroundTransparency = bgTransparency
+    end
+
+    if UI.FavoritesTab then
+        UI.FavoritesTab.BackgroundColor3 = bgColor
+        UI.FavoritesTab.BackgroundTransparency = bgTransparency
+        UI.FavoritesTab.Image = State.favoriteIconId
+        UI.FavoritesTab.ImageColor3 = Color3.fromHSV((tick() * 0.15) % 1, 1, 1)
     end
 
     if UI.Reload then
@@ -3971,7 +3982,7 @@ function getCategoryStats()
     end
 
     local favoritesToUse = (State.currentMode == "animation") and (_G.filteredFavoritesAnimationsForDisplay or State.favoriteAnimations) or (_G.filteredFavoritesForDisplay or State.favoriteEmotes)
-    if #favoritesToUse > 0 then
+    if State.favoritesTabActive and #favoritesToUse > 0 then
         local hasRandom = not randomCaptured and shouldShowRandom
         if hasRandom then randomCaptured = true end
         local pages = calcPagesForList(#favoritesToUse, hasRandom)
@@ -3985,7 +3996,7 @@ function getCategoryStats()
         normalList = State.emotePageCache.normal or {}
     end
 
-    if #normalList > 0 then
+    if not State.favoritesTabActive and #normalList > 0 then
         local hasRandom = not randomCaptured and shouldShowRandom
         if hasRandom then randomCaptured = true end
         local pages = calcPagesForList(#normalList, hasRandom)
@@ -4036,6 +4047,12 @@ end
 function getRandomSourceList()
     if Config.RandomEnabled == false then
         return {}
+    end
+    if State.favoritesTabActive then
+        if State.currentMode == "animation" then
+            return _G.filteredFavoritesAnimationsForDisplay or State.favoriteAnimations
+        end
+        return _G.filteredFavoritesForDisplay or State.favoriteEmotes
     end
     if State.favoriteEnabled then
         if State.currentMode == "animation" then
@@ -4883,6 +4900,9 @@ function createGUIElements()
     if emotesWheel:FindFirstChild("Favorite") then
         emotesWheel.Favorite:Destroy()
     end
+    if emotesWheel:FindFirstChild("FavoritesTab") then
+        emotesWheel.FavoritesTab:Destroy()
+    end
     if emotesWheel:FindFirstChild("SpeedEmote") then
         emotesWheel.SpeedEmote:Destroy()
     end
@@ -4919,6 +4939,8 @@ function createGUIElements()
     UI.Search = Instance.new("TextBox")
     UI.Favorite = Instance.new("ImageButton")
     local UICorner2 = Instance.new("UICorner")
+    UI.FavoritesTab = Instance.new("ImageButton")
+    local UICorner3 = Instance.new("UICorner")
     UI.SpeedBox = Instance.new("TextBox")
     local UICorner_4 = Instance.new("UICorner")
     UI.SpeedEmote = Instance.new("ImageButton")
@@ -5050,6 +5072,20 @@ function createGUIElements()
 
     UICorner2.CornerRadius = UDim.new(0, 10)
     UICorner2.Parent = UI.Favorite
+
+    UI.FavoritesTab.Name = "FavoritesTab"
+    UI.FavoritesTab.Parent = emotesWheel
+    UI.FavoritesTab.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    UI.FavoritesTab.BackgroundTransparency = 0.400
+    UI.FavoritesTab.BorderSizePixel = 0
+    UI.FavoritesTab.Position = UDim2.new(0.108, 0, -0.108, 0)
+    UI.FavoritesTab.Size = UDim2.new(0.0875, 0, 0.0875, 0)
+    UI.FavoritesTab.Image = State.favoriteIconId
+    UI.FavoritesTab.ImageColor3 = Color3.fromRGB(255, 0, 0)
+    UI.FavoritesTab.ZIndex = 3
+
+    UICorner3.CornerRadius = UDim.new(0, 10)
+    UICorner3.Parent = UI.FavoritesTab
 
     UI.SpeedBox.Name = "SpeedBox"
     UI.SpeedBox.Parent = emotesWheel
@@ -6606,6 +6642,29 @@ function toggleFavoriteMode()
     end)
 end
 
+function toggleFavoritesTab()
+    State.favoritesTabActive = not State.favoritesTabActive
+
+    if State.favoritesTabActive then
+        State.favoriteTabSavedPage = State.currentPage
+        State.currentPage = 1
+    else
+        State.currentPage = State.favoriteTabSavedPage or 1
+    end
+
+    State.totalPages = calculateTotalPages()
+    State.currentPage = math.max(1, math.min(State.currentPage, State.totalPages))
+    updatePageDisplay()
+    updateEmotes()
+    updateScriptPriorityOverlay()
+
+    getgenv().Notify({
+        Title = '7yd7 | Favorite Tab',
+        Content = State.favoritesTabActive and '⭐ Favorites tab ON' or '⭐ Favorites tab OFF',
+        Duration = 3
+    })
+end
+
 local clickCooldown = {}
 local CLICK_COOLDOWN_TIME = 0.1
 
@@ -6829,6 +6888,12 @@ function connectEvents()
     if UI.Favorite then
         table.insert(State.guiConnections, UI.Favorite.MouseButton1Click:Connect(function()
             safeButtonClick("Favorite", toggleFavoriteMode)
+        end))
+    end
+
+    if UI.FavoritesTab then
+        table.insert(State.guiConnections, UI.FavoritesTab.MouseButton1Click:Connect(function()
+            safeButtonClick("FavoritesTab", toggleFavoritesTab)
         end))
     end
 
@@ -8703,6 +8768,7 @@ function checkAndRecreateGUI()
 
     if not emotesWheel:FindFirstChild("Under") or not emotesWheel:FindFirstChild("Top") or
         not emotesWheel:FindFirstChild("EmoteWalkButton") or not emotesWheel:FindFirstChild("Favorite") or
+        not emotesWheel:FindFirstChild("FavoritesTab") or
         not emotesWheel:FindFirstChild("SpeedEmote") or not emotesWheel:FindFirstChild("SpeedBox") or
         not emotesWheel:FindFirstChild("Changepage") or not emotesWheel:FindFirstChild("Reload") then
         State.isGUICreated = false
