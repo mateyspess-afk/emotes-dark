@@ -6653,19 +6653,6 @@ function toggleAutoReload()
     end
 end
 
-function refreshEmoteList()
-    if State.hudEditorActive then return end
-    if State.isLoading then
-        getgenv().Notify({
-            Title = '7yd7 | Emote',
-            Content = '⚠️ A lista ainda está carregando...',
-            Duration = 3
-        })
-        return
-    end
-    fetchAllEmotes()
-end
-
 function connectEvents()
     disconnectAllConnections()
 
@@ -6853,7 +6840,7 @@ function connectEvents()
 
     if UI.Reload then
         table.insert(State.guiConnections, UI.Reload.MouseButton1Click:Connect(function()
-            safeButtonClick("RefreshEmotes", refreshEmoteList)
+            safeButtonClick("AutoReload", toggleAutoReload)
         end))
     end
 
