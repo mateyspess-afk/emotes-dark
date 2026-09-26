@@ -65,6 +65,11 @@ local State = {
     emotePreviewTrack = nil,
     emoteHoldInputType = nil,
     favoriteRgbConnection = nil,
+    buttonPreviewViewport = nil,
+    buttonPreviewModel = nil,
+    buttonPreviewTrack = nil,
+    buttonPreviewSlot = nil,
+    buttonPreviewOriginalTransparency = nil,
     emoteHoldToken = 0,
     currentCharacter = nil,
     emoteClickConnections = {},
@@ -6357,12 +6362,71 @@ end
 local EMOTE_HOLD_PREVIEW_DELAY = 0.28
 
 function stopEmotePreview()
+    if State.buttonPreviewTrack then
+        pcall(function() State.buttonPreviewTrack:Stop() end)
+        State.buttonPreviewTrack = nil
+    end
     if State.emotePreviewTrack then
         pcall(function() State.emotePreviewTrack:Stop() end)
         State.emotePreviewTrack = nil
     end
+    if State.buttonPreviewSlot and State.buttonPreviewSlot.Parent and State.buttonPreviewOriginalTransparency ~= nil then
+        State.buttonPreviewSlot.ImageTransparency = State.buttonPreviewOriginalTransparency
+    end
+    if State.buttonPreviewViewport then
+        State.buttonPreviewViewport:Destroy()
+    end
+    State.buttonPreviewViewport = nil
+    State.buttonPreviewModel = nil
+    State.buttonPreviewSlot = nil
+    State.buttonPreviewOriginalTransparency = nil
 end
 
+function getEmoteSlotAtPosition(position)
+    local success, frontFrame = pcall(function()
+        return CoreGui.RobloxGui.EmotesMenu.Children.Main.EmotesWheel.Front.EmotesButtons
+    end)
+    if not success or not frontFrame then return nil end
+
+    local function getSlotEmoteId(slot)
+        if not slot or not slot:IsA("ImageLabel") then return nil end
+        if isRandomSlotActive() and slot.Name == "1" then return nil end
+
+        local idValue = slot:FindFirstChild("EmotePreviewID")
+        local emoteId = idValue and tonumber(idValue.Value)
+        if not emoteId and slot.Image and slot.Image ~= "" then
+            emoteId = tonumber(extractAssetId(slot.Image))
+        end
+        return emoteId
+    end
+
+    local guiObjectsOk, guiObjects = pcall(function()
+        return GuiService:GetGuiObjectsAtPosition(math.floor(position.X), math.floor(position.Y))
+    end)
+    if guiObjectsOk and guiObjects then
+        for _, object in ipairs(guiObjects) do
+            local candidate = object
+            while candidate and candidate ~= frontFrame do
+                local emoteId = getSlotEmoteId(candidate)
+                if emoteId then return emoteId, candidate end
+                candidate = candidate.Parent
+            end
+        end
+    end
+
+    for _, child in pairs(frontFrame:GetChildren()) do
+        local emoteId = getSlotEmoteId(child)
+        if emoteId then
+            local absPos = child.AbsolutePosition
+            local absSize = child.AbsoluteSize
+            local inside = position.X >= absPos.X and position.X <= absPos.X + absSize.X
+                and position.Y >= absPos.Y and position.Y <= absPos.Y + absSize.Y
+            if inside then return emoteId, child end
+        end
+    end
+
+    return nil
+end
 function getEmoteSlotAtPosition(position)
     local success, frontFrame = pcall(function()
         return CoreGui.RobloxGui.EmotesMenu.Children.Main.EmotesWheel.Front.EmotesButtons
@@ -6409,44 +6473,107 @@ function getEmoteSlotAtPosition(position)
     return nil
 end
 
-function startEmotePreview(emoteId)
-    stopEmotePreview()
-    local _, humanoid = getCharacterAndHumanoid()
-    if not humanoid then return end
+function startButtonCharacterPreview(slot, emoteId)
+    if not slot or not slot.Parent then return false end
+    local character = player.Character
+    if not character then return false end
 
-    local track
-    local nativeOk, nativeTrack = pcall(function()
-        return humanoid:PlayEmoteAndGetAnimTrackById(tonumber(emoteId))
+    local viewport = Instance.new("ViewportFrame")
+    viewport.Name = "EmoteCharacterPreview"
+    viewport.Size = UDim2.new(1, 0, 1, 0)
+    viewport.Position = UDim2.new(0, 0, 0, 0)
+    viewport.BackgroundTransparency = 1
+    viewport.BorderSizePixel = 0
+    viewport.ZIndex = slot.ZIndex + 1
+    viewport.Ambient = Color3.fromRGB(190, 190, 190)
+    viewport.LightColor = Color3.fromRGB(255, 255, 255)
+    viewport.LightDirection = Vector3.new(-1, -1, -1)
+    viewport.Parent = slot
+
+    local worldModel = Instance.new("WorldModel")
+    worldModel.Parent = viewport
+
+    local oldArchivable = character.Archivable
+    character.Archivable = true
+    local clone = character:Clone()
+    character.Archivable = oldArchivable
+    if not clone then
+        viewport:Destroy()
+        return false
+    end
+
+    for _, descendant in ipairs(clone:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            descendant:Destroy()
+        elseif descendant:IsA("BasePart") then
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = false
+            descendant.Massless = true
+        elseif descendant:IsA("Humanoid") then
+            descendant.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+            descendant.AutoRotate = false
+        end
+    end
+
+    clone.Parent = worldModel
+    clone:PivotTo(CFrame.new(0, 0, 0))
+    local root = clone:FindFirstChild("HumanoidRootPart")
+    if root then root.Anchored = true end
+
+    local camera = Instance.new("Camera")
+    camera.FieldOfView = 38
+    camera.Parent = viewport
+    viewport.CurrentCamera = camera
+
+    local modelCFrame, modelSize = clone:GetBoundingBox()
+    local target = modelCFrame.Position + Vector3.new(0, modelSize.Y * 0.05, 0)
+    local distance = math.max(modelSize.X, modelSize.Y, modelSize.Z) * 1.8
+    camera.CFrame = CFrame.new(target + Vector3.new(0, modelSize.Y * 0.04, distance), target)
+
+    local humanoid = clone:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        viewport:Destroy()
+        return false
+    end
+    local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+    local animationId = resolveEmoteToAnimationId(tonumber(emoteId)) or tonumber(emoteId)
+    if not animationId then
+        viewport:Destroy()
+        return false
+    end
+
+    local animation = Instance.new("Animation")
+    animation.AnimationId = "rbxassetid://" .. tostring(animationId)
+    local ok, track = pcall(function()
+        return animator:LoadAnimation(animation)
     end)
-    if nativeOk and nativeTrack and typeof(nativeTrack) == "Instance" and nativeTrack:IsA("AnimationTrack") then
-        track = nativeTrack
-    else
-        local animator = humanoid:FindFirstChild("Animator")
-        if not animator then return end
-
-        local animationId = resolveEmoteToAnimationId(tonumber(emoteId)) or tonumber(emoteId)
-        if not animationId then return end
-        local animation = Instance.new("Animation")
-        animation.AnimationId = "rbxassetid://" .. tostring(animationId)
-        local fallbackOk, fallbackTrack = pcall(function()
-            return animator:LoadAnimation(animation)
-        end)
-        if not fallbackOk or not fallbackTrack then return end
-        track = fallbackTrack
+    if not ok or not track then
+        viewport:Destroy()
+        return false
     end
 
     track.Priority = Enum.AnimationPriority.Action
     track.Looped = true
-    if not track.IsPlaying then
-        track:Play()
-    end
+    track:Play()
     if State.speedEmoteEnabled then
         local speedValue = tonumber(UI.SpeedBox and UI.SpeedBox.Text) or Config.EmoteSpeed or 1
         track:AdjustSpeed(speedValue)
     end
-    State.emotePreviewTrack = track
+
+    State.buttonPreviewViewport = viewport
+    State.buttonPreviewModel = clone
+    State.buttonPreviewTrack = track
+    State.buttonPreviewSlot = slot
+    State.buttonPreviewOriginalTransparency = slot.ImageTransparency
+    slot.ImageTransparency = 1
+    return true
 end
 
+function startEmotePreview(emoteId, slot)
+    stopEmotePreview()
+    startButtonCharacterPreview(slot, emoteId)
+end
 function setupEmoteHoldPreview()
     local function resetHold()
         State.emoteHoldToken = State.emoteHoldToken + 1
@@ -6464,8 +6591,8 @@ function setupEmoteHoldPreview()
         end)
         if not okWheel or not emotesWheel or not emotesWheel.Visible then return end
 
-        local emoteId = getEmoteSlotAtPosition(Vector2.new(input.Position.X, input.Position.Y))
-        if not emoteId then return end
+        local emoteId, emoteSlot = getEmoteSlotAtPosition(Vector2.new(input.Position.X, input.Position.Y))
+        if not emoteId or not emoteSlot then return end
 
         State.emoteHoldToken = State.emoteHoldToken + 1
         local token = State.emoteHoldToken
@@ -6474,7 +6601,7 @@ function setupEmoteHoldPreview()
             if State.emoteHoldToken ~= token
                 or State.emoteHoldInputType ~= input.UserInputType
                 or State.currentMode ~= "emote" then return end
-            startEmotePreview(emoteId)
+            startEmotePreview(emoteId, emoteSlot)
         end)
     end))
 
