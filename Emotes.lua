@@ -8,7 +8,7 @@
 if _G.EmotesGUIRunning then
     getgenv().Notify({
         Title = '7yd7 | Emote',
-        Content = 'â ï¸ It works It actually works',
+        Content = 'Ã¢ÂÂ Ã¯Â¸Â It works It actually works',
         Duration = 5
     })
     return
@@ -1075,7 +1075,7 @@ local randomDropdown = SettingsLib.AddDropdown(GeneralTab, "Random Source", rand
     SaveConfig()
 end)
 if randomDropdown and randomDropdown.Button then
-    randomDropdown.Button.Text = (Config.RandomMode or "All") .. "  â¼"
+    randomDropdown.Button.Text = (Config.RandomMode or "All") .. "  Ã¢ÂÂ¼"
 end
 
 TogglesUI.RandomEnabled = SettingsLib.AddToggle(GeneralTab, "Random Enabled", "Enable/disable random", Config.RandomEnabled, function(v)
@@ -2395,7 +2395,7 @@ SettingsLib.AddIconButton(BtnRow, "108445456753346", function()
             SaveThemes(themes)
             currentThemeName = In.Text
             themeDropdown.Refresh(GetNames())
-            themeDropdown.Button.Text = currentThemeName .. "  â¼"
+            themeDropdown.Button.Text = currentThemeName .. "  Ã¢ÂÂ¼"
             ApplyTheme(themes[currentThemeName])
             popup:Destroy()
         end
@@ -2413,7 +2413,7 @@ SettingsLib.AddIconButton(BtnRow, "71829270056766", function()
         SaveThemes(themes)
         currentThemeName = "Default"
         themeDropdown.Refresh(GetNames())
-        themeDropdown.Button.Text = "Default  â¼"
+        themeDropdown.Button.Text = "Default  Ã¢ÂÂ¼"
         ApplyTheme(themes["Default"])
     end
 end)
@@ -2438,7 +2438,7 @@ SettingsLib.AddIconButton(BtnRow, "117761881427472", function()
             currentThemeName = In.Text
             SaveThemes(themes)
             themeDropdown.Refresh(GetNames())
-            themeDropdown.Button.Text = currentThemeName .. "  â¼"
+            themeDropdown.Button.Text = currentThemeName .. "  Ã¢ÂÂ¼"
             popup:Destroy()
         end
     end)
@@ -2475,7 +2475,7 @@ SettingsLib.AddIconButton(BtnRow, "78317476576895", function()
     local close = Instance.new("TextButton")
     close.Size = UDim2.fromOffset(24, 24)
     close.Position = UDim2.new(1, -30, 0, 5)
-    close.Text = "Ã"
+    close.Text = "ÃÂ"
     close.Font = Enum.Font.GothamBold
     close.TextSize = 20
     close.BackgroundTransparency = 1
@@ -2504,7 +2504,7 @@ SettingsLib.AddIconButton(BtnRow, "107588515524752", function()
     local close = Instance.new("TextButton")
     close.Size = UDim2.fromOffset(24, 24)
     close.Position = UDim2.new(1, -30, 0, 5)
-    close.Text = "Ã"
+    close.Text = "ÃÂ"
     close.Font = Enum.Font.GothamBold
     close.TextSize = 20
     close.BackgroundTransparency = 1
@@ -2818,7 +2818,7 @@ State.enterCustomAnimationEditor = function(category, animName)
 
     if UI._2Routenumber then UI._2Routenumber.TextEditable = false; UI._2Routenumber.Active = false; pcall(function() UI._2Routenumber:ReleaseFocus() end) end
 
-    getgenv().Notify({ Title = "7yd7 | Animation Editor", Content = "ð±ï¸ Select an animation from the wheel to set for " .. animName, Duration = 5 })
+    getgenv().Notify({ Title = "7yd7 | Animation Editor", Content = "Ã°ÂÂÂ±Ã¯Â¸Â Select an animation from the wheel to set for " .. animName, Duration = 5 })
 end
 
 State.CustomAnimTab = SettingsLib.CreateTab("Animation", 4)
@@ -2950,7 +2950,7 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "108445456753346", function()
             State.SaveCustomAnimations(State.CustomAnimations)
             if State.CustomAnimDropdown then
                 State.CustomAnimDropdown.Refresh(State.CustomAnimations.Order)
-                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  â¼"
+                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  Ã¢ÂÂ¼"
             end
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
@@ -2972,7 +2972,7 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "71829270056766", function()
         State.SaveCustomAnimations(State.CustomAnimations)
         if State.CustomAnimDropdown then
             State.CustomAnimDropdown.Refresh(State.CustomAnimations.Order)
-            State.CustomAnimDropdown.Button.Text = "Default  â¼"
+            State.CustomAnimDropdown.Button.Text = "Default  Ã¢ÂÂ¼"
         end
         if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
         if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
@@ -3002,7 +3002,7 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "117761881427472", function()
             State.SaveCustomAnimations(State.CustomAnimations)
             if State.CustomAnimDropdown then
                 State.CustomAnimDropdown.Refresh(State.CustomAnimations.Order)
-                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  â¼"
+                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  Ã¢ÂÂ¼"
             end
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
@@ -3078,13 +3078,13 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "78317476576895", function()
             State.SaveCustomAnimations(State.CustomAnimations)
             if State.CustomAnimDropdown then
                 State.CustomAnimDropdown.Refresh(State.CustomAnimations.Order)
-                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  â¼"
+                State.CustomAnimDropdown.Button.Text = State.currentCustomAnimationName .. "  Ã¢ÂÂ¼"
             end
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(false) end
             popup:Destroy()
-            getgenv().Notify({ Title = "7yd7 | Animation", Content = "â Imported custom animations", Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Animation", Content = "Ã¢ÂÂ Imported custom animations", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
         end
@@ -3281,7 +3281,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "108445456753346", function()
             State.SaveEmotePages(State.EmotePages)
             if State.PageDropdown then State.PageDropdown.Refresh(GetEmotePageNames()) end
             SwitchEmotePage(In.Text)
-            if State.PageDropdown then State.PageDropdown.Button.Text = State.currentEmotePageName .. "  â¼" end
+            if State.PageDropdown then State.PageDropdown.Button.Text = State.currentEmotePageName .. "  Ã¢ÂÂ¼" end
             popup:Destroy()
         end
     end)
@@ -3298,7 +3298,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "71829270056766", function()
         State.SaveEmotePages(State.EmotePages)
         if State.PageDropdown then
             State.PageDropdown.Refresh(GetEmotePageNames())
-            State.PageDropdown.Button.Text = "Default  â¼"
+            State.PageDropdown.Button.Text = "Default  Ã¢ÂÂ¼"
         end
         SwitchEmotePage("Default")
     end
@@ -3321,7 +3321,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "117761881427472", function()
             State.SaveEmotePages(State.EmotePages)
             if State.PageDropdown then
                 State.PageDropdown.Refresh(GetEmotePageNames())
-                State.PageDropdown.Button.Text = State.currentEmotePageName .. "  â¼"
+                State.PageDropdown.Button.Text = State.currentEmotePageName .. "  Ã¢ÂÂ¼"
             end
             popup:Destroy()
         end
@@ -3346,7 +3346,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "107588515524752", function()
     local close = Instance.new("TextButton")
     close.Size = UDim2.fromOffset(24, 24)
     close.Position = UDim2.new(1, -30, 0, 5)
-    close.Text = "Ã"
+    close.Text = "ÃÂ"
     close.Font = Enum.Font.GothamBold
     close.TextSize = 20
     close.BackgroundTransparency = 1
@@ -3371,11 +3371,11 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "78317476576895", function()
             State.SaveEmotePages(State.EmotePages)
             if State.PageDropdown then
                 State.PageDropdown.Refresh(GetEmotePageNames())
-                State.PageDropdown.Button.Text = State.currentEmotePageName .. "  â¼"
+                State.PageDropdown.Button.Text = State.currentEmotePageName .. "  Ã¢ÂÂ¼"
             end
             SwitchEmotePage(targetName)
             popup:Destroy()
-            getgenv().Notify({ Title = "7yd7 | Page", Content = "â Imported Emote page", Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Page", Content = "Ã¢ÂÂ Imported Emote page", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid Emote Page JSON", Duration = 3 })
         end
@@ -3383,7 +3383,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "78317476576895", function()
     local close = Instance.new("TextButton")
     close.Size = UDim2.fromOffset(24, 24)
     close.Position = UDim2.new(1, -30, 0, 5)
-    close.Text = "Ã"
+    close.Text = "ÃÂ"
     close.Font = Enum.Font.GothamBold
     close.TextSize = 20
     close.BackgroundTransparency = 1
@@ -3440,10 +3440,10 @@ function MakeDescLine(text)
     lbl.RichText = true
 end
 
-MakeDescLine("<b>â¢ Theme:</b> Saves custom themes")
-MakeDescLine("<b>â¢ Settings:</b> Saves HUD layout & values")
-MakeDescLine("<b>â¢ Favorite:</b> Saves favorite emotes/anims")
-MakeDescLine("<b>â¢ All:</b> Includes everything above")
+MakeDescLine("<b>Ã¢ÂÂ¢ Theme:</b> Saves custom themes")
+MakeDescLine("<b>Ã¢ÂÂ¢ Settings:</b> Saves HUD layout & values")
+MakeDescLine("<b>Ã¢ÂÂ¢ Favorite:</b> Saves favorite emotes/anims")
+MakeDescLine("<b>Ã¢ÂÂ¢ All:</b> Includes everything above")
 
 local ExportItem = SettingsLib.AddItem(BackupTab, "Export Settings", "Save current settings to a file for sharing or later import.")
 ExportItem.LayoutOrder = 2
@@ -3621,7 +3621,7 @@ function HandleImportPrompt(typeStr)
                 SaveThemesImplementation(themes)
                 themeDropdown.Refresh(GetNames())
                 if themeDropdown and themeDropdown.Button then
-                    themeDropdown.Button.Text = currentThemeName .. "  â¼"
+                    themeDropdown.Button.Text = currentThemeName .. "  Ã¢ÂÂ¼"
                 end
                 local themeToApply = themes[currentThemeName] or themes["Default"]
                 if themeToApply then
@@ -3673,7 +3673,7 @@ function HandleImportPrompt(typeStr)
     local close = Instance.new("TextButton")
     close.Size = UDim2.fromOffset(24, 24)
     close.Position = UDim2.new(1, -30, 0, 5)
-    close.Text = "Ã"
+    close.Text = "ÃÂ"
     close.Font = Enum.Font.GothamBold
     close.TextSize = 20
     close.BackgroundTransparency = 1
@@ -3689,7 +3689,7 @@ BtnImportFavorites.MouseButton1Click:Connect(function() HandleImportPrompt("Favo
 
 getgenv().Notify({
     Title = '7yd7 | Emote',
-    Content = 'â ï¸ Script loading...',
+    Content = 'Ã¢ÂÂ Ã¯Â¸Â Script loading...',
     Duration = 5
 })
 
@@ -5219,17 +5219,17 @@ toggleFavorite = function(emoteId, emoteName)
         table.remove(State.favoriteEmotes, index)
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = 'ðï¸ Removed "' .. emoteName .. '" from favorites',
+            Content = 'Ã°ÂÂÂÃ¯Â¸Â Removed "' .. emoteName .. '" from favorites',
             Duration = 3
         })
     else
         table.insert(State.favoriteEmotes, {
             id = emoteId,
-            name = emoteName .. " - â­"
+            name = emoteName .. " - Ã¢Â­Â"
         })
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = 'â Added "' .. emoteName .. '" to favorites',
+            Content = 'Ã¢ÂÂ Added "' .. emoteName .. '" to favorites',
             Duration = 3
         })
     end
@@ -5261,20 +5261,20 @@ toggleFavoriteAnimation = function(animationData)
         table.remove(State.favoriteAnimations, index)
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = 'ðï¸ Removed "' .. animationData.name .. '" from favorites',
+            Content = 'Ã°ÂÂÂÃ¯Â¸Â Removed "' .. animationData.name .. '" from favorites',
             Duration = 3
         })
     else
         table.insert(State.favoriteAnimations, {
             id = animationData.id,
-            name = animationData.name .. " - â­",
+            name = animationData.name .. " - Ã¢Â­Â",
             bundledItems = animationData.bundledItems,
             isCustomSet = IsCustomSetData(animationData),
             customSetName = IsCustomSetData(animationData) and (type(animationData.name) == "string" and animationData.name:gsub("%s*%-.*$", "") or animationData.name) or nil
         })
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = 'â Added "' .. animationData.name .. '" to favorites',
+            Content = 'Ã¢ÂÂ Added "' .. animationData.name .. '" to favorites',
             Duration = 3
         })
     end
@@ -5350,7 +5350,7 @@ applyAnimation = function(animationData)
     if not animate or not humanoid then
         getgenv().Notify({
             Title = '7yd7 | Animation Error',
-            Content = 'â Animate or Humanoid not found',
+            Content = 'Ã¢ÂÂ Animate or Humanoid not found',
             Duration = 3
         })
         return
@@ -5533,6 +5533,9 @@ function playAnimationPreview(animationData)
 end
 
 handleSectorAction = function(index)
+    stopEmotePreview()
+    State.emoteHoldToken = State.emoteHoldToken + 1
+    State.emoteHoldInputType = nil
     if tick() - State.lastActionTick < 0.25 then return end
     State.lastActionTick = tick()
 
@@ -5571,7 +5574,7 @@ handleSectorAction = function(index)
                 end
                 State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
                 State.SaveCustomAnimations(State.CustomAnimations)
-                getgenv().Notify({ Title = "7yd7 | Saved", Content = "â Saved " .. name, Duration = 3 })
+                getgenv().Notify({ Title = "7yd7 | Saved", Content = "Ã¢ÂÂ Saved " .. name, Duration = 3 })
                 if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
                 if refreshCustomAnimationState then refreshCustomAnimationState(true) end
                 State.exitCustomAnimationEditor()
@@ -5694,7 +5697,7 @@ handleSectorAction = function(index)
             end
             State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
             State.SaveCustomAnimations(State.CustomAnimations)
-            getgenv().Notify({ Title = "7yd7 | Saved", Content = "â Saved " .. name, Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Saved", Content = "Ã¢ÂÂ Saved " .. name, Duration = 3 })
             
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(true) end
@@ -5943,7 +5946,7 @@ function fetchAllEmotes()
             local emoteData, total = fetchFromUrl()
             if emoteData then
                 applyData(emoteData, total)
-                getgenv().Notify({Title = '7yd7 | Emote', Content = "ð¦ Emotes loaded", Duration = 3})
+                getgenv().Notify({Title = '7yd7 | Emote', Content = "Ã°ÂÂÂ¦ Emotes loaded", Duration = 3})
                 return
             end
             task.wait(3)
@@ -6090,7 +6093,7 @@ function searchEmotes(searchTerm)
     if State.isLoading then
         getgenv().Notify({
             Title = '7yd7 | Emote',
-            Content = 'â ï¸ Loading please wait...',
+            Content = 'Ã¢ÂÂ Ã¯Â¸Â Loading please wait...',
             Duration = 5
         })
         return
@@ -6158,7 +6161,7 @@ function searchAnimations(searchTerm)
     if State.isLoading then
         getgenv().Notify({
             Title = '7yd7 | Animation',
-            Content = 'â ï¸ Loading please wait...',
+            Content = 'Ã¢ÂÂ Ã¯Â¸Â Loading please wait...',
             Duration = 5
         })
         return
@@ -6359,19 +6362,31 @@ function startEmotePreview(emoteId)
     local _, humanoid = getCharacterAndHumanoid()
     if not humanoid then return end
 
-    local animator = humanoid:FindFirstChild("Animator")
-    if not animator then return end
-
-    local animation = Instance.new("Animation")
-    animation.AnimationId = "rbxassetid://" .. tostring(emoteId)
-    local ok, track = pcall(function()
-        return animator:LoadAnimation(animation)
+    local track
+    local nativeOk, nativeTrack = pcall(function()
+        return humanoid:PlayEmoteAndGetAnimTrackById(tonumber(emoteId))
     end)
-    if not ok or not track then return end
+    if nativeOk and nativeTrack and typeof(nativeTrack) == "Instance" and nativeTrack:IsA("AnimationTrack") then
+        track = nativeTrack
+    else
+        local animator = humanoid:FindFirstChild("Animator")
+        if not animator then return end
+
+        local animation = Instance.new("Animation")
+        animation.AnimationId = "rbxassetid://" .. tostring(emoteId)
+        local fallbackOk, fallbackTrack = pcall(function()
+            return animator:LoadAnimation(animation)
+        end)
+        if not fallbackOk or not fallbackTrack then return end
+        track = fallbackTrack
+        track:Play()
+    end
 
     track.Priority = Enum.AnimationPriority.Action
     track.Looped = true
-    track:Play()
+    if not track.IsPlaying then
+        track:Play()
+    end
     if State.speedEmoteEnabled then
         local speedValue = tonumber(UI.SpeedBox and UI.SpeedBox.Text) or Config.EmoteSpeed or 1
         track:AdjustSpeed(speedValue)
@@ -6477,7 +6492,7 @@ function onCharacterAdded(character)
             applyAnimation(getgenv().lastPlayedAnimation)
             getgenv().Notify({
                 Title = '7yd7 | Auto Reload Animation',
-                Content = 'ð The last animation was automatically \n reapplied',
+                Content = 'Ã°ÂÂÂ The last animation was automatically \n reapplied',
                 Duration = 3
             })
             
@@ -6631,7 +6646,7 @@ function toggleEmoteWalk()
     if State.emotesWalkEnabled then
         getgenv().Notify({
             Title = '7yd7 | Emote Freeze',
-            Content = "ð Emote freeze ON",
+            Content = "Ã°ÂÂÂ Emote freeze ON",
             Duration = 5
         })
 
@@ -6643,7 +6658,7 @@ function toggleEmoteWalk()
     else
         getgenv().Notify({
             Title = '7yd7 | Emote Freeze',
-            Content = 'ð Emote freeze OFF',
+            Content = 'Ã°ÂÂÂ Emote freeze OFF',
             Duration = 5
         })
         task.wait(0.1)
@@ -6665,7 +6680,7 @@ function toggleSpeedEmote()
     if State.speedEmoteEnabled then
         getgenv().Notify({
             Title = '7yd7 | Speed Emote',
-            Content = "â¡ Speed Emote ON",
+            Content = "Ã¢ÂÂ¡ Speed Emote ON",
             Duration = 5
         })
         task.wait(0.1)
@@ -6673,7 +6688,7 @@ function toggleSpeedEmote()
     else
         getgenv().Notify({
             Title = '7yd7 | Speed Emote',
-            Content = 'â¡ Speed Emote OFF',
+            Content = 'Ã¢ÂÂ¡ Speed Emote OFF',
             Duration = 5
         })
         task.wait(0.1)
@@ -6692,7 +6707,7 @@ function toggleFavoriteMode()
         ApplyFavoriteButtonVisual()
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = "ð Favorite ON",
+            Content = "Ã°ÂÂÂ Favorite ON",
             Duration = 5
         })
 
@@ -6708,7 +6723,7 @@ function toggleFavoriteMode()
         ApplyFavoriteButtonVisual()
         getgenv().Notify({
             Title = '7yd7 | Favorite System',
-            Content = 'ð Favorite OFF',
+            Content = 'Ã°ÂÂÂ Favorite OFF',
             Duration = 3
         })
         
@@ -6762,13 +6777,13 @@ function toggleAutoReload()
     if getgenv().autoReloadEnabled then
         getgenv().Notify({
             Title = '7yd7 | Auto Reload Animation',
-            Content = "ð Auto Reload ON",
+            Content = "Ã°ÂÂÂ Auto Reload ON",
             Duration = 5
         })
     else
         getgenv().Notify({
             Title = '7yd7 | Auto Reload Animation',
-            Content = 'ð Auto Reload OFF',
+            Content = 'Ã°ÂÂÂ Auto Reload OFF',
             Duration = 3
         })
     end
@@ -7014,7 +7029,7 @@ function connectEvents()
                     
                     getgenv().Notify({
                         Title = '7yd7 | Animation',
-                        Content = 'ð Changed to Emote > Animation Mode',
+                        Content = 'Ã°ÂÂÂ Changed to Emote > Animation Mode',
                         Duration = 3
                     })
 
@@ -7040,7 +7055,7 @@ function connectEvents()
                     
                     getgenv().Notify({
                         Title = '7yd7 | Emote', 
-                        Content = 'ð Changed to Animation > Emote Mode',
+                        Content = 'Ã°ÂÂÂ Changed to Animation > Emote Mode',
                         Duration = 3
                     })
                 end
@@ -7940,7 +7955,7 @@ enterHUDEditor = function()
         pcall(function() updateGUIColors() end)
         getgenv().Notify({ 
             Title = "7yd7 | HUD Editor", 
-            Content = HUD.IsUnlocked and "ð Interior Unlocked! Children are now editable." or "ð Interior Locked! Top-level only.", 
+            Content = HUD.IsUnlocked and "Ã°ÂÂÂ Interior Unlocked! Children are now editable." or "Ã°ÂÂÂ Interior Locked! Top-level only.", 
             Duration = 2 
         })
     end))
@@ -8008,7 +8023,7 @@ enterHUDEditor = function()
             }
         }
         setclipboard(HttpService:JSONEncode(data))
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "â HUD settings copied", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã¢ÂÂ HUD settings copied", Duration = 2 })
     end))
 
     table.insert(HUD.Connections, importBtn.MouseButton1Click:Connect(function()
@@ -8078,7 +8093,7 @@ enterHUDEditor = function()
                 HUD.UndoStack = {}
                 if backdrop then backdrop:Destroy() end
                 popup:Destroy()
-                getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "â HUD settings imported", Duration = 2 })
+                getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã¢ÂÂ HUD settings imported", Duration = 2 })
             else
                 getgenv().Notify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
             end
@@ -8087,7 +8102,7 @@ enterHUDEditor = function()
         local close = Instance.new("TextButton")
         close.Size = UDim2.fromOffset(24, 24)
         close.Position = UDim2.new(1, -30, 0, 5)
-        close.Text = "Ã"
+        close.Text = "ÃÂ"
         close.Font = Enum.Font.GothamBold
         close.TextSize = 20
         close.BackgroundTransparency = 1
@@ -8195,7 +8210,7 @@ enterHUDEditor = function()
         end
         updatePageDisplay()
         
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "ð All designs and frames have been fully reset", Duration = 3 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã°ÂÂÂ All designs and frames have been fully reset", Duration = 3 })
     end))
 
     local propertiesPanel = Instance.new("Frame")
@@ -8489,7 +8504,7 @@ enterHUDEditor = function()
         updateHUDLayouts()
         ApplyUIVisibility()
         pcall(function() updateGUIColors() end)
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "ðï¸ Custom Frame deleted", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã°ÂÂÂÃ¯Â¸Â Custom Frame deleted", Duration = 2 })
     end))
 
 
@@ -8786,10 +8801,10 @@ enterHUDEditor = function()
         setupElementDragging(newName, cf, getMovableElements(), snapGuideV, snapGuideH)
         selectHUDElement(newName, cf)
         
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "â Custom Frame added!", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã¢ÂÂ Custom Frame added!", Duration = 2 })
     end))
 
-    getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "âï¸ Drag elements to reposition", Duration = 5 })
+    getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "Ã¢ÂÂÃ¯Â¸Â Drag elements to reposition", Duration = 5 })
 end
 
 State.RefreshUI = function()
@@ -8922,7 +8937,7 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
     SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/OpenEmote.lua", "Open Emote")
     getgenv().Notify({
         Title = '7yd7 | Emote Mobile',
-        Content = 'ð± Added emote open button for ease of use',
+        Content = 'Ã°ÂÂÂ± Added emote open button for ease of use',
         Duration = 10
     })
 end
@@ -8930,7 +8945,7 @@ end
 if UserInputService.KeyboardEnabled then
     getgenv().Notify({
         Title = '7yd7 | Emote PC',
-        Content = 'ð» Open menu press button "."',
+        Content = 'Ã°ÂÂÂ» Open menu press button "."',
         Duration = 10
     })
 end
