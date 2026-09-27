@@ -1944,56 +1944,68 @@ local function showBugReportWindow()
     card.Parent = overlay
     card.AnchorPoint = Vector2.new(0.5, 0.5)
     card.Position = UDim2.fromScale(0.5, 0.5)
-    card.Size = UDim2.new(0.9, 0, 0, 300)
-    card.BackgroundColor3 = Color3.fromRGB(35, 36, 42)
+    card.Size = UDim2.new(0.86, 0, 0, 280)
+    card.BackgroundColor3 = Color3.fromRGB(27, 28, 34)
     card.BorderSizePixel = 0
     card.ZIndex = 7001
 
     local cardCorner = Instance.new("UICorner")
-    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.CornerRadius = UDim.new(0, 10)
     cardCorner.Parent = card
 
     local title = Instance.new("TextLabel")
     title.Parent = card
     title.BackgroundTransparency = 1
     title.Position = UDim2.new(0, 18, 0, 12)
-    title.Size = UDim2.new(1, -62, 0, 30)
+    title.Size = UDim2.new(1, -132, 0, 24)
     title.Font = Enum.Font.GothamBold
-    title.Text = "🐞 Reportar bug"
-    title.TextColor3 = Color3.fromRGB(255, 193, 7)
-    title.TextSize = 18
+    title.Text = "REPORT A BUG"
+    title.TextColor3 = Color3.fromRGB(242, 242, 247)
+    title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 7002
 
     local close = Instance.new("TextButton")
     close.Parent = card
     close.BackgroundTransparency = 1
-    close.Position = UDim2.new(1, -44, 0, 10)
-    close.Size = UDim2.fromOffset(30, 30)
+    close.Position = UDim2.new(1, -40, 0, 9)
+    close.Size = UDim2.fromOffset(28, 28)
     close.Font = Enum.Font.GothamBold
     close.Text = "×"
     close.TextColor3 = Color3.fromRGB(220, 220, 225)
     close.TextSize = 24
     close.ZIndex = 7002
 
+    local cooldownLabel = Instance.new("TextLabel")
+    cooldownLabel.Parent = card
+    cooldownLabel.BackgroundTransparency = 1
+    cooldownLabel.Position = UDim2.new(1, -116, 0, 14)
+    cooldownLabel.Size = UDim2.fromOffset(72, 20)
+    cooldownLabel.Font = Enum.Font.GothamBold
+    cooldownLabel.Text = "00h 00m 00s"
+    cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
+    cooldownLabel.TextSize = 9
+    cooldownLabel.TextXAlignment = Enum.TextXAlignment.Right
+    cooldownLabel.ZIndex = 7002
+
     local hint = Instance.new("TextLabel")
     hint.Parent = card
     hint.BackgroundTransparency = 1
     hint.Position = UDim2.new(0, 18, 0, 45)
-    hint.Size = UDim2.new(1, -36, 0, 32)
+    hint.Size = UDim2.new(1, -36, 0, 30)
     hint.Font = Enum.Font.Gotham
     hint.Text = "Explique o que aconteceu e como reproduzir. Mínimo: 20 caracteres."
-    hint.TextColor3 = Color3.fromRGB(190, 191, 200)
-    hint.TextSize = 11
+    hint.TextColor3 = Color3.fromRGB(170, 171, 181)
+    hint.TextSize = 10
     hint.TextWrapped = true
     hint.TextXAlignment = Enum.TextXAlignment.Left
     hint.ZIndex = 7002
 
     local textBox = Instance.new("TextBox")
     textBox.Parent = card
-    textBox.BackgroundColor3 = Color3.fromRGB(25, 26, 31)
-    textBox.Position = UDim2.new(0, 18, 0, 82)
-    textBox.Size = UDim2.new(1, -36, 0, 92)
+    textBox.BackgroundColor3 = Color3.fromRGB(37, 38, 45)
+    textBox.Position = UDim2.new(0, 18, 0, 80)
+    textBox.Size = UDim2.new(1, -36, 0, 94)
     textBox.ClearTextOnFocus = false
     textBox.Font = Enum.Font.Gotham
     textBox.MultiLine = true
@@ -2001,49 +2013,38 @@ local function showBugReportWindow()
     textBox.PlaceholderColor3 = Color3.fromRGB(120, 121, 130)
     textBox.Text = ""
     textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
-    textBox.TextSize = 12
+    textBox.TextSize = 11
     textBox.TextWrapped = true
     textBox.TextXAlignment = Enum.TextXAlignment.Left
     textBox.TextYAlignment = Enum.TextYAlignment.Top
     textBox.ZIndex = 7002
 
     local boxCorner = Instance.new("UICorner")
-    boxCorner.CornerRadius = UDim.new(0, 8)
+    boxCorner.CornerRadius = UDim.new(0, 7)
     boxCorner.Parent = textBox
 
     local status = Instance.new("TextLabel")
     status.Parent = card
     status.BackgroundTransparency = 1
-    status.Position = UDim2.new(0, 18, 0, 182)
-    status.Size = UDim2.new(1, -36, 0, 30)
+    status.Position = UDim2.new(0, 18, 0, 180)
+    status.Size = UDim2.new(1, -36, 0, 28)
     status.Font = Enum.Font.Gotham
     status.Text = ""
     status.TextColor3 = Color3.fromRGB(255, 150, 150)
-    status.TextSize = 11
+    status.TextSize = 10
     status.TextWrapped = true
     status.TextXAlignment = Enum.TextXAlignment.Left
     status.ZIndex = 7002
 
-    local cooldownLabel = Instance.new("TextLabel")
-    cooldownLabel.Parent = card
-    cooldownLabel.BackgroundTransparency = 1
-    cooldownLabel.Position = UDim2.new(0, 18, 1, -44)
-    cooldownLabel.Size = UDim2.new(1, -150, 0, 24)
-    cooldownLabel.Font = Enum.Font.Gotham
-    cooldownLabel.TextColor3 = Color3.fromRGB(190, 191, 200)
-    cooldownLabel.TextSize = 11
-    cooldownLabel.TextXAlignment = Enum.TextXAlignment.Left
-    cooldownLabel.ZIndex = 7002
-
     local send = Instance.new("TextButton")
     send.Parent = card
     send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
-    send.Position = UDim2.new(1, -122, 1, -50)
+    send.Position = UDim2.new(1, -122, 1, -48)
     send.Size = UDim2.fromOffset(104, 32)
     send.Font = Enum.Font.GothamBold
-    send.Text = "ENVIAR"
+    send.Text = "SEND REPORT"
     send.TextColor3 = Color3.fromRGB(30, 30, 35)
-    send.TextSize = 12
+    send.TextSize = 10
     send.ZIndex = 7002
 
     local sendCorner = Instance.new("UICorner")
@@ -2055,8 +2056,8 @@ local function showBugReportWindow()
     local function refreshCooldown()
         if not overlay.Parent or bugReportTimerToken ~= token then return false end
         if isBugReportOwner() then
-            cooldownLabel.Text = "Disponível • dono da experiência sem cooldown"
-            cooldownLabel.TextColor3 = Color3.fromRGB(160, 220, 170)
+            cooldownLabel.Text = "00h 00m 00s"
+            cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
             send.AutoButtonColor = true
             send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
@@ -2065,14 +2066,14 @@ local function showBugReportWindow()
 
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
-            cooldownLabel.Text = "Cooldown: " .. formatBugCooldown(remaining)
-            cooldownLabel.TextColor3 = Color3.fromRGB(255, 193, 7)
+            cooldownLabel.Text = formatBugCooldown(remaining)
+            cooldownLabel.TextColor3 = Color3.fromRGB(255, 105, 105)
             send.Active = false
             send.AutoButtonColor = false
-            send.BackgroundColor3 = Color3.fromRGB(95, 88, 55)
+            send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
         else
-            cooldownLabel.Text = "Disponível • cooldown de 15 horas por usuário"
-            cooldownLabel.TextColor3 = Color3.fromRGB(160, 220, 170)
+            cooldownLabel.Text = "00h 00m 00s"
+            cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
             send.AutoButtonColor = true
             send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
@@ -2091,8 +2092,9 @@ local function showBugReportWindow()
 
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
-            status.TextColor3 = Color3.fromRGB(255, 193, 7)
+            status.TextColor3 = Color3.fromRGB(255, 105, 105)
             status.Text = "Cooldown ativo: " .. formatBugCooldown(remaining)
+            refreshCooldown()
             return
         end
 
@@ -2108,7 +2110,7 @@ local function showBugReportWindow()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
             status.Text = tostring(result)
-            send.Active = true
+            refreshCooldown()
         end
     end)
 
