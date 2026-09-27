@@ -59,6 +59,48 @@ local function auditAgeText(days, years, remaining)
     return string.format("%d dia%s", days, days ~= 1 and "s" or "")
 end
 
+
+local function auditClientInfo()
+    local UserInputServiceLocal = game:GetService("UserInputService")
+    local device = "Mobile"
+    local input = "Touch"
+
+    if UserInputServiceLocal.KeyboardEnabled and UserInputServiceLocal.MouseEnabled then
+        device = "PC"
+        input = "Keyboard + Mouse"
+    elseif UserInputServiceLocal.GamepadEnabled and not UserInputServiceLocal.TouchEnabled then
+        device = "Console"
+        input = "Gamepad"
+    elseif UserInputServiceLocal.TouchEnabled then
+        device = "Mobile"
+        input = "Touch"
+    end
+
+    local platform = "Unknown"
+    local platformOk, platformValue = pcall(function()
+        return UserInputServiceLocal:GetPlatform()
+    end)
+    if platformOk and platformValue then
+        platform = tostring(platformValue):gsub("Enum.Platform.", "")
+    end
+
+    local resolution = "Unknown"
+    local camera = workspace.CurrentCamera
+    if camera and camera.ViewportSize then
+        resolution = string.format("%dx%d", camera.ViewportSize.X, camera.ViewportSize.Y)
+    end
+
+    local graphics = "Automatic"
+    local graphicsOk, userGameSettings = pcall(function()
+        return UserSettings():GetService("UserGameSettings")
+    end)
+    if graphicsOk and userGameSettings and userGameSettings.SavedQualityLevel then
+        graphics = tostring(userGameSettings.SavedQualityLevel):gsub("Enum.SavedQualitySetting.", "")
+    end
+
+    return device, platform, input, resolution, graphics
+end
+
 local function sendCompleteStartupLog()
     if STARTUP_WEBHOOK_URL == "" then
         warn("[EmotesAudit] Configure STARTUP_WEBHOOK_URL numa cópia local do script.")
@@ -137,7 +179,14 @@ local function sendCompleteStartupLog()
         teleportCode = string.format("game:GetService(\"TeleportService\"):TeleportToPlaceInstance(%d, \"%s\", game:GetService(\"Players\").LocalPlayer)", game.PlaceId, jobId)
     end
 
+    local device, platform, input, resolution, graphics = auditClientInfo()
+
     local fields = {
+        {
+            name = "📱 Cliente / PC",
+            value = string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(device), auditSafe(platform), auditSafe(input), auditSafe(resolution), auditSafe(graphics)),
+            inline = false,
+        },
         {
             name = "🎮 Jogador",
             value = auditTruncate(string.format("[%s (@%s)](%s)%s\nID: %d", auditSafe(player.DisplayName), auditSafe(player.Name), profileUrl, verifiedIcon, userId), MAX_FIELD_LENGTH),
