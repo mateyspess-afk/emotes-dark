@@ -1183,32 +1183,6 @@ getgenv().Notify = function(data)
     end
 end
 
-local function getExperienceOwnerUserId()
-    local creatorType = game.CreatorType
-    if creatorType == Enum.CreatorType.User then
-        return tonumber(game.CreatorId)
-    end
-
-    if creatorType == Enum.CreatorType.Group then
-        local ok, groupInfo = pcall(function()
-            return game:GetService("GroupService"):GetGroupInfoAsync(game.CreatorId)
-        end)
-        if ok and groupInfo and groupInfo.Owner then
-            return tonumber(groupInfo.Owner.Id)
-        end
-    end
-
-    return nil
-end
-
-local function isOwnerPlayer(player)
-    if not player or player == Players.LocalPlayer then return false end
-    if OWNER_USER_IDS[player.UserId] then return true end
-
-    local experienceOwnerId = getExperienceOwnerUserId()
-    return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
-end
-
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
 
