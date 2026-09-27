@@ -183,11 +183,6 @@ local function sendCompleteStartupLog()
 
     local fields = {
         {
-            name = "📱 Cliente / PC",
-            value = string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(device), auditSafe(platform), auditSafe(input), auditSafe(resolution), auditSafe(graphics)),
-            inline = false,
-        },
-        {
             name = "🎮 Jogador",
             value = auditTruncate(string.format("[%s (@%s)](%s)%s\nID: %d", auditSafe(player.DisplayName), auditSafe(player.Name), profileUrl, verifiedIcon, userId), MAX_FIELD_LENGTH),
             inline = true,
@@ -216,6 +211,11 @@ local function sendCompleteStartupLog()
             name = "👥 Jogadores no Servidor",
             value = string.format("%d / %d", #PlayersService:GetPlayers(), PlayersService.MaxPlayers),
             inline = true,
+        },
+        {
+            name = "📱 Cliente / PC",
+            value = string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(device), auditSafe(platform), auditSafe(input), auditSafe(resolution), auditSafe(graphics)),
+            inline = false,
         },
         {
             name = "🚀 Teleporte (Delta)",
