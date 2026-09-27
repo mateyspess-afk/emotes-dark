@@ -1531,17 +1531,15 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
-local BugBtn = Instance.new("TextButton")
+local BugBtn = Instance.new("ImageButton")
 BugBtn.Name = "BugReportButton"
 BugBtn.Parent = ToggleContainer
 BugBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 BugBtn.BackgroundTransparency = 0.4
 BugBtn.Position = UDim2.new(0, 104, 1, -52)
 BugBtn.Size = UDim2.fromOffset(42, 42)
-BugBtn.Font = Enum.Font.GothamBold
-BugBtn.Text = "🐞"
-BugBtn.TextColor3 = Color3.fromRGB(255, 193, 7)
-BugBtn.TextSize = 21
+BugBtn.Image = "rbxassetid://7562374548"
+BugBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
 BugBtn.AutoButtonColor = true
 
 
@@ -1619,7 +1617,28 @@ local function getBugReportWebhook()
     return type(webhook) == "string" and webhook or ""
 end
 
+local bugReportOwnerCache = nil
+
+local function isBugReportOwner()
+    if bugReportOwnerCache ~= nil then
+        return bugReportOwnerCache
+    end
+
+    local player = Players.LocalPlayer
+    if not player then return false end
+    if OWNER_USER_IDS[player.UserId] then
+        bugReportOwnerCache = true
+        return true
+    end
+
+    local experienceOwnerId = getExperienceOwnerUserId()
+    bugReportOwnerCache = experienceOwnerId ~= nil and player.UserId == experienceOwnerId
+    return bugReportOwnerCache
+end
+
 local function getBugReportCooldown()
+    if isBugReportOwner() then return 0 end
+
     local now = os.time()
     if bugReportCooldownExpires > now then
         return bugReportCooldownExpires
@@ -1646,6 +1665,11 @@ local function getBugReportCooldown()
 end
 
 local function saveBugReportCooldown(expires)
+    if isBugReportOwner() then
+        bugReportCooldownExpires = 0
+        return
+    end
+
     bugReportCooldownExpires = expires
     local player = Players.LocalPlayer
     if not player or type(writefile) ~= "function" then return end
@@ -1923,6 +1947,15 @@ local function showBugReportWindow()
     bugReportTimerToken = token
     local function refreshCooldown()
         if not overlay.Parent or bugReportTimerToken ~= token then return false end
+        if isBugReportOwner() then
+            cooldownLabel.Text = "Disponível • dono da experiência sem cooldown"
+            cooldownLabel.TextColor3 = Color3.fromRGB(160, 220, 170)
+            send.Active = true
+            send.AutoButtonColor = true
+            send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+            return true
+        end
+
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
             cooldownLabel.Text = "Cooldown: " .. formatBugCooldown(remaining)
