@@ -1771,7 +1771,7 @@ DonationTitle.BackgroundTransparency = 1
 DonationTitle.Position = UDim2.fromOffset(18, 12)
 DonationTitle.Size = UDim2.new(1, -70, 0, 32)
 DonationTitle.Font = Enum.Font.GothamBold
-DonationTitle.Text = "DOAR ROBUX"
+DonationTitle.Text = "Donations and classification"
 DonationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 DonationTitle.TextSize = 20
 DonationTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1791,21 +1791,94 @@ DonationClose.ZIndex = 5101
 local DonationSubtitle = Instance.new("TextLabel")
 DonationSubtitle.Parent = DonationWindow
 DonationSubtitle.BackgroundTransparency = 1
-DonationSubtitle.Position = UDim2.fromOffset(18, 52)
-DonationSubtitle.Size = UDim2.new(1, -36, 0, 40)
+DonationSubtitle.Position = UDim2.fromOffset(18, 48)
+DonationSubtitle.Size = UDim2.new(1, -36, 0, 28)
 DonationSubtitle.Font = Enum.Font.Gotham
-DonationSubtitle.Text = "Escolha um valor para apoiar o Emote Dark. A compra será aberta pelo Roblox."
+DonationSubtitle.Text = "Help keep our systems running 🙏"
 DonationSubtitle.TextColor3 = Color3.fromRGB(175, 184, 196)
 DonationSubtitle.TextSize = 14
 DonationSubtitle.TextWrapped = true
 DonationSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 DonationSubtitle.ZIndex = 5101
 
+local DonationTab = Instance.new("TextButton")
+DonationTab.Parent = DonationWindow
+DonationTab.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
+DonationTab.BorderSizePixel = 0
+DonationTab.Position = UDim2.fromOffset(18, 88)
+DonationTab.Size = UDim2.fromOffset(220, 34)
+DonationTab.Font = Enum.Font.GothamBold
+DonationTab.Text = "DOAR"
+DonationTab.TextColor3 = Color3.fromRGB(30, 24, 12)
+DonationTab.TextSize = 13
+DonationTab.ZIndex = 5102
+
+local DonationTabCorner = Instance.new("UICorner")
+DonationTabCorner.CornerRadius = UDim.new(0, 7)
+DonationTabCorner.Parent = DonationTab
+
+local ClassificationTab = Instance.new("TextButton")
+ClassificationTab.Parent = DonationWindow
+ClassificationTab.BackgroundColor3 = Color3.fromRGB(48, 54, 64)
+ClassificationTab.BorderSizePixel = 0
+ClassificationTab.Position = UDim2.fromOffset(250, 88)
+ClassificationTab.Size = UDim2.fromOffset(232, 34)
+ClassificationTab.Font = Enum.Font.GothamBold
+ClassificationTab.Text = "CLASSIFICAÇÕES"
+ClassificationTab.TextColor3 = Color3.fromRGB(210, 218, 228)
+ClassificationTab.TextSize = 13
+ClassificationTab.ZIndex = 5102
+
+local ClassificationTabCorner = Instance.new("UICorner")
+ClassificationTabCorner.CornerRadius = UDim.new(0, 7)
+ClassificationTabCorner.Parent = ClassificationTab
+
+local ClassificationPanel = Instance.new("Frame")
+ClassificationPanel.Parent = DonationWindow
+ClassificationPanel.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
+ClassificationPanel.BorderSizePixel = 0
+ClassificationPanel.Position = UDim2.fromOffset(18, 132)
+ClassificationPanel.Size = UDim2.new(1, -36, 0, 142)
+ClassificationPanel.Visible = false
+ClassificationPanel.ZIndex = 5101
+
+local ClassificationPanelCorner = Instance.new("UICorner")
+ClassificationPanelCorner.CornerRadius = UDim.new(0, 8)
+ClassificationPanelCorner.Parent = ClassificationPanel
+
+local ClassificationTitle = Instance.new("TextLabel")
+ClassificationTitle.Parent = ClassificationPanel
+ClassificationTitle.BackgroundTransparency = 1
+ClassificationTitle.Position = UDim2.fromOffset(14, 12)
+ClassificationTitle.Size = UDim2.new(1, -28, 0, 24)
+ClassificationTitle.Font = Enum.Font.GothamBold
+ClassificationTitle.Text = "CLASSIFICAÇÕES DOS DOADORES"
+ClassificationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClassificationTitle.TextSize = 14
+ClassificationTitle.TextXAlignment = Enum.TextXAlignment.Left
+ClassificationTitle.ZIndex = 5102
+
+local ClassificationDescription = Instance.new("TextLabel")
+ClassificationDescription.Parent = ClassificationPanel
+ClassificationDescription.BackgroundTransparency = 1
+ClassificationDescription.Position = UDim2.fromOffset(14, 40)
+ClassificationDescription.Size = UDim2.new(1, -28, 0, 88)
+ClassificationDescription.Font = Enum.Font.Gotham
+ClassificationDescription.Text = "O ranking dos doadores aparecerá aqui quando o sistema registrar as compras.
+
+Bronze: 10+  •  Prata: 100+  •  Ouro: 500+  •  Diamante: 1000+ Robux"
+ClassificationDescription.TextColor3 = Color3.fromRGB(185, 194, 206)
+ClassificationDescription.TextSize = 13
+ClassificationDescription.TextWrapped = true
+ClassificationDescription.TextXAlignment = Enum.TextXAlignment.Left
+ClassificationDescription.TextYAlignment = Enum.TextYAlignment.Top
+ClassificationDescription.ZIndex = 5102
+
 local DonationStatus = Instance.new("TextLabel")
 DonationStatus.Parent = DonationWindow
 DonationStatus.BackgroundTransparency = 1
-DonationStatus.Position = UDim2.fromOffset(18, 98)
-DonationStatus.Size = UDim2.new(1, -36, 0, 30)
+DonationStatus.Position = UDim2.fromOffset(18, 128)
+DonationStatus.Size = UDim2.new(1, -36, 0, 28)
 DonationStatus.Font = Enum.Font.Gotham
 DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
 DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
@@ -1817,7 +1890,7 @@ DonationStatus.ZIndex = 5101
 local DonationOptions = Instance.new("Frame")
 DonationOptions.Parent = DonationWindow
 DonationOptions.BackgroundTransparency = 1
-DonationOptions.Position = UDim2.fromOffset(18, 138)
+DonationOptions.Position = UDim2.fromOffset(18, 160)
 DonationOptions.Size = UDim2.new(1, -36, 0, 104)
 DonationOptions.ZIndex = 5101
 
@@ -1876,6 +1949,29 @@ for index, amount in ipairs(DonationAmounts) do
         end
     end)
 end
+
+local donationView = "donate"
+local function setDonationView(view)
+    donationView = view == "classifications" and "classifications" or "donate"
+    local showingDonations = donationView == "donate"
+    DonationOptions.Visible = showingDonations
+    DonationStatus.Visible = showingDonations
+    ClassificationPanel.Visible = not showingDonations
+    DonationTab.BackgroundColor3 = showingDonations and Color3.fromRGB(255, 190, 70) or Color3.fromRGB(48, 54, 64)
+    DonationTab.TextColor3 = showingDonations and Color3.fromRGB(30, 24, 12) or Color3.fromRGB(210, 218, 228)
+    ClassificationTab.BackgroundColor3 = showingDonations and Color3.fromRGB(48, 54, 64) or Color3.fromRGB(255, 190, 70)
+    ClassificationTab.TextColor3 = showingDonations and Color3.fromRGB(210, 218, 228) or Color3.fromRGB(30, 24, 12)
+end
+
+DonationTab.MouseButton1Click:Connect(function()
+    setDonationView("donate")
+end)
+
+ClassificationTab.MouseButton1Click:Connect(function()
+    setDonationView("classifications")
+end)
+
+setDonationView("donate")
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
@@ -2219,6 +2315,7 @@ DonationBtn.MouseButton1Click:Connect(function()
     BugReportWindow.Visible = false
     DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
     DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
+    setDonationView("donate")
     DonationWindow.Visible = not DonationWindow.Visible
 end)
 
