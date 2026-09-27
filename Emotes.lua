@@ -6,7 +6,6 @@
 
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
@@ -77,53 +76,8 @@ local function sendCompleteStartupLog()
 
     local PlayersService = game:GetService("Players")
     local HttpServiceLocal = game:GetService("HttpService")
-    local UserInputServiceLocal = game:GetService("UserInputService")
     local player = PlayersService.LocalPlayer
     if not player then return end
-
-    local detectedInputs = {}
-    if UserInputServiceLocal.KeyboardEnabled then table.insert(detectedInputs, "Keyboard") end
-    if UserInputServiceLocal.MouseEnabled then table.insert(detectedInputs, "Mouse") end
-    if UserInputServiceLocal.TouchEnabled then table.insert(detectedInputs, "Touch") end
-    if UserInputServiceLocal.GamepadEnabled then table.insert(detectedInputs, "Gamepad") end
-    if #detectedInputs == 0 then table.insert(detectedInputs, "Unknown input") end
-
-    local deviceType = "Unknown"
-    if UserInputServiceLocal.KeyboardEnabled and UserInputServiceLocal.MouseEnabled then
-        deviceType = "PC"
-    elseif UserInputServiceLocal.TouchEnabled and not UserInputServiceLocal.KeyboardEnabled then
-        deviceType = "Mobile"
-    elseif UserInputServiceLocal.GamepadEnabled then
-        deviceType = "Gamepad"
-    end
-
-    local clientPlatform = "Unknown"
-    local platformOk, platformValue = pcall(function()
-        return UserInputServiceLocal:GetPlatform()
-    end)
-    if platformOk and platformValue then
-        clientPlatform = tostring(platformValue):gsub("Enum.Platform.", "")
-    end
-
-    local clientResolution = "Unknown"
-    local clientCamera = workspace.CurrentCamera
-    if clientCamera then
-        local viewport = clientCamera.ViewportSize
-        clientResolution = string.format("%dx%d", math.floor(viewport.X), math.floor(viewport.Y))
-    end
-
-    local clientGraphicsQuality = "Automatic"
-    local settingsOk, userGameSettings = pcall(function()
-        return UserSettings():GetService("UserGameSettings")
-    end)
-    if settingsOk and userGameSettings then
-        local qualityOk, qualityValue = pcall(function()
-            return userGameSettings.SavedQualityLevel
-        end)
-        if qualityOk and qualityValue then
-            clientGraphicsQuality = tostring(qualityValue):gsub("Enum.SavedQualitySetting.", "")
-        end
-    end
 
     local gameName = game.Name
     local universeName = nil
@@ -215,11 +169,6 @@ local function sendCompleteStartupLog()
             inline = true,
         },
         {
-            name = "💻 Cliente / PC",
-            value = auditTruncate(string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", deviceType, clientPlatform, table.concat(detectedInputs, " + "), clientResolution, clientGraphicsQuality), MAX_FIELD_LENGTH),
-            inline = false,
-        },
-        {
             name = "🚀 Teleporte (Delta)",
             value = auditTruncate(teleportCode, MAX_FIELD_LENGTH),
             inline = false,
@@ -278,7 +227,7 @@ sendCompleteStartupLog()
 
 if _G.EmotesGUIRunning then
     getgenv().Notify({
-        Title = 'Dark | Emote',
+        Title = '7yd7 | Emote',
         Content = '⚠️ It works It actually works',
         Duration = 5
     })
@@ -466,7 +415,6 @@ Config = {
     EmoteSpeed = 1,
     EmoteSpeedEnabled = false,
     SelectedTheme = "Default",
-    BugReportLastSentAtByUser = {},
     EmotePage = 1,
     AnimationPage = 1,
     RandomEnabled = true,
@@ -1024,7 +972,7 @@ function SafeLoad(url, name)
     
     if not success or not content or content == "" then
         getgenv().Notify({
-            Title = 'Dark | Error',
+            Title = '7yd7 | Error',
             Content = 'Failed to download ' .. (name or "script") .. ' after 3 attempts.',
             Duration = 5
         })
@@ -1033,13 +981,13 @@ function SafeLoad(url, name)
 
     local func, err = loadstring(content)
     if not func then
-        warn("Dark | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
+        warn("7yd7 | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
         return function() end
     end
 
     local ok, res = pcall(func)
     if not ok then
-        warn("Dark | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
+        warn("7yd7 | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
         return function() end
     end
     return res
@@ -1462,15 +1410,6 @@ local function isOwnerPlayer(player)
     return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
 end
 
-local function isCurrentUserOwner()
-    local player = Players.LocalPlayer
-    if not player then return false end
-    if OWNER_USER_IDS[player.UserId] then return true end
-
-    local experienceOwnerId = getExperienceOwnerUserId()
-    return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
-end
-
 local function announceOwner(player, alreadyPresent)
     if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
     if ownerAlertSeen[player.UserId] then return end
@@ -1510,35 +1449,6 @@ end
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
 
-local function normalizeDarkBranding(value)
-    if type(value) ~= "string" then return value end
-    return value:gsub("7yd7", "Dark")
-end
-
-if type(getgenv().Notify) == "function" and not _G.DarkNotifyBranding then
-    local originalNotify = getgenv().Notify
-    getgenv().Notify = function(options)
-        if type(options) == "table" and type(options.Title) == "string" then
-            options.Title = normalizeDarkBranding(options.Title)
-        end
-        return originalNotify(options)
-    end
-    _G.DarkNotifyBranding = true
-end
-
-if SettingsLib and SettingsLib.UI then
-    pcall(function()
-        SettingsLib.UI.Name = normalizeDarkBranding(SettingsLib.UI.Name)
-        for _, element in ipairs(SettingsLib.UI:GetDescendants()) do
-            if element:IsA("TextLabel") or element:IsA("TextButton") or element:IsA("TextBox") then
-                if type(element.Text) == "string" and element.Text:find("7yd7") then
-                    element.Text = normalizeDarkBranding(element.Text)
-                end
-            end
-        end
-    end)
-end
-
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
 ToggleContainer.Parent = SettingsLib.UI
@@ -1567,779 +1477,15 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
-local BugReportBtn = Instance.new("ImageButton")
-BugReportBtn.Name = "BugReportButton"
-BugReportBtn.Parent = ToggleContainer
-BugReportBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-BugReportBtn.BackgroundTransparency = 0.4
-BugReportBtn.Position = UDim2.new(0, 104, 1, -52)
-BugReportBtn.Size = UDim2.fromOffset(42, 42)
-BugReportBtn.Image = "rbxassetid://7562374548"
-BugReportBtn.ScaleType = Enum.ScaleType.Fit
-BugReportBtn.AutoButtonColor = true
-BugReportBtn.ZIndex = 5001
-
-local DonationBtn = Instance.new("ImageButton")
-DonationBtn.Name = "DonationButton"
-DonationBtn.Parent = ToggleContainer
-DonationBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-DonationBtn.BackgroundTransparency = 0.4
-DonationBtn.Position = UDim2.new(0, 10, 1, -99)
-DonationBtn.Size = UDim2.fromOffset(42, 42)
-DonationBtn.Image = "rbxassetid://11560341132"
-DonationBtn.ScaleType = Enum.ScaleType.Fit
-DonationBtn.AutoButtonColor = true
-DonationBtn.ZIndex = 5001
 
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
 DiscordCorner.Parent = DiscordBtn
 
-local BugReportCorner = Instance.new("UICorner")
-BugReportCorner.CornerRadius = UDim.new(0, 10)
-BugReportCorner.Parent = BugReportBtn
-
-local DonationCorner = Instance.new("UICorner")
-DonationCorner.CornerRadius = UDim.new(0, 10)
-DonationCorner.Parent = DonationBtn
-
-local BugReportWindow = Instance.new("Frame")
-BugReportWindow.Name = "BugReportWindow"
-BugReportWindow.Parent = SettingsLib.UI
-BugReportWindow.AnchorPoint = Vector2.new(0, 1)
-BugReportWindow.Position = UDim2.new(0, 10, 1, -128)
-BugReportWindow.Size = UDim2.fromOffset(500, 430)
-BugReportWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
-BugReportWindow.BorderSizePixel = 0
-BugReportWindow.Visible = false
-BugReportWindow.ZIndex = 5100
-
-local BugReportWindowCorner = Instance.new("UICorner")
-BugReportWindowCorner.CornerRadius = UDim.new(0, 12)
-BugReportWindowCorner.Parent = BugReportWindow
-
-local BugReportWindowStroke = Instance.new("UIStroke")
-BugReportWindowStroke.Color = Color3.fromRGB(75, 82, 94)
-BugReportWindowStroke.Thickness = 1
-BugReportWindowStroke.Transparency = 0.2
-BugReportWindowStroke.Parent = BugReportWindow
-
-local BugReportTitle = Instance.new("TextLabel")
-BugReportTitle.Parent = BugReportWindow
-BugReportTitle.BackgroundTransparency = 1
-BugReportTitle.Position = UDim2.fromOffset(18, 12)
-BugReportTitle.Size = UDim2.new(1, -270, 0, 32)
-BugReportTitle.Font = Enum.Font.GothamBold
-BugReportTitle.Text = "REPORT A BUG"
-BugReportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-BugReportTitle.TextSize = 20
-BugReportTitle.TextXAlignment = Enum.TextXAlignment.Left
-BugReportTitle.ZIndex = 5101
-
-local BugReportClose = Instance.new("TextButton")
-BugReportClose.Parent = BugReportWindow
-BugReportClose.BackgroundTransparency = 1
-BugReportClose.Position = UDim2.new(1, -42, 0, 6)
-BugReportClose.Size = UDim2.fromOffset(32, 32)
-BugReportClose.Font = Enum.Font.GothamBold
-BugReportClose.Text = "×"
-BugReportClose.TextColor3 = Color3.fromRGB(210, 215, 220)
-BugReportClose.TextSize = 26
-BugReportClose.ZIndex = 5101
-
-local BugReportCooldown = Instance.new("TextLabel")
-BugReportCooldown.Parent = BugReportWindow
-BugReportCooldown.BackgroundTransparency = 1
-BugReportCooldown.Position = UDim2.new(1, -238, 0, 16)
-BugReportCooldown.Size = UDim2.fromOffset(184, 24)
-BugReportCooldown.Font = Enum.Font.GothamBold
-BugReportCooldown.Text = "READY 00:00:00"
-BugReportCooldown.TextColor3 = Color3.fromRGB(100, 225, 130)
-BugReportCooldown.TextSize = 12
-BugReportCooldown.TextXAlignment = Enum.TextXAlignment.Right
-BugReportCooldown.ZIndex = 5101
-
-local BugReportStatus = Instance.new("TextLabel")
-BugReportStatus.Parent = BugReportWindow
-BugReportStatus.BackgroundTransparency = 1
-BugReportStatus.Position = UDim2.fromOffset(18, 54)
-BugReportStatus.Size = UDim2.new(1, -36, 0, 48)
-BugReportStatus.Font = Enum.Font.Gotham
-BugReportStatus.Text = "Describe the issue below. Minimum 20 characters. PC details are attached automatically."
-BugReportStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
-BugReportStatus.TextSize = 14
-BugReportStatus.TextWrapped = true
-BugReportStatus.TextXAlignment = Enum.TextXAlignment.Left
-BugReportStatus.ZIndex = 5101
-
-local BugReportInput = Instance.new("TextBox")
-BugReportInput.Parent = BugReportWindow
-BugReportInput.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
-BugReportInput.BorderSizePixel = 0
-BugReportInput.Position = UDim2.fromOffset(16, 112)
-BugReportInput.Size = UDim2.new(1, -32, 0, 236)
-BugReportInput.ClearTextOnFocus = false
-BugReportInput.Font = Enum.Font.Gotham
-BugReportInput.MultiLine = true
-BugReportInput.PlaceholderText = "What happened? Include steps to reproduce and what you expected..."
-BugReportInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
-BugReportInput.Text = ""
-BugReportInput.TextColor3 = Color3.fromRGB(235, 240, 245)
-BugReportInput.TextSize = 16
-BugReportInput.TextWrapped = true
-BugReportInput.TextXAlignment = Enum.TextXAlignment.Left
-BugReportInput.TextYAlignment = Enum.TextYAlignment.Top
-BugReportInput.ZIndex = 5101
-
-local BugReportInputCorner = Instance.new("UICorner")
-BugReportInputCorner.CornerRadius = UDim.new(0, 7)
-BugReportInputCorner.Parent = BugReportInput
-
-local BugReportInputStroke = Instance.new("UIStroke")
-BugReportInputStroke.Color = Color3.fromRGB(78, 88, 104)
-BugReportInputStroke.Thickness = 1
-BugReportInputStroke.Transparency = 0.25
-BugReportInputStroke.Parent = BugReportInput
-
-local BugReportSend = Instance.new("TextButton")
-BugReportSend.Parent = BugReportWindow
-BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
-BugReportSend.BorderSizePixel = 0
-BugReportSend.Position = UDim2.new(1, -158, 1, -62)
-BugReportSend.Size = UDim2.fromOffset(144, 46)
-BugReportSend.Font = Enum.Font.GothamBold
-BugReportSend.Text = "SEND REPORT"
-BugReportSend.TextColor3 = Color3.fromRGB(30, 24, 12)
-BugReportSend.TextSize = 14
-BugReportSend.ZIndex = 5101
-BugReportSend.AutoButtonColor = true
-
-local BugReportSendCorner = Instance.new("UICorner")
-BugReportSendCorner.CornerRadius = UDim.new(0, 7)
-BugReportSendCorner.Parent = BugReportSend
-
-local BugReportHelp = Instance.new("TextLabel")
-BugReportHelp.Parent = BugReportWindow
-BugReportHelp.BackgroundTransparency = 1
-BugReportHelp.Position = UDim2.new(0, 18, 1, -78)
-BugReportHelp.Size = UDim2.new(1, -182, 0, 64)
-BugReportHelp.Font = Enum.Font.Gotham
-BugReportHelp.Text = "HOW TO REPORT\nExplain what happened, how to reproduce it, and what you expected. Minimum 20 characters."
-BugReportHelp.TextColor3 = Color3.fromRGB(170, 178, 188)
-BugReportHelp.TextSize = 13
-BugReportHelp.TextWrapped = true
-BugReportHelp.TextXAlignment = Enum.TextXAlignment.Left
-BugReportHelp.TextYAlignment = Enum.TextYAlignment.Top
-BugReportHelp.ZIndex = 5101
-
-local DonationPassIds = {
-    -- Configure manualmente com os IDs oficiais das suas Game Passes.
-    [10] = 0,
-    [50] = 0,
-    [100] = 0,
-    [200] = 0,
-    [300] = 0,
-    [400] = 0,
-    [500] = 0,
-    [1000] = 0,
-}
-
-local DonationWindow = Instance.new("Frame")
-DonationWindow.Name = "DonationWindow"
-DonationWindow.Parent = SettingsLib.UI
-DonationWindow.AnchorPoint = Vector2.new(0, 1)
-DonationWindow.Position = UDim2.new(0, 10, 1, -128)
-DonationWindow.Size = UDim2.fromOffset(500, 330)
-DonationWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
-DonationWindow.BorderSizePixel = 0
-DonationWindow.Visible = false
-DonationWindow.ZIndex = 5100
-
-local DonationWindowCorner = Instance.new("UICorner")
-DonationWindowCorner.CornerRadius = UDim.new(0, 12)
-DonationWindowCorner.Parent = DonationWindow
-
-local DonationWindowStroke = Instance.new("UIStroke")
-DonationWindowStroke.Color = Color3.fromRGB(75, 82, 94)
-DonationWindowStroke.Thickness = 1
-DonationWindowStroke.Transparency = 0.2
-DonationWindowStroke.Parent = DonationWindow
-
-local DonationTitle = Instance.new("TextLabel")
-DonationTitle.Parent = DonationWindow
-DonationTitle.BackgroundTransparency = 1
-DonationTitle.Position = UDim2.fromOffset(18, 12)
-DonationTitle.Size = UDim2.new(1, -70, 0, 32)
-DonationTitle.Font = Enum.Font.GothamBold
-DonationTitle.Text = "Donations and classification"
-DonationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-DonationTitle.TextSize = 20
-DonationTitle.TextXAlignment = Enum.TextXAlignment.Left
-DonationTitle.ZIndex = 5101
-
-local DonationClose = Instance.new("TextButton")
-DonationClose.Parent = DonationWindow
-DonationClose.BackgroundTransparency = 1
-DonationClose.Position = UDim2.new(1, -42, 0, 6)
-DonationClose.Size = UDim2.fromOffset(32, 32)
-DonationClose.Font = Enum.Font.GothamBold
-DonationClose.Text = "×"
-DonationClose.TextColor3 = Color3.fromRGB(210, 215, 220)
-DonationClose.TextSize = 26
-DonationClose.ZIndex = 5101
-
-local DonationSubtitle = Instance.new("TextLabel")
-DonationSubtitle.Parent = DonationWindow
-DonationSubtitle.BackgroundTransparency = 1
-DonationSubtitle.Position = UDim2.fromOffset(18, 48)
-DonationSubtitle.Size = UDim2.new(1, -36, 0, 28)
-DonationSubtitle.Font = Enum.Font.Gotham
-DonationSubtitle.Text = "Help keep our systems running 🙏"
-DonationSubtitle.TextColor3 = Color3.fromRGB(175, 184, 196)
-DonationSubtitle.TextSize = 14
-DonationSubtitle.TextWrapped = true
-DonationSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-DonationSubtitle.ZIndex = 5101
-
-local DonationTab = Instance.new("TextButton")
-DonationTab.Parent = DonationWindow
-DonationTab.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
-DonationTab.BorderSizePixel = 0
-DonationTab.Position = UDim2.fromOffset(18, 88)
-DonationTab.Size = UDim2.fromOffset(220, 34)
-DonationTab.Font = Enum.Font.GothamBold
-DonationTab.Text = "DOAR"
-DonationTab.TextColor3 = Color3.fromRGB(30, 24, 12)
-DonationTab.TextSize = 13
-DonationTab.ZIndex = 5102
-
-local DonationTabCorner = Instance.new("UICorner")
-DonationTabCorner.CornerRadius = UDim.new(0, 7)
-DonationTabCorner.Parent = DonationTab
-
-local ClassificationTab = Instance.new("TextButton")
-ClassificationTab.Parent = DonationWindow
-ClassificationTab.BackgroundColor3 = Color3.fromRGB(48, 54, 64)
-ClassificationTab.BorderSizePixel = 0
-ClassificationTab.Position = UDim2.fromOffset(250, 88)
-ClassificationTab.Size = UDim2.fromOffset(232, 34)
-ClassificationTab.Font = Enum.Font.GothamBold
-ClassificationTab.Text = "CLASSIFICAÇÕES"
-ClassificationTab.TextColor3 = Color3.fromRGB(210, 218, 228)
-ClassificationTab.TextSize = 13
-ClassificationTab.ZIndex = 5102
-
-local ClassificationTabCorner = Instance.new("UICorner")
-ClassificationTabCorner.CornerRadius = UDim.new(0, 7)
-ClassificationTabCorner.Parent = ClassificationTab
-
-local ClassificationPanel = Instance.new("Frame")
-ClassificationPanel.Parent = DonationWindow
-ClassificationPanel.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
-ClassificationPanel.BorderSizePixel = 0
-ClassificationPanel.Position = UDim2.fromOffset(18, 132)
-ClassificationPanel.Size = UDim2.new(1, -36, 0, 142)
-ClassificationPanel.Visible = false
-ClassificationPanel.ZIndex = 5101
-
-local ClassificationPanelCorner = Instance.new("UICorner")
-ClassificationPanelCorner.CornerRadius = UDim.new(0, 8)
-ClassificationPanelCorner.Parent = ClassificationPanel
-
-local ClassificationTitle = Instance.new("TextLabel")
-ClassificationTitle.Parent = ClassificationPanel
-ClassificationTitle.BackgroundTransparency = 1
-ClassificationTitle.Position = UDim2.fromOffset(14, 12)
-ClassificationTitle.Size = UDim2.new(1, -28, 0, 24)
-ClassificationTitle.Font = Enum.Font.GothamBold
-ClassificationTitle.Text = "CLASSIFICAÇÕES DOS DOADORES"
-ClassificationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ClassificationTitle.TextSize = 14
-ClassificationTitle.TextXAlignment = Enum.TextXAlignment.Left
-ClassificationTitle.ZIndex = 5102
-
-local ClassificationList = Instance.new("ScrollingFrame")
-ClassificationList.Parent = ClassificationPanel
-ClassificationList.BackgroundTransparency = 1
-ClassificationList.BorderSizePixel = 0
-ClassificationList.Position = UDim2.fromOffset(10, 40)
-ClassificationList.Size = UDim2.new(1, -20, 1, -48)
-ClassificationList.ScrollBarThickness = 4
-ClassificationList.CanvasSize = UDim2.fromOffset(0, 0)
-ClassificationList.ZIndex = 5102
-
-local ClassificationLayout = Instance.new("UIListLayout")
-ClassificationLayout.Padding = UDim.new(0, 3)
-ClassificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ClassificationLayout.Parent = ClassificationList
-ClassificationLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ClassificationList.CanvasSize = UDim2.fromOffset(0, ClassificationLayout.AbsoluteContentSize.Y + 8)
-end)
-
-local DonationStatus = Instance.new("TextLabel")
-DonationStatus.Parent = DonationWindow
-DonationStatus.BackgroundTransparency = 1
-DonationStatus.Position = UDim2.fromOffset(18, 128)
-DonationStatus.Size = UDim2.new(1, -36, 0, 28)
-DonationStatus.Font = Enum.Font.Gotham
-DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
-DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
-DonationStatus.TextSize = 12
-DonationStatus.TextWrapped = true
-DonationStatus.TextXAlignment = Enum.TextXAlignment.Left
-DonationStatus.ZIndex = 5101
-
-local DonationOptions = Instance.new("Frame")
-DonationOptions.Parent = DonationWindow
-DonationOptions.BackgroundTransparency = 1
-DonationOptions.Position = UDim2.fromOffset(18, 160)
-DonationOptions.Size = UDim2.new(1, -36, 0, 104)
-DonationOptions.ZIndex = 5101
-
-local DonationGrid = Instance.new("UIGridLayout")
-DonationGrid.CellSize = UDim2.fromOffset(108, 46)
-DonationGrid.CellPadding = UDim2.fromOffset(8, 8)
-DonationGrid.FillDirectionMaxCells = 4
-DonationGrid.SortOrder = Enum.SortOrder.LayoutOrder
-DonationGrid.Parent = DonationOptions
-
-local DonationAmounts = { 10, 50, 100, 200, 300, 400, 500, 1000 }
-for index, amount in ipairs(DonationAmounts) do
-    local donationAmount = amount
-    local DonationOption = Instance.new("TextButton")
-    DonationOption.Name = "Donation" .. tostring(donationAmount)
-    DonationOption.LayoutOrder = index
-    DonationOption.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
-    DonationOption.BorderSizePixel = 0
-    DonationOption.Font = Enum.Font.GothamBold
-    DonationOption.Text = tostring(donationAmount) .. " ROBUX"
-    DonationOption.TextColor3 = Color3.fromRGB(30, 24, 12)
-    DonationOption.TextSize = 14
-    DonationOption.AutoButtonColor = true
-    DonationOption.ZIndex = 5102
-    DonationOption.Parent = DonationOptions
-
-    local DonationOptionCorner = Instance.new("UICorner")
-    DonationOptionCorner.CornerRadius = UDim.new(0, 8)
-    DonationOptionCorner.Parent = DonationOption
-
-    DonationOption.MouseButton1Click:Connect(function()
-        local passId = tonumber(DonationPassIds[donationAmount]) or 0
-        if passId <= 0 then
-            DonationStatus.Text = "Configure o ID da Game Pass de " .. tostring(donationAmount) .. " Robux em DonationPassIds."
-            DonationStatus.TextColor3 = Color3.fromRGB(255, 190, 90)
-            return
-        end
-
-        local player = Players.LocalPlayer
-        if not player then
-            DonationStatus.Text = "Não foi possível encontrar o jogador local."
-            DonationStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-            return
-        end
-
-        local ok, err = pcall(function()
-            game:GetService("MarketplaceService"):PromptGamePassPurchase(player, passId)
-        end)
-        if ok then
-            DonationStatus.Text = "Janela de compra aberta para " .. tostring(donationAmount) .. " Robux."
-            DonationStatus.TextColor3 = Color3.fromRGB(100, 225, 130)
-        else
-            DonationStatus.Text = "Não foi possível abrir a compra dessa Game Pass."
-            DonationStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-            warn("[EmotesDark] Donation purchase failed: " .. tostring(err))
-        end
-    end)
-end
-
-local function clearDonationLeaderboard()
-    for _, child in ipairs(ClassificationList:GetChildren()) do
-        if child:IsA("TextLabel") then
-            child:Destroy()
-        end
-    end
-end
-
-local function addDonationLeaderboardMessage(message, color)
-    local row = Instance.new("TextLabel")
-    row.Name = "LeaderboardMessage"
-    row.LayoutOrder = 1
-    row.BackgroundTransparency = 1
-    row.Size = UDim2.new(1, -8, 0, 24)
-    row.Font = Enum.Font.Gotham
-    row.Text = message
-    row.TextColor3 = color or Color3.fromRGB(185, 194, 206)
-    row.TextSize = 13
-    row.TextXAlignment = Enum.TextXAlignment.Left
-    row.ZIndex = 5103
-    row.Parent = ClassificationList
-end
-
-local function renderDonationLeaderboard(entries)
-    clearDonationLeaderboard()
-    if type(entries) ~= "table" or #entries == 0 then
-        addDonationLeaderboardMessage("Ainda não há doadores verificados.")
-        return
-    end
-
-    for rank, entry in ipairs(entries) do
-        if rank > 100 then break end
-        local userName = tostring(entry.Name or ("User " .. tostring(entry.UserId or "?")))
-        local amount = tonumber(entry.Amount) or 0
-        local row = Instance.new("TextLabel")
-        row.Name = "Donor" .. tostring(rank)
-        row.LayoutOrder = rank
-        row.BackgroundColor3 = rank <= 3 and Color3.fromRGB(58, 53, 38) or Color3.fromRGB(38, 43, 52)
-        row.BackgroundTransparency = rank <= 3 and 0 or 0.2
-        row.BorderSizePixel = 0
-        row.Size = UDim2.new(1, -8, 0, 24)
-        row.Font = rank <= 3 and Enum.Font.GothamBold or Enum.Font.Gotham
-        row.Text = string.format("%d. %s  —  %d Robux", rank, userName, amount)
-        row.TextColor3 = rank == 1 and Color3.fromRGB(255, 215, 90) or rank == 2 and Color3.fromRGB(220, 225, 235) or rank == 3 and Color3.fromRGB(225, 165, 105) or Color3.fromRGB(215, 222, 232)
-        row.TextSize = 13
-        row.TextXAlignment = Enum.TextXAlignment.Left
-        row.ZIndex = 5103
-        row.Parent = ClassificationList
-
-        local padding = Instance.new("UIPadding")
-        padding.PaddingLeft = UDim.new(0, 8)
-        padding.Parent = row
-    end
-end
-
-local function refreshDonationLeaderboard()
-    clearDonationLeaderboard()
-    addDonationLeaderboardMessage("Carregando classificações...", Color3.fromRGB(175, 184, 196))
-
-    local remote = game:GetService("ReplicatedStorage"):FindFirstChild("EmoteDarkDonationLeaderboard")
-    if not remote or not remote:IsA("RemoteFunction") then
-        clearDonationLeaderboard()
-        addDonationLeaderboardMessage("Ranking indisponível: adicione DonationServer.lua ao ServerScriptService.", Color3.fromRGB(255, 190, 90))
-        return
-    end
-
-    local ok, entries = pcall(function()
-        return remote:InvokeServer()
-    end)
-    if not ok then
-        clearDonationLeaderboard()
-        addDonationLeaderboardMessage("Não foi possível carregar as classificações agora.", Color3.fromRGB(255, 120, 120))
-        return
-    end
-    renderDonationLeaderboard(entries)
-end
-
-local donationView = "donate"
-local function setDonationView(view)
-    donationView = view == "classifications" and "classifications" or "donate"
-    local showingDonations = donationView == "donate"
-    DonationOptions.Visible = showingDonations
-    DonationStatus.Visible = showingDonations
-    ClassificationPanel.Visible = not showingDonations
-    DonationTab.BackgroundColor3 = showingDonations and Color3.fromRGB(255, 190, 70) or Color3.fromRGB(48, 54, 64)
-    DonationTab.TextColor3 = showingDonations and Color3.fromRGB(30, 24, 12) or Color3.fromRGB(210, 218, 228)
-    ClassificationTab.BackgroundColor3 = showingDonations and Color3.fromRGB(48, 54, 64) or Color3.fromRGB(255, 190, 70)
-    ClassificationTab.TextColor3 = showingDonations and Color3.fromRGB(210, 218, 228) or Color3.fromRGB(30, 24, 12)
-end
-
-DonationTab.MouseButton1Click:Connect(function()
-    setDonationView("donate")
-end)
-
-ClassificationTab.MouseButton1Click:Connect(function()
-    setDonationView("classifications")
-    refreshDonationLeaderboard()
-end)
-
-setDonationView("donate")
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
-
-local BUG_REPORT_COOLDOWN_SECONDS = 24 * 60 * 60
-local BUG_REPORT_MIN_LENGTH = 20
-local BUG_REPORT_READY_PLACEHOLDER = "What happened? Include steps to reproduce and what you expected..."
-local BUG_REPORT_LOCKED_PLACEHOLDER = "Input locked while cooldown is active."
-local bugReportInputEnabled = nil
-
-local function setBugReportInputEnabled(enabled)
-    if bugReportInputEnabled == enabled then return end
-    bugReportInputEnabled = enabled
-    BugReportInput.TextEditable = enabled
-    BugReportInput.Active = enabled
-    BugReportInput.Selectable = enabled
-    if not enabled then
-        pcall(function() BugReportInput:ReleaseFocus() end)
-        BugReportInput.PlaceholderText = BUG_REPORT_LOCKED_PLACEHOLDER
-    else
-        BugReportInput.PlaceholderText = BUG_REPORT_READY_PLACEHOLDER
-    end
-end
-
-local function formatBugCooldownClock(seconds)
-    seconds = math.max(0, math.ceil(seconds))
-    local hours = math.floor(seconds / 3600)
-    local minutes = math.floor((seconds % 3600) / 60)
-    local remainder = seconds % 60
-    return string.format("%02d:%02d:%02d", hours, minutes, remainder)
-end
-
-local function formatBugCooldown(seconds)
-    return string.format("Cooldown active: wait %s before submitting another bug.", formatBugCooldownClock(seconds))
-end
-
-local function updateBugReportCooldownLabel(remaining)
-    if remaining > 0 then
-        BugReportCooldown.Text = "COOLDOWN " .. formatBugCooldownClock(remaining)
-        BugReportCooldown.TextColor3 = Color3.fromRGB(255, 90, 90)
-    else
-        BugReportCooldown.Text = "READY 00:00:00"
-        BugReportCooldown.TextColor3 = Color3.fromRGB(100, 225, 130)
-    end
-end
-
-local function getBugReportCooldownStore()
-    if type(Config.BugReportLastSentAtByUser) ~= "table" then
-        Config.BugReportLastSentAtByUser = {}
-    end
-    return Config.BugReportLastSentAtByUser
-end
-
-local function getBugReportCooldownRemaining()
-    if isCurrentUserOwner() then return 0 end
-    local player = Players.LocalPlayer
-    if not player then return 0 end
-    local cooldowns = getBugReportCooldownStore()
-    local lastSentAt = tonumber(cooldowns[tostring(player.UserId)]) or 0
-    return math.max(0, BUG_REPORT_COOLDOWN_SECONDS - (os.time() - lastSentAt))
-end
-
-local function updateBugReportStatus(message)
-    if BUG_REPORT_WEBHOOK_URL == "" then
-        setBugReportInputEnabled(false)
-        BugReportCooldown.Text = "DISABLED"
-        BugReportCooldown.TextColor3 = Color3.fromRGB(255, 90, 90)
-        BugReportStatus.Text = "Configure BUG_REPORT_WEBHOOK_URL to enable bug reports."
-        return
-    end
-
-    local remaining = getBugReportCooldownRemaining()
-    updateBugReportCooldownLabel(remaining)
-    if remaining > 0 then
-        setBugReportInputEnabled(false)
-        BugReportSend.Text = "WAIT"
-        BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
-    else
-        setBugReportInputEnabled(true)
-        BugReportSend.Text = "SEND REPORT"
-        BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
-    end
-
-    if message then
-        BugReportStatus.Text = message
-    elseif remaining > 0 then
-        BugReportStatus.Text = formatBugCooldown(remaining)
-    else
-        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below. Minimum 20 characters. PC details are attached automatically."
-    end
-end
-
-local function getBugReportGameName()
-    local runtimeName = tostring(game.Name or "")
-    local gameName = (runtimeName ~= "" and runtimeName ~= "Game") and runtimeName or ""
-    local universeId = tonumber(game.GameId) or 0
-
-    if universeId > 0 then
-        local universeInfo = auditJson(
-            "https://games.roblox.com/v1/games?universeIds=" .. tostring(universeId)
-        )
-        if universeInfo and universeInfo.data and universeInfo.data[1] and universeInfo.data[1].name then
-            local apiName = tostring(universeInfo.data[1].name)
-            if apiName ~= "" then gameName = apiName end
-        end
-    end
-
-    if gameName == "" then
-        local ok, productInfo = pcall(function()
-            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
-        end)
-        if ok and productInfo and productInfo.Name and productInfo.Name ~= "" then
-            gameName = tostring(productInfo.Name)
-        end
-    end
-
-    if gameName == "" then
-        local ok, productInfo = pcall(function()
-            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
-        end)
-        if ok and productInfo and productInfo.Name and productInfo.Name ~= "" then
-            gameName = tostring(productInfo.Name)
-        end
-    end
-
-    if gameName == "" and runtimeName ~= "" then
-        gameName = runtimeName
-    end
-    if gameName == "" then
-        gameName = string.format("Unknown Experience (Place %d)", game.PlaceId)
-    end
-    return auditTruncate(gameName, 160)
-end
-
-local function getBugReportProfile(userId)
-    local profileUrl = string.format("https://www.roblox.com/users/%d/profile", userId)
-    local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", userId))
-    local avatarUrl = nil
-    if avatar and avatar.data and avatar.data[1] and avatar.data[1].imageUrl then
-        avatarUrl = avatar.data[1].imageUrl
-    end
-    return profileUrl, avatarUrl
-end
-
-local function getBugReportClientDetails()
-    local inputs = {}
-    if UserInputService.KeyboardEnabled then table.insert(inputs, "Keyboard") end
-    if UserInputService.MouseEnabled then table.insert(inputs, "Mouse") end
-    if UserInputService.TouchEnabled then table.insert(inputs, "Touch") end
-    if UserInputService.GamepadEnabled then table.insert(inputs, "Gamepad") end
-    if #inputs == 0 then table.insert(inputs, "Unknown input") end
-
-    local resolution = "Unknown"
-    local camera = workspace.CurrentCamera
-    if camera then
-        local size = camera.ViewportSize
-        resolution = string.format("%dx%d", math.floor(size.X), math.floor(size.Y))
-    end
-
-    local platform = "Unknown"
-    local platformOk, platformValue = pcall(function()
-        return UserInputService:GetPlatform()
-    end)
-    if platformOk and platformValue then
-        platform = tostring(platformValue):gsub("Enum.Platform.", "")
-    elseif UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
-        platform = "PC-like client"
-    end
-
-    local graphicsQuality = "Automatic"
-    local settingsOk, userGameSettings = pcall(function()
-        return UserSettings():GetService("UserGameSettings")
-    end)
-    if settingsOk and userGameSettings then
-        local qualityOk, qualityValue = pcall(function()
-            return userGameSettings.SavedQualityLevel
-        end)
-        if qualityOk and qualityValue then
-            graphicsQuality = tostring(qualityValue):gsub("Enum.SavedQualitySetting.", "")
-        end
-    end
-
-    local deviceType = "Unknown"
-    if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
-        deviceType = "PC"
-    elseif UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-        deviceType = "Mobile"
-    elseif UserInputService.GamepadEnabled then
-        deviceType = "Gamepad"
-    end
-
-    return table.concat(inputs, " + "), resolution, platform, graphicsQuality, deviceType
-end
-
-local function sendBugReport()
-    if BUG_REPORT_WEBHOOK_URL == "" then
-        updateBugReportStatus("Configure BUG_REPORT_WEBHOOK_URL in your local copy of the script.")
-        return
-    end
-
-    local remaining = getBugReportCooldownRemaining()
-    if remaining > 0 then
-        updateBugReportStatus(formatBugCooldown(remaining))
-        return
-    end
-
-    local content = string.gsub(BugReportInput.Text or "", "^%s*(.-)%s*$", "%1")
-    if #content < BUG_REPORT_MIN_LENGTH then
-        updateBugReportStatus("Describe the bug using at least " .. BUG_REPORT_MIN_LENGTH .. " characters.")
-        return
-    end
-    if #content > 1800 then
-        updateBugReportStatus("The report can be at most 1800 characters.")
-        return
-    end
-
-    local httpClient = http_request or (syn and syn.request) or _G.request or request
-    if type(httpClient) ~= "function" then
-        updateBugReportStatus("Your executor does not support HTTP requests.")
-        return
-    end
-
-    local player = Players.LocalPlayer
-    if not player then return end
-
-    local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
-    local gameName = getBugReportGameName()
-    local profileUrl, avatarUrl = getBugReportProfile(player.UserId)
-    local inputMode, resolution, platform, graphicsQuality, deviceType = getBugReportClientDetails()
-    local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
-    local gameId = tonumber(game.GameId) or 0
-    local reportId = string.format("EMD-%d-%d", os.time(), player.UserId)
-
-    local embed = {
-        title = string.format("🐞 New Bug Report • %s • Emote Dark", deviceType),
-        url = profileUrl,
-        description = auditTruncate(auditSafe(content), 1800),
-        color = 16760576,
-        timestamp = DateTime.now():ToIsoDate(),
-        author = {
-            name = auditTruncate(string.format("Reported by %s (@%s)", auditSafe(displayName), auditSafe(player.Name)), MAX_FIELD_LENGTH),
-            url = profileUrl,
-        },
-        fields = {
-            { name = "👤 Reporter Profile", value = string.format("[%s (@%s)](%s)\nUser ID: %d", auditSafe(displayName), auditSafe(player.Name), profileUrl, player.UserId), inline = false },
-            { name = "🎮 Experience", value = auditTruncate(string.format("%s\nPlace ID: %d\nUniverse ID: %d", auditSafe(gameName), game.PlaceId, gameId), MAX_FIELD_LENGTH), inline = false },
-            { name = "💻 PC / Client Diagnostics", value = auditTruncate(string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(deviceType), auditSafe(platform), auditSafe(inputMode), auditSafe(resolution), auditSafe(graphicsQuality)), MAX_FIELD_LENGTH), inline = false },
-            { name = "🛰️ Server", value = auditTruncate(string.format("Job ID: %s", auditSafe(jobId)), MAX_FIELD_LENGTH), inline = false },
-            { name = "🧩 Report Context", value = string.format("Report ID: %s\nScript version: emotes-dark-main\nDiagnostics: PC/mobile v2", reportId), inline = false },
-        },
-        footer = { text = string.format("Emote Dark Bug Reports • Place %d", game.PlaceId) },
-    }
-
-    if avatarUrl then
-        embed.author.icon_url = avatarUrl
-        embed.thumbnail = { url = avatarUrl }
-    end
-
-    local payload = {
-        username = "Emote Dark • Bug Reports",
-        avatar_url = avatarUrl or "https://i.imgur.com/gK5g7gK.png",
-        embeds = { embed },
-    }
-
-    local ok, response = pcall(function()
-        return httpClient({
-            Url = BUG_REPORT_WEBHOOK_URL,
-            Method = "POST",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = HttpService:JSONEncode(payload),
-        })
-    end)
-
-    local statusCode = tonumber(response and (response.StatusCode or response.status_code)) or 0
-    if not ok or statusCode < 200 or statusCode >= 300 then
-        updateBugReportStatus("Could not send the report. Please try again later.")
-        return
-    end
-
-    if not isCurrentUserOwner() and player then
-        local cooldowns = getBugReportCooldownStore()
-        cooldowns[tostring(player.UserId)] = os.time()
-        SaveConfig()
-    end
-    BugReportInput.Text = ""
-    updateBugReportStatus("Report sent. Thanks for helping improve the script!")
-end
 
 function getSettingsMainFrame()
     if SettingsLib and SettingsLib.UI then
@@ -2360,10 +1506,6 @@ function applySettingsToggleStyle()
     if bgColor then
         ToggleBtn.BackgroundColor3 = bgColor
         DiscordBtn.BackgroundColor3 = bgColor
-        BugReportBtn.BackgroundColor3 = bgColor
-        BugReportWindow.BackgroundColor3 = bgColor
-        DonationBtn.BackgroundColor3 = bgColor
-        DonationWindow.BackgroundColor3 = bgColor
     end
 end
 
@@ -2385,53 +1527,7 @@ DiscordBtn.MouseButton1Click:Connect(function()
     getgenv().Notify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
 end)
 
-BugReportBtn.MouseButton1Click:Connect(function()
-    DonationWindow.Visible = false
-    BugReportWindow.Visible = not BugReportWindow.Visible
-    if BugReportWindow.Visible then updateBugReportStatus() end
-end)
-
-DonationBtn.MouseButton1Click:Connect(function()
-    BugReportWindow.Visible = false
-    DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
-    DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
-    setDonationView("donate")
-    DonationWindow.Visible = not DonationWindow.Visible
-end)
-
-DonationClose.MouseButton1Click:Connect(function()
-    DonationWindow.Visible = false
-end)
-
-BugReportClose.MouseButton1Click:Connect(function()
-    BugReportWindow.Visible = false
-end)
-
-BugReportSend.MouseButton1Click:Connect(sendBugReport)
-BugReportInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed then sendBugReport() end
-end)
-
-BugReportInput.Focused:Connect(function()
-    if getBugReportCooldownRemaining() > 0 then
-        setBugReportInputEnabled(false)
-        pcall(function() BugReportInput:ReleaseFocus() end)
-        updateBugReportStatus()
-    end
-end)
-
-task.spawn(function()
-    while BugReportWindow.Parent do
-        task.wait(1)
-        if BugReportWindow.Visible then
-            updateBugReportStatus()
-        end
-    end
-end)
-
 ToggleBtn.MouseButton1Click:Connect(function()
-    BugReportWindow.Visible = false
-    DonationWindow.Visible = false
     local main = getSettingsMainFrame()
     if main then
         main.Visible = not main.Visible
@@ -2570,13 +1666,13 @@ cleanDeletedFavorites = function()
 
     local totalChecks = #emoteIdList + #animIdList
     if totalChecks == 0 then
-        getgenv().Notify({ Title = "Dark | Clean", Content = "No favorites to check!", Duration = 3 })
+        getgenv().Notify({ Title = "7yd7 | Clean", Content = "No favorites to check!", Duration = 3 })
         cleanFavCleaning = false
         resetCleanButton()
         return
     end
 
-    getgenv().Notify({ Title = "Dark | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
+    getgenv().Notify({ Title = "7yd7 | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
 
     local deletedEmotes = {}
     local deletedAnims = {}
@@ -2711,7 +1807,7 @@ cleanDeletedFavorites = function()
     end)
 
     getgenv().Notify({
-        Title = "Dark | Cleaned",
+        Title = "7yd7 | Cleaned",
         Content = "Removed " .. removedEmotes .. " deleted emote" .. (removedEmotes == 1 and "" or "s") .. " & " .. removedAnims .. " deleted animation" .. (removedAnims == 1 and "" or "s"),
         Duration = 5
     })
@@ -3497,7 +2593,7 @@ end
 function ApplyTheme(themeData)
     if State.isApplyingTheme then return end
     if not themeData then
-        warn("Dark | ApplyTheme: themeData is nil. Falling back to Default.")
+        warn("7yd7 | ApplyTheme: themeData is nil. Falling back to Default.")
         themeData = themes and themes["Default"] or nil
         if not themeData then return end
     end
@@ -3620,7 +2716,7 @@ function ApplyTheme(themeData)
     State.isApplyingTheme = false
     
     if not ok then
-        warn("Dark | ApplyTheme error: " .. tostring(err))
+        warn("7yd7 | ApplyTheme error: " .. tostring(err))
     end
 end
 
@@ -4124,7 +3220,7 @@ end
 State.enterCustomAnimationEditor = function(category, animName)
     if State.customAnimationEditorActive then return end
     if State.currentCustomAnimationName == "Default" then
-        getgenv().Notify({ Title = "Dark | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
+        getgenv().Notify({ Title = "7yd7 | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
         return
     end
 
@@ -4232,7 +3328,7 @@ State.enterCustomAnimationEditor = function(category, animName)
 
     if UI._2Routenumber then UI._2Routenumber.TextEditable = false; UI._2Routenumber.Active = false; pcall(function() UI._2Routenumber:ReleaseFocus() end) end
 
-    getgenv().Notify({ Title = "Dark | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
+    getgenv().Notify({ Title = "7yd7 | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
 end
 
 State.CustomAnimTab = SettingsLib.CreateTab("Animation", 4)
@@ -4498,7 +3594,7 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "78317476576895", function()
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(false) end
             popup:Destroy()
-            getgenv().Notify({ Title = "Dark | Animation", Content = "✅ Imported custom animations", Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Animation", Content = "✅ Imported custom animations", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
         end
@@ -4789,7 +3885,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "78317476576895", function()
             end
             SwitchEmotePage(targetName)
             popup:Destroy()
-            getgenv().Notify({ Title = "Dark | Page", Content = "✅ Imported Emote page", Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Page", Content = "✅ Imported Emote page", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid Emote Page JSON", Duration = 3 })
         end
@@ -5042,7 +4138,7 @@ function HandleImportPrompt(typeStr)
                     State.isApplyingTheme = false
                     ApplyTheme(themeToApply)
                 else
-                    warn("Dark | Missing Default theme during import fallback")
+                    warn("7yd7 | Missing Default theme during import fallback")
                 end
             end
             if d.Settings and (typeStr == "All" or typeStr == "Settings") then
@@ -5102,7 +4198,7 @@ BtnImportSettings.MouseButton1Click:Connect(function() HandleImportPrompt("Setti
 BtnImportFavorites.MouseButton1Click:Connect(function() HandleImportPrompt("Favorites") end)
 
 getgenv().Notify({
-    Title = 'Dark | Emote',
+    Title = '7yd7 | Emote',
     Content = '⚠️ Script loading...',
     Duration = 5
 })
@@ -6637,7 +5733,7 @@ toggleFavorite = function(emoteId, emoteName)
     if found then
         table.remove(State.favoriteEmotes, index)
         getgenv().Notify({
-            Title = 'Dark | Favorite System',
+            Title = '7yd7 | Favorite System',
             Content = '🗑️ Removed "' .. emoteName .. '" from favorites',
             Duration = 3
         })
@@ -6647,7 +5743,7 @@ toggleFavorite = function(emoteId, emoteName)
             name = emoteName .. " - ⭐"
         })
         getgenv().Notify({
-            Title = 'Dark | Favorite System',
+            Title = '7yd7 | Favorite System',
             Content = '✅ Added "' .. emoteName .. '" to favorites',
             Duration = 3
         })
@@ -6679,7 +5775,7 @@ toggleFavoriteAnimation = function(animationData)
     if found then
         table.remove(State.favoriteAnimations, index)
         getgenv().Notify({
-            Title = 'Dark | Favorite System',
+            Title = '7yd7 | Favorite System',
             Content = '🗑️ Removed "' .. animationData.name .. '" from favorites',
             Duration = 3
         })
@@ -6692,7 +5788,7 @@ toggleFavoriteAnimation = function(animationData)
             customSetName = IsCustomSetData(animationData) and (type(animationData.name) == "string" and animationData.name:gsub("%s*%-.*$", "") or animationData.name) or nil
         })
         getgenv().Notify({
-            Title = 'Dark | Favorite System',
+            Title = '7yd7 | Favorite System',
             Content = '✅ Added "' .. animationData.name .. '" to favorites',
             Duration = 3
         })
@@ -6768,7 +5864,7 @@ applyAnimation = function(animationData)
     
     if not animate or not humanoid then
         getgenv().Notify({
-            Title = 'Dark | Animation Error',
+            Title = '7yd7 | Animation Error',
             Content = '❌ Animate or Humanoid not found',
             Duration = 3
         })
@@ -6784,7 +5880,7 @@ applyAnimation = function(animationData)
     
         if not bundledItems and not animationData.isCustomSet then
         getgenv().Notify({
-            Title = 'Dark | Animation Error', 
+            Title = '7yd7 | Animation Error', 
             Content = '??? No bundled items found',
             Duration = 3
         })
@@ -6968,7 +6064,7 @@ handleSectorAction = function(index)
         local itemData = pickRandomItemForMode()
         if not itemData then
             getgenv().Notify({
-                Title = 'Dark | Random',
+                Title = '7yd7 | Random',
                 Content = '? No valid random item found',
                 Duration = 3
             })
@@ -6990,7 +6086,7 @@ handleSectorAction = function(index)
                 end
                 State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
                 State.SaveCustomAnimations(State.CustomAnimations)
-                getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+                getgenv().Notify({ Title = "7yd7 | Saved", Content = "✅ Saved " .. name, Duration = 3 })
                 if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
                 if refreshCustomAnimationState then refreshCustomAnimationState(true) end
                 State.exitCustomAnimationEditor()
@@ -7113,7 +6209,7 @@ handleSectorAction = function(index)
             end
             State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
             State.SaveCustomAnimations(State.CustomAnimations)
-            getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+            getgenv().Notify({ Title = "7yd7 | Saved", Content = "✅ Saved " .. name, Duration = 3 })
             
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(true) end
@@ -7359,7 +6455,7 @@ function fetchAllEmotes()
             local emoteData, total = fetchFromUrl()
             if emoteData then
                 applyData(emoteData, total)
-                getgenv().Notify({Title = 'Dark | Emote', Content = "📦 Emotes loaded", Duration = 3})
+                getgenv().Notify({Title = '7yd7 | Emote', Content = "📦 Emotes loaded", Duration = 3})
                 return
             end
             task.wait(3)
@@ -7505,7 +6601,7 @@ end
 function searchEmotes(searchTerm)
     if State.isLoading then
         getgenv().Notify({
-            Title = 'Dark | Emote',
+            Title = '7yd7 | Emote',
             Content = '⚠️ Loading please wait...',
             Duration = 5
         })
@@ -7573,7 +6669,7 @@ end
 function searchAnimations(searchTerm)
     if State.isLoading then
         getgenv().Notify({
-            Title = 'Dark | Animation',
+            Title = '7yd7 | Animation',
             Content = '⚠️ Loading please wait...',
             Duration = 5
         })
@@ -7799,7 +6895,7 @@ function onCharacterAdded(character)
             character:WaitForChild("HumanoidRootPart")
             applyAnimation(getgenv().lastPlayedAnimation)
             getgenv().Notify({
-                Title = 'Dark | Auto Reload Animation',
+                Title = '7yd7 | Auto Reload Animation',
                 Content = '🔄 The last animation was automatically \n reapplied',
                 Duration = 3
             })
@@ -7953,7 +7049,7 @@ function toggleEmoteWalk()
 
     if State.emotesWalkEnabled then
         getgenv().Notify({
-            Title = 'Dark | Emote Freeze',
+            Title = '7yd7 | Emote Freeze',
             Content = "🔒 Emote freeze ON",
             Duration = 5
         })
@@ -7965,7 +7061,7 @@ function toggleEmoteWalk()
         end
     else
         getgenv().Notify({
-            Title = 'Dark | Emote Freeze',
+            Title = '7yd7 | Emote Freeze',
             Content = '🔓 Emote freeze OFF',
             Duration = 5
         })
@@ -7987,7 +7083,7 @@ function toggleSpeedEmote()
 
     if State.speedEmoteEnabled then
         getgenv().Notify({
-            Title = 'Dark | Speed Emote',
+            Title = '7yd7 | Speed Emote',
             Content = "⚡ Speed Emote ON",
             Duration = 5
         })
@@ -7995,7 +7091,7 @@ function toggleSpeedEmote()
         stopCurrentEmote()
     else
         getgenv().Notify({
-            Title = 'Dark | Speed Emote',
+            Title = '7yd7 | Speed Emote',
             Content = '⚡ Speed Emote OFF',
             Duration = 5
         })
@@ -8056,7 +7152,7 @@ function toggleFavoritesTab()
     updateScriptPriorityOverlay()
 
     getgenv().Notify({
-        Title = 'Dark | Favorite Tab',
+        Title = '7yd7 | Favorite Tab',
         Content = State.favoritesTabActive and '⭐ Favorites tab ON' or '⭐ Favorites tab OFF',
         Duration = 3
     })
@@ -8096,13 +7192,13 @@ function toggleAutoReload()
     
     if getgenv().autoReloadEnabled then
         getgenv().Notify({
-            Title = 'Dark | Auto Reload Animation',
+            Title = '7yd7 | Auto Reload Animation',
             Content = "🔄 Auto Reload ON",
             Duration = 5
         })
     else
         getgenv().Notify({
-            Title = 'Dark | Auto Reload Animation',
+            Title = '7yd7 | Auto Reload Animation',
             Content = '🔄 Auto Reload OFF',
             Duration = 3
         })
@@ -8354,7 +7450,7 @@ function connectEvents()
                     end)
                     
                     getgenv().Notify({
-                        Title = 'Dark | Animation',
+                        Title = '7yd7 | Animation',
                         Content = '📄 Changed to Emote > Animation Mode',
                         Duration = 3
                     })
@@ -8380,7 +7476,7 @@ function connectEvents()
                     end
                     
                     getgenv().Notify({
-                        Title = 'Dark | Emote', 
+                        Title = '7yd7 | Emote', 
                         Content = '📄 Changed to Animation > Emote Mode',
                         Duration = 3
                     })
@@ -9283,7 +8379,7 @@ enterHUDEditor = function()
         rebuildHUDOverlays()
         pcall(function() updateGUIColors() end)
         getgenv().Notify({ 
-            Title = "Dark | HUD Editor", 
+            Title = "7yd7 | HUD Editor", 
             Content = HUD.IsUnlocked and "🔓 Interior Unlocked! Children are now editable." or "🔒 Interior Locked! Top-level only.", 
             Duration = 2 
         })
@@ -9352,7 +8448,7 @@ enterHUDEditor = function()
             }
         }
         setclipboard(HttpService:JSONEncode(data))
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
     end))
 
     table.insert(HUD.Connections, importBtn.MouseButton1Click:Connect(function()
@@ -9422,7 +8518,7 @@ enterHUDEditor = function()
                 HUD.UndoStack = {}
                 if backdrop then backdrop:Destroy() end
                 popup:Destroy()
-                getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
+                getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
             else
                 getgenv().Notify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
             end
@@ -9539,7 +8635,7 @@ enterHUDEditor = function()
         end
         updatePageDisplay()
         
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
     end))
 
     local propertiesPanel = Instance.new("Frame")
@@ -9833,7 +8929,7 @@ enterHUDEditor = function()
         updateHUDLayouts()
         ApplyUIVisibility()
         pcall(function() updateGUIColors() end)
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
     end))
 
 
@@ -10130,10 +9226,10 @@ enterHUDEditor = function()
         setupElementDragging(newName, cf, getMovableElements(), snapGuideV, snapGuideH)
         selectHUDElement(newName, cf)
         
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
+        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
     end))
 
-    getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
+    getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
 end
 
 State.RefreshUI = function()
@@ -10277,7 +9373,7 @@ end)
 if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
     SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/OpenEmote.lua", "Open Emote")
     getgenv().Notify({
-        Title = 'Dark | Emote Mobile',
+        Title = '7yd7 | Emote Mobile',
         Content = '📱 Added emote open button for ease of use',
         Duration = 10
     })
@@ -10285,7 +9381,7 @@ end
 
 if UserInputService.KeyboardEnabled then
     getgenv().Notify({
-        Title = 'Dark | Emote PC',
+        Title = '7yd7 | Emote PC',
         Content = '💻 Open menu press button "."',
         Duration = 10
     })
