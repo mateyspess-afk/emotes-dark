@@ -251,7 +251,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local request = http_request or (syn and syn.request) or request
+local request = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
 local OWNER_USER_IDS = {
@@ -1631,12 +1631,17 @@ local function globalChatHeaders()
     }
 end
 
+local function globalChatClientPath(path)
+    local separator = string.find(path, "?", 1, true) and "&" or "?"
+    return path .. separator .. "client=emotes-dark-v2"
+end
+
 local function globalChatRequest(method, path, body, withSession)
     if GLOBAL_CHAT_API_URL == "" or type(request) ~= "function" then return nil, "API não configurada" end
     local headers = globalChatHeaders()
     if withSession and globalChatSessionToken then headers["Authorization"] = "Bearer " .. globalChatSessionToken end
     local ok, response = pcall(function()
-        return request({Url = GLOBAL_CHAT_API_URL .. path, Method = method, Headers = headers, Body = body and HttpService:JSONEncode(body) or nil})
+        return request({Url = GLOBAL_CHAT_API_URL .. globalChatClientPath(path), Method = method, Headers = headers, Body = body and HttpService:JSONEncode(body) or nil})
     end)
     if not ok or not response then return nil, "Falha de conexão" end
     local statusCode = tonumber(response.StatusCode) or 0
