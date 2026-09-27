@@ -5,19 +5,80 @@
 ]]
 
 
+local STARTUP_WEBHOOK_URL = ""
+
+local function sendDirectStartupLog()
+    if STARTUP_WEBHOOK_URL == "" then
+        return
+    end
+
+    local httpClient = http_request or (syn and syn.request) or request
+    if type(httpClient) ~= "function" then
+        return
+    end
+
+    local player = game:GetService("Players").LocalPlayer
+    local payload = {
+        username = "Roblox Audit",
+        embeds = {{
+            title = "Sistema executado",
+            color = 5793266,
+            timestamp = DateTime.now():ToIsoDate(),
+            fields = {
+                {
+                    name = "Jogador",
+                    value = string.format(
+                        "%s | UserId: %d",
+                        player and player.Name or "Desconhecido",
+                        player and player.UserId or 0
+                    ),
+                    inline = false,
+                },
+                {
+                    name = "Jogo",
+                    value = string.format(
+                        "%s | PlaceId: %d",
+                        game.Name,
+                        game.PlaceId
+                    ),
+                    inline = false,
+                },
+                {
+                    name = "Versão",
+                    value = "emotes-dark-main",
+                    inline = false,
+                },
+            },
+        }},
+    }
+
+    pcall(function()
+        httpClient({
+            Url = STARTUP_WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+            },
+            Body = game:GetService("HttpService"):JSONEncode(payload),
+        })
+    end)
+end
+
 local function reportScriptStarted()
     local ok, auditEvent = pcall(function()
         return game:GetService("ReplicatedStorage"):FindFirstChild("OwnedScriptStarted")
     end)
 
-    if not ok or not auditEvent or not auditEvent:IsA("RemoteEvent") then
-        return
+    if ok and auditEvent and auditEvent:IsA("RemoteEvent") then
+        pcall(function()
+            auditEvent:FireServer("emotes-dark-main")
+        end)
     end
 
-    pcall(function()
-        auditEvent:FireServer("emotes-dark-main")
-    end)
+    sendDirectStartupLog()
 end
+
+reportScriptStarted()
 
 reportScriptStarted()
 
