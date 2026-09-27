@@ -248,6 +248,13 @@ local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 local request = http_request or (syn and syn.request) or request
 
+-- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
+local OWNER_USER_IDS = {
+    -- [123456789] = true,
+}
+local OWNER_ALERT_TITLE = "👑 Dono no servidor"
+local OWNER_ALERT_DURATION = 12
+
 local State = {
     currentMode = "emote",
     savedAnimPage = 1,
@@ -334,6 +341,7 @@ local State = {
 
 Config = {
     NotifyEnabled = true,
+    OwnerAlertEnabled = true,
     SearchVisible = true,
     FavVisible = true,
     ModeVisible = true,
@@ -1174,6 +1182,64 @@ getgenv().Notify = function(data)
     end
 end
 
+local function getExperienceOwnerUserId()
+    local creatorType = game.CreatorType
+    if creatorType == Enum.CreatorType.User then
+        return tonumber(game.CreatorId)
+    end
+
+    if creatorType == Enum.CreatorType.Group then
+        local ok, groupInfo = pcall(function()
+            return game:GetService("GroupService"):GetGroupInfoAsync(game.CreatorId)
+        end)
+        if ok and groupInfo and groupInfo.Owner then
+            return tonumber(groupInfo.Owner.Id)
+        end
+    end
+
+    return nil
+end
+
+local function isOwnerPlayer(player)
+    if not player or player == Players.LocalPlayer then return false end
+    if OWNER_USER_IDS[player.UserId] then return true end
+
+    local experienceOwnerId = getExperienceOwnerUserId()
+    return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
+end
+
+local ownerAlertSeen = {}
+local function announceOwner(player, alreadyPresent)
+    if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
+    if ownerAlertSeen[player.UserId] then return end
+    ownerAlertSeen[player.UserId] = true
+
+    local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
+    local playerCount = #Players:GetPlayers()
+    local maxPlayers = Players.MaxPlayers
+    local status = alreadyPresent and "já está neste servidor" or "entrou no mesmo servidor"
+    local notify = getgenv().Notify
+    if type(notify) ~= "function" then return end
+
+    notify({
+        Title = OWNER_ALERT_TITLE,
+        Content = string.format("%s (@%s) %s • %d/%d jogadores", displayName, player.Name, status, playerCount, maxPlayers),
+        Duration = OWNER_ALERT_DURATION,
+    })
+end
+
+Players.PlayerAdded:Connect(function(player)
+    task.defer(announceOwner, player, false)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    ownerAlertSeen[player.UserId] = nil
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.defer(announceOwner, player, true)
+end
+
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
 
 local ToggleContainer = Instance.new("Frame")
@@ -1277,6 +1343,11 @@ local TogglesUI = {}
 local GeneralTab = SettingsLib.CreateTab("General", 1)
 TogglesUI.NotifyEnabled = SettingsLib.AddToggle(GeneralTab, "Show Notifications", "Receive alerts and feedback", Config.NotifyEnabled, function(v)
     Config.NotifyEnabled = v
+    SaveConfig()
+end)
+
+TogglesUI.OwnerAlertEnabled = SettingsLib.AddToggle(GeneralTab, "Owner Alert", "Alert when the experience owner joins", Config.OwnerAlertEnabled, function(v)
+    Config.OwnerAlertEnabled = v
     SaveConfig()
 end)
 
