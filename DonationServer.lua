@@ -1,6 +1,6 @@
 -- Emote Dark - Verified Donation Leaderboard
 -- Place this Script in ServerScriptService inside your Roblox experience.
--- Configure the same Game Pass IDs here and in Emotes.lua.
+-- Configure the same IDs here and in Emotes.lua.
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -18,8 +18,20 @@ local DonationPassIds = {
     [1000] = 0,
 }
 
+local DonationProductIds = {
+    [10] = 0,
+    [50] = 0,
+    [100] = 0,
+    [200] = 0,
+    [300] = 0,
+    [400] = 0,
+    [500] = 0,
+    [1000] = 0,
+}
+
 local MAX_LEADERBOARD_ENTRIES = 100
 local donationStore = DataStoreService:GetOrderedDataStore("EmoteDarkDonations_v1")
+local profileStore = DataStoreService:GetDataStore("EmoteDarkDonationProfiles_v1")
 local nameCache = {}
 
 local leaderboardRemote = ReplicatedStorage:FindFirstChild("EmoteDarkDonationLeaderboard")
@@ -45,7 +57,7 @@ local function getPlayerName(userId)
     return "User " .. tostring(userId)
 end
 
-local function calculateVerifiedTotal(player)
+local function calculateVerifiedGamePassTotal(player)
     local total = 0
     local checkedAnyPass = false
     for amount, passId in pairs(DonationPassIds) do
@@ -64,16 +76,12 @@ local function calculateVerifiedTotal(player)
             end
         end
     end
-    if not checkedAnyPass then return 0 end
+    if not checkedAnyPass then return nil end
     return total
 end
 
-local function syncPlayerDonation(player)
-    if not player or player.Parent ~= Players then return end
-    local total = calculateVerifiedTotal(player)
-    if total == nil then return end
-
-    local key = tostring(player.UserId)
+local function updateOrderedTotal(userId, total)
+    local key = tostring(userId)
     local ok, err = pcall(function()
         if total > 0 then
             donationStore:SetAsync(key, total)
@@ -82,35 +90,82 @@ local function syncPlayerDonation(player)
         end
     end)
     if not ok then
-        warn("[EmoteDark] Could not save donation for " .. player.Name .. ": " .. tostring(err))
+        warn("[EmoteDark] Could not update donation leaderboard: " .. tostring(err))
     end
+    return ok
 end
 
-local function refreshAfterPurchase(player, purchasedPassId, wasPurchased)
-    if not wasPurchased then return end
-    local expectedPass = false
-    for _, passId in pairs(DonationPassIds) do
-        if tonumber(passId) == tonumber(purchasedPassId) then
-            expectedPass = true
-            break
-        end
-    end
-    if not expectedPass then return end
-    task.delay(3, function()
-        syncPlayerDonation(player)
+local function syncPlayerGamePassDonation(player)
+    if not player or player.Parent ~= Players then return end
+    local gamePassTotal = calculateVerifiedGamePassTotal(player)
+    if gamePassTotal == nil then return end
+
+    local key = tostring(player.UserId)
+    local ok, profile = pcall(function()
+        return profileStore:UpdateAsync(key, function(oldProfile)
+            oldProfile = type(oldProfile) == "table" and oldProfile or {}
+            oldProfile.ProductTotal = tonumber(oldProfile.ProductTotal) or 0
+            oldProfile.GamePassTotal = gamePassTotal
+            oldProfile.Total = oldProfile.ProductTotal + gamePassTotal
+            return oldProfile
+        end)
     end)
+    if not ok then
+        warn("[EmoteDark] Could not save verified Game Pass total: " .. tostring(profile))
+        return
+    end
+    updateOrderedTotal(player.UserId, tonumber(profile.Total) or 0)
 end
 
-MarketplaceService.PromptGamePassPurchaseFinished:Connect(refreshAfterPurchase)
+local productAmounts = {}
+for amount, productId in pairs(DonationProductIds) do
+    productId = tonumber(productId) or 0
+    if productId > 0 then
+        productAmounts[productId] = amount
+    end
+end
+
+MarketplaceService.ProcessReceipt = function(receiptInfo)
+    local amount = productAmounts[tonumber(receiptInfo.ProductId)]
+    if not amount then
+        return Enum.ProductPurchaseDecision.NotProcessedYet
+    end
+
+    local key = tostring(receiptInfo.PlayerId)
+    local ok, profile = pcall(function()
+        return profileStore:UpdateAsync(key, function(oldProfile)
+            oldProfile = type(oldProfile) == "table" and oldProfile or {}
+            oldProfile.ProductTotal = tonumber(oldProfile.ProductTotal) or 0
+            oldProfile.GamePassTotal = tonumber(oldProfile.GamePassTotal) or 0
+            oldProfile.Receipts = type(oldProfile.Receipts) == "table" and oldProfile.Receipts or {}
+            local purchaseKey = tostring(receiptInfo.PurchaseId)
+            if not oldProfile.Receipts[purchaseKey] then
+                oldProfile.Receipts[purchaseKey] = true
+                oldProfile.ProductTotal += amount
+            end
+            oldProfile.Total = oldProfile.ProductTotal + oldProfile.GamePassTotal
+            return oldProfile
+        end)
+    end)
+    if not ok then
+        warn("[EmoteDark] Could not process donation receipt: " .. tostring(profile))
+        return Enum.ProductPurchaseDecision.NotProcessedYet
+    end
+
+    if not updateOrderedTotal(receiptInfo.PlayerId, tonumber(profile.Total) or 0) then
+        return Enum.ProductPurchaseDecision.NotProcessedYet
+    end
+    return Enum.ProductPurchaseDecision.PurchaseGranted
+end
 
 Players.PlayerAdded:Connect(function(player)
     task.delay(3, function()
-        syncPlayerDonation(player)
+        syncPlayerGamePassDonation(player)
     end)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
-    task.spawn(syncPlayerDonation, player)
+    task.spawn(syncPlayerGamePassDonation, player)
 end
 
 leaderboardRemote.OnServerInvoke = function()
