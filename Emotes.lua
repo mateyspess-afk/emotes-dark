@@ -79,12 +79,32 @@ local function sendCompleteStartupLog()
     if not player then return end
 
     local gameName = game.Name
-    local productOk, productInfo = pcall(function()
-        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
-    end)
+    local universeName = nil
 
-    if productOk and productInfo and productInfo.Name and productInfo.Name ~= "" then
-        gameName = productInfo.Name
+    -- GameId é o ID da experiência/universo; PlaceId é somente o local atual.
+    if game.GameId and game.GameId > 0 then
+        local universeInfo = auditJson(
+            "https://games.roblox.com/v1/games?universeIds=" .. tostring(game.GameId)
+        )
+
+        if universeInfo
+            and universeInfo.data
+            and universeInfo.data[1]
+            and universeInfo.data[1].name
+            and universeInfo.data[1].name ~= "" then
+            universeName = universeInfo.data[1].name
+            gameName = universeName
+        end
+    end
+
+    if not universeName then
+        local productOk, productInfo = pcall(function()
+            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+        end)
+
+        if productOk and productInfo and productInfo.Name and productInfo.Name ~= "" then
+            gameName = productInfo.Name
+        end
     end
 
     local userId = player.UserId
@@ -134,7 +154,7 @@ local function sendCompleteStartupLog()
         },
         {
             name = "🗺️ Jogo",
-            value = string.format("Nome do jogo: **%s**\nPlaceId: %d", auditSafe(gameName), game.PlaceId),
+            value = string.format("Experiência: **%s**\nPlaceId: %d", auditSafe(gameName), game.PlaceId),
             inline = false,
         },
         {
