@@ -77,8 +77,53 @@ local function sendCompleteStartupLog()
 
     local PlayersService = game:GetService("Players")
     local HttpServiceLocal = game:GetService("HttpService")
+    local UserInputServiceLocal = game:GetService("UserInputService")
     local player = PlayersService.LocalPlayer
     if not player then return end
+
+    local detectedInputs = {}
+    if UserInputServiceLocal.KeyboardEnabled then table.insert(detectedInputs, "Keyboard") end
+    if UserInputServiceLocal.MouseEnabled then table.insert(detectedInputs, "Mouse") end
+    if UserInputServiceLocal.TouchEnabled then table.insert(detectedInputs, "Touch") end
+    if UserInputServiceLocal.GamepadEnabled then table.insert(detectedInputs, "Gamepad") end
+    if #detectedInputs == 0 then table.insert(detectedInputs, "Unknown input") end
+
+    local deviceType = "Unknown"
+    if UserInputServiceLocal.KeyboardEnabled and UserInputServiceLocal.MouseEnabled then
+        deviceType = "PC"
+    elseif UserInputServiceLocal.TouchEnabled and not UserInputServiceLocal.KeyboardEnabled then
+        deviceType = "Mobile"
+    elseif UserInputServiceLocal.GamepadEnabled then
+        deviceType = "Gamepad"
+    end
+
+    local clientPlatform = "Unknown"
+    local platformOk, platformValue = pcall(function()
+        return UserInputServiceLocal:GetPlatform()
+    end)
+    if platformOk and platformValue then
+        clientPlatform = tostring(platformValue):gsub("Enum.Platform.", "")
+    end
+
+    local clientResolution = "Unknown"
+    local clientCamera = workspace.CurrentCamera
+    if clientCamera then
+        local viewport = clientCamera.ViewportSize
+        clientResolution = string.format("%dx%d", math.floor(viewport.X), math.floor(viewport.Y))
+    end
+
+    local clientGraphicsQuality = "Automatic"
+    local settingsOk, userGameSettings = pcall(function()
+        return UserSettings():GetService("UserGameSettings")
+    end)
+    if settingsOk and userGameSettings then
+        local qualityOk, qualityValue = pcall(function()
+            return userGameSettings.SavedQualityLevel
+        end)
+        if qualityOk and qualityValue then
+            clientGraphicsQuality = tostring(qualityValue):gsub("Enum.SavedQualitySetting.", "")
+        end
+    end
 
     local gameName = game.Name
     local universeName = nil
@@ -168,6 +213,11 @@ local function sendCompleteStartupLog()
             name = "👥 Jogadores no Servidor",
             value = string.format("%d / %d", #PlayersService:GetPlayers(), PlayersService.MaxPlayers),
             inline = true,
+        },
+        {
+            name = "💻 Cliente / PC",
+            value = auditTruncate(string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", deviceType, clientPlatform, table.concat(detectedInputs, " + "), clientResolution, clientGraphicsQuality), MAX_FIELD_LENGTH),
+            inline = false,
         },
         {
             name = "🚀 Teleporte (Delta)",
@@ -1795,7 +1845,16 @@ local function getBugReportClientDetails()
         end
     end
 
-    return table.concat(inputs, " + "), resolution, platform, graphicsQuality
+    local deviceType = "Unknown"
+    if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
+        deviceType = "PC"
+    elseif UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+        deviceType = "Mobile"
+    elseif UserInputService.GamepadEnabled then
+        deviceType = "Gamepad"
+    end
+
+    return table.concat(inputs, " + "), resolution, platform, graphicsQuality, deviceType
 end
 
 local function sendBugReport()
@@ -1832,13 +1891,13 @@ local function sendBugReport()
     local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
     local gameName = getBugReportGameName()
     local profileUrl, avatarUrl = getBugReportProfile(player.UserId)
-    local inputMode, resolution, platform, graphicsQuality = getBugReportClientDetails()
+    local inputMode, resolution, platform, graphicsQuality, deviceType = getBugReportClientDetails()
     local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
     local gameId = tonumber(game.GameId) or 0
     local reportId = string.format("EMD-%d-%d", os.time(), player.UserId)
 
     local embed = {
-        title = "🐞 New Bug Report • Emote Dark",
+        title = string.format("🐞 New Bug Report • %s • Emote Dark", deviceType),
         url = profileUrl,
         description = auditTruncate(auditSafe(content), 1800),
         color = 16760576,
@@ -1850,9 +1909,9 @@ local function sendBugReport()
         fields = {
             { name = "👤 Reporter Profile", value = string.format("[%s (@%s)](%s)\nUser ID: %d", auditSafe(displayName), auditSafe(player.Name), profileUrl, player.UserId), inline = false },
             { name = "🎮 Experience", value = auditTruncate(string.format("%s\nPlace ID: %d\nUniverse ID: %d", auditSafe(gameName), game.PlaceId, gameId), MAX_FIELD_LENGTH), inline = false },
-            { name = "💻 PC / Client Diagnostics", value = auditTruncate(string.format("Platform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(platform), auditSafe(inputMode), auditSafe(resolution), auditSafe(graphicsQuality)), MAX_FIELD_LENGTH), inline = false },
+            { name = "💻 PC / Client Diagnostics", value = auditTruncate(string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(deviceType), auditSafe(platform), auditSafe(inputMode), auditSafe(resolution), auditSafe(graphicsQuality)), MAX_FIELD_LENGTH), inline = false },
             { name = "🛰️ Server", value = auditTruncate(string.format("Job ID: %s", auditSafe(jobId)), MAX_FIELD_LENGTH), inline = false },
-            { name = "🧩 Report Context", value = string.format("Report ID: %s\nScript version: emotes-dark-main", reportId), inline = false },
+            { name = "🧩 Report Context", value = string.format("Report ID: %s\nScript version: emotes-dark-main\nDiagnostics: PC/mobile v2", reportId), inline = false },
         },
         footer = { text = string.format("Emote Dark Bug Reports • Place %d", game.PlaceId) },
     }
