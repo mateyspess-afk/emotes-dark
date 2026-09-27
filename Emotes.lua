@@ -104,7 +104,7 @@ local function sendCompleteStartupLog()
     local teleportCode = "Execute em um servidor online para gerar o código de teleporte"
 
     if jobId ~= "N/A (Studio)" then
-        teleportCode = string.format("game:GetService('TeleportService'):TeleportToPlaceInstance(%d, '%s', game.Players.LocalPlayer)", game.PlaceId, jobId)
+        teleportCode = string.format("game:GetService(\"TeleportService\"):TeleportToPlaceInstance(%d, \"%s\", game:GetService(\"Players\").LocalPlayer)", game.PlaceId, jobId)
     end
 
     local fields = {
