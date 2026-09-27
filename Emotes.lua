@@ -1509,6 +1509,35 @@ end
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
 
+local function normalizeDarkBranding(value)
+    if type(value) ~= "string" then return value end
+    return value:gsub("7yd7", "Dark")
+end
+
+if type(getgenv().Notify) == "function" and not _G.DarkNotifyBranding then
+    local originalNotify = getgenv().Notify
+    getgenv().Notify = function(options)
+        if type(options) == "table" and type(options.Title) == "string" then
+            options.Title = normalizeDarkBranding(options.Title)
+        end
+        return originalNotify(options)
+    end
+    _G.DarkNotifyBranding = true
+end
+
+if SettingsLib and SettingsLib.UI then
+    pcall(function()
+        SettingsLib.UI.Name = normalizeDarkBranding(SettingsLib.UI.Name)
+        for _, element in ipairs(SettingsLib.UI:GetDescendants()) do
+            if element:IsA("TextLabel") or element:IsA("TextButton") or element:IsA("TextBox") then
+                if type(element.Text) == "string" and element.Text:find("7yd7") then
+                    element.Text = normalizeDarkBranding(element.Text)
+                end
+            end
+        end
+    end)
+end
+
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
 ToggleContainer.Parent = SettingsLib.UI
