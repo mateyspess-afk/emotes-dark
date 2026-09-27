@@ -5,7 +5,7 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = ""
+local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
 
