@@ -252,7 +252,7 @@ local request = http_request or (syn and syn.request) or request
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
 local OWNER_USER_IDS = {
-    -- [10956940752] = true,
+    [10956940752] = true,
 }
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
