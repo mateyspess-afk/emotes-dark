@@ -1553,7 +1553,7 @@ BugReportStatus.BackgroundTransparency = 1
 BugReportStatus.Position = UDim2.fromOffset(14, 38)
 BugReportStatus.Size = UDim2.new(1, -28, 0, 32)
 BugReportStatus.Font = Enum.Font.Gotham
-BugReportStatus.Text = "Describe the issue below."
+BugReportStatus.Text = "Describe the issue below. PC details are attached automatically."
 BugReportStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
 BugReportStatus.TextSize = 10
 BugReportStatus.TextWrapped = true
@@ -1569,7 +1569,7 @@ BugReportInput.Size = UDim2.new(1, -20, 0, 145)
 BugReportInput.ClearTextOnFocus = false
 BugReportInput.Font = Enum.Font.Gotham
 BugReportInput.MultiLine = true
-BugReportInput.PlaceholderText = "What happened? Include steps to reproduce..."
+BugReportInput.PlaceholderText = "What happened? Include steps to reproduce and what you expected..."
 BugReportInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
 BugReportInput.Text = ""
 BugReportInput.TextColor3 = Color3.fromRGB(235, 240, 245)
@@ -1633,20 +1633,24 @@ local function updateBugReportStatus(message)
         BugReportSend.Text = "WAIT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
     else
-        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below."
+        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below. PC details are attached automatically."
         BugReportSend.Text = "SEND REPORT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
     end
 end
 
 local function getBugReportGameName()
-    local gameName = ""
-    if game.GameId and game.GameId > 0 then
+    local runtimeName = tostring(game.Name or "")
+    local gameName = (runtimeName ~= "" and runtimeName ~= "Game") and runtimeName or ""
+    local universeId = tonumber(game.GameId) or 0
+
+    if universeId > 0 then
         local universeInfo = auditJson(
-            "https://games.roblox.com/v1/games?universeIds=" .. tostring(game.GameId)
+            "https://games.roblox.com/v1/games?universeIds=" .. tostring(universeId)
         )
         if universeInfo and universeInfo.data and universeInfo.data[1] and universeInfo.data[1].name then
-            gameName = universeInfo.data[1].name
+            local apiName = tostring(universeInfo.data[1].name)
+            if apiName ~= "" then gameName = apiName end
         end
     end
 
@@ -1655,14 +1659,26 @@ local function getBugReportGameName()
             return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
         end)
         if ok and productInfo and productInfo.Name and productInfo.Name ~= "" then
-            gameName = productInfo.Name
+            gameName = tostring(productInfo.Name)
         end
     end
 
     if gameName == "" then
-        gameName = tostring(game.Name or ("Place " .. tostring(game.PlaceId)))
+        local ok, productInfo = pcall(function()
+            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+        end)
+        if ok and productInfo and productInfo.Name and productInfo.Name ~= "" then
+            gameName = tostring(productInfo.Name)
+        end
     end
-    return gameName
+
+    if gameName == "" and runtimeName ~= "" then
+        gameName = runtimeName
+    end
+    if gameName == "" then
+        gameName = string.format("Unknown Experience (Place %d)", game.PlaceId)
+    end
+    return auditTruncate(gameName, 160)
 end
 
 local function getBugReportProfile(userId)
@@ -1689,7 +1705,31 @@ local function getBugReportClientDetails()
         local size = camera.ViewportSize
         resolution = string.format("%dx%d", math.floor(size.X), math.floor(size.Y))
     end
-    return table.concat(inputs, " + "), resolution
+
+    local platform = "Unknown"
+    local platformOk, platformValue = pcall(function()
+        return UserInputService:GetPlatform()
+    end)
+    if platformOk and platformValue then
+        platform = tostring(platformValue):gsub("Enum.Platform.", "")
+    elseif UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
+        platform = "PC-like client"
+    end
+
+    local graphicsQuality = "Automatic"
+    local settingsOk, userGameSettings = pcall(function()
+        return UserSettings():GetService("UserGameSettings")
+    end)
+    if settingsOk and userGameSettings then
+        local qualityOk, qualityValue = pcall(function()
+            return userGameSettings.SavedQualityLevel
+        end)
+        if qualityOk and qualityValue then
+            graphicsQuality = tostring(qualityValue):gsub("Enum.SavedQualitySetting.", "")
+        end
+    end
+
+    return table.concat(inputs, " + "), resolution, platform, graphicsQuality
 end
 
 local function sendBugReport()
@@ -1726,29 +1766,29 @@ local function sendBugReport()
     local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
     local gameName = getBugReportGameName()
     local profileUrl, avatarUrl = getBugReportProfile(player.UserId)
-    local inputMode, resolution = getBugReportClientDetails()
+    local inputMode, resolution, platform, graphicsQuality = getBugReportClientDetails()
     local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
+    local gameId = tonumber(game.GameId) or 0
+    local reportId = string.format("EMD-%d-%d", os.time(), player.UserId)
 
     local embed = {
-        title = "🐞 New Bug Report",
+        title = "🐞 New Bug Report • Emote Dark",
+        url = profileUrl,
         description = auditTruncate(auditSafe(content), 1800),
         color = 16760576,
         timestamp = DateTime.now():ToIsoDate(),
         author = {
-            name = auditTruncate(string.format("%s (@%s)", auditSafe(displayName), auditSafe(player.Name)), MAX_FIELD_LENGTH),
+            name = auditTruncate(string.format("Reported by %s (@%s)", auditSafe(displayName), auditSafe(player.Name)), MAX_FIELD_LENGTH),
             url = profileUrl,
         },
         fields = {
-            { name = "👤 Roblox Profile", value = string.format("[%s (@%s)](%s)", auditSafe(displayName), auditSafe(player.Name), profileUrl), inline = false },
-            { name = "🆔 User ID", value = tostring(player.UserId), inline = true },
-            { name = "🎮 Experience", value = auditTruncate(auditSafe(gameName), MAX_FIELD_LENGTH), inline = true },
-            { name = "📍 Place ID", value = tostring(game.PlaceId), inline = true },
-            { name = "🛰️ Server Job ID", value = auditTruncate(auditSafe(jobId), MAX_FIELD_LENGTH), inline = false },
-            { name = "🖥️ Client Input", value = inputMode, inline = true },
-            { name = "🖼️ Screen Resolution", value = resolution, inline = true },
-            { name = "📦 Script Version", value = "emotes-dark-main", inline = false },
+            { name = "👤 Reporter Profile", value = string.format("[%s (@%s)](%s)\nUser ID: %d", auditSafe(displayName), auditSafe(player.Name), profileUrl, player.UserId), inline = false },
+            { name = "🎮 Experience", value = auditTruncate(string.format("%s\nPlace ID: %d\nUniverse ID: %d", auditSafe(gameName), game.PlaceId, gameId), MAX_FIELD_LENGTH), inline = false },
+            { name = "💻 PC / Client Diagnostics", value = auditTruncate(string.format("Platform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(platform), auditSafe(inputMode), auditSafe(resolution), auditSafe(graphicsQuality)), MAX_FIELD_LENGTH), inline = false },
+            { name = "🛰️ Server", value = auditTruncate(string.format("Job ID: %s", auditSafe(jobId)), MAX_FIELD_LENGTH), inline = false },
+            { name = "🧩 Report Context", value = string.format("Report ID: %s\nScript version: emotes-dark-main", reportId), inline = false },
         },
-        footer = { text = "Bug Reports • Emote Dark" },
+        footer = { text = string.format("Emote Dark Bug Reports • Place %d", game.PlaceId) },
     }
 
     if avatarUrl then
@@ -1758,6 +1798,7 @@ local function sendBugReport()
 
     local payload = {
         username = "Emote Dark • Bug Reports",
+        avatar_url = avatarUrl or "https://i.imgur.com/gK5g7gK.png",
         embeds = { embed },
     }
 
