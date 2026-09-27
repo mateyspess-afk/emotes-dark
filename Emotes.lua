@@ -1744,6 +1744,18 @@ local DonationPassIds = {
     [1000] = 0,
 }
 
+local DonationProductIds = {
+    -- Configure manualmente com os IDs dos Developer Products.
+    [10] = 0,
+    [50] = 0,
+    [100] = 0,
+    [200] = 0,
+    [300] = 0,
+    [400] = 0,
+    [500] = 0,
+    [1000] = 0,
+}
+
 local DonationWindow = Instance.new("Frame")
 DonationWindow.Name = "DonationWindow"
 DonationWindow.Parent = SettingsLib.UI
@@ -1924,9 +1936,10 @@ for index, amount in ipairs(DonationAmounts) do
     DonationOptionCorner.Parent = DonationOption
 
     DonationOption.MouseButton1Click:Connect(function()
+        local productId = tonumber(DonationProductIds[donationAmount]) or 0
         local passId = tonumber(DonationPassIds[donationAmount]) or 0
-        if passId <= 0 then
-            DonationStatus.Text = "Configure o ID da Game Pass de " .. tostring(donationAmount) .. " Robux em DonationPassIds."
+        if productId <= 0 and passId <= 0 then
+            DonationStatus.Text = "Configure o ID do Developer Product de " .. tostring(donationAmount) .. " Robux em DonationProductIds."
             DonationStatus.TextColor3 = Color3.fromRGB(255, 190, 90)
             return
         end
@@ -1939,10 +1952,15 @@ for index, amount in ipairs(DonationAmounts) do
         end
 
         local ok, err = pcall(function()
-            game:GetService("MarketplaceService"):PromptGamePassPurchase(player, passId)
+            local marketplaceService = game:GetService("MarketplaceService")
+            if productId > 0 then
+                marketplaceService:PromptProductPurchase(player, productId)
+            else
+                marketplaceService:PromptGamePassPurchase(player, passId)
+            end
         end)
         if ok then
-            DonationStatus.Text = "Janela de compra aberta para " .. tostring(donationAmount) .. " Robux."
+            DonationStatus.Text = "Janela oficial de compra aberta para " .. tostring(donationAmount) .. " Robux."
             DonationStatus.TextColor3 = Color3.fromRGB(100, 225, 130)
         else
             DonationStatus.Text = "Não foi possível abrir a compra dessa Game Pass."
