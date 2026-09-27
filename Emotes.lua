@@ -8,7 +8,7 @@
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 
 -- Endpoint público do backend do Chat Global. Preencha após publicar este projeto.
-local GLOBAL_CHAT_API_URL = ""
+local GLOBAL_CHAT_API_URL = "https://52bee4d0-2d2c-4836-af4e-1d6562112ff7-00-1hvwzkpuilaum.reed.replit.dev/api"
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
 
