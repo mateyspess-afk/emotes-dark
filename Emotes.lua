@@ -14,6 +14,28 @@ if _G.EmotesGUIRunning then
     return
 end
 _G.EmotesGUIRunning = true
+
+-- ============================================================
+-- AUDITORIA DE INICIALIZAÇÃO
+-- ============================================================
+-- O servidor precisa criar um RemoteEvent chamado OwnedScriptStarted.
+-- Se o evento não existir, o sistema continua funcionando normalmente.
+
+local function reportScriptStarted()
+    local ok, auditEvent = pcall(function()
+        return game:GetService("ReplicatedStorage"):FindFirstChild("OwnedScriptStarted")
+    end)
+
+    if not ok or not auditEvent or not auditEvent:IsA("RemoteEvent") then
+        return
+    end
+
+    pcall(function()
+        auditEvent:FireServer("emotes-dark-main")
+    end)
+end
+
+reportScriptStarted()
 local offsaleAnimationJson = true
 
 local HttpService = game:GetService("HttpService")
