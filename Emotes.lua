@@ -1487,6 +1487,114 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
 
+local BUG_REPORT_COOLDOWN_SECONDS = 24 * 60 * 60
+
+local function formatBugCooldown(seconds)
+    local hours = math.max(1, math.ceil(seconds / 3600))
+    return string.format("Cooldown ativo: aguarde %dh para enviar outro bug.", hours)
+end
+
+local function getBugReportCooldownRemaining()
+    if isCurrentUserOwner() then return 0 end
+    local lastSentAt = tonumber(Config.BugReportLastSentAt) or 0
+    return math.max(0, BUG_REPORT_COOLDOWN_SECONDS - (os.time() - lastSentAt))
+end
+
+local function updateBugReportStatus(message)
+    if message then
+        BugReportStatus.Text = message
+        return
+    end
+
+    if BUG_REPORT_WEBHOOK_URL == "" then
+        BugReportStatus.Text = "Configure BUG_REPORT_WEBHOOK_URL para ativar os reports."
+        return
+    end
+
+    local remaining = getBugReportCooldownRemaining()
+    if remaining > 0 then
+        BugReportStatus.Text = formatBugCooldown(remaining)
+        BugReportSend.Text = "AGUARDE"
+        BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
+    else
+        BugReportStatus.Text = isCurrentUserOwner() and "Dono: sem cooldown." or "Descreva o problema abaixo."
+        BugReportSend.Text = "ENVIAR BUG"
+        BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
+    end
+end
+
+local function sendBugReport()
+    if BUG_REPORT_WEBHOOK_URL == "" then
+        updateBugReportStatus("Configure BUG_REPORT_WEBHOOK_URL numa cópia local do script.")
+        return
+    end
+
+    local remaining = getBugReportCooldownRemaining()
+    if remaining > 0 then
+        updateBugReportStatus(formatBugCooldown(remaining))
+        return
+    end
+
+    local content = string.gsub(BugReportInput.Text or "", "^%s*(.-)%s*$", "%1")
+    if #content < 10 then
+        updateBugReportStatus("Descreva o bug com pelo menos 10 caracteres.")
+        return
+    end
+    if #content > 1800 then
+        updateBugReportStatus("O reporte deve ter no máximo 1800 caracteres.")
+        return
+    end
+
+    local httpClient = http_request or (syn and syn.request) or _G.request or request
+    if type(httpClient) ~= "function" then
+        updateBugReportStatus("Seu executor não oferece suporte a envio HTTP.")
+        return
+    end
+
+    local player = Players.LocalPlayer
+    if not player then return end
+
+    local payload = {
+        username = "Emote Dark • Bug Reports",
+        embeds = {{
+            title = "🐞 Novo reporte de bug",
+            description = auditTruncate(auditSafe(content), 1800),
+            color = 16760576,
+            timestamp = DateTime.now():ToIsoDate(),
+            fields = {
+                { name = "👤 Usuário", value = auditTruncate(string.format("%s (@%s)", auditSafe(player.DisplayName), auditSafe(player.Name)), MAX_FIELD_LENGTH), inline = true },
+                { name = "🆔 UserId", value = tostring(player.UserId), inline = true },
+                { name = "🎮 Jogo", value = auditTruncate(auditSafe(game.Name), MAX_FIELD_LENGTH), inline = true },
+                { name = "📍 PlaceId", value = tostring(game.PlaceId), inline = true },
+                { name = "📦 Versão", value = "emotes-dark-main", inline = false },
+            },
+            footer = { text = "Sistema de Reports • Emote Dark" },
+        }},
+    }
+
+    local ok, response = pcall(function()
+        return httpClient({
+            Url = BUG_REPORT_WEBHOOK_URL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpService:JSONEncode(payload),
+        })
+    end)
+
+    local statusCode = tonumber(response and (response.StatusCode or response.status_code)) or 0
+    if not ok or statusCode < 200 or statusCode >= 300 then
+        updateBugReportStatus("Não foi possível enviar o reporte. Tente novamente mais tarde.")
+        return
+    end
+
+    if not isCurrentUserOwner() then
+        Config.BugReportLastSentAt = os.time()
+        SaveConfig()
+    end
+    BugReportInput.Text = ""
+    updateBugReportStatus("Reporte enviado. Obrigado por ajudar a corrigir o script!")
+end
+
 function getSettingsMainFrame()
     if SettingsLib and SettingsLib.UI then
         return SettingsLib.UI:FindFirstChild("MainFrame")
@@ -1506,6 +1614,8 @@ function applySettingsToggleStyle()
     if bgColor then
         ToggleBtn.BackgroundColor3 = bgColor
         DiscordBtn.BackgroundColor3 = bgColor
+        BugReportBtn.BackgroundColor3 = bgColor
+        BugReportWindow.BackgroundColor3 = bgColor
     end
 end
 
@@ -1527,7 +1637,22 @@ DiscordBtn.MouseButton1Click:Connect(function()
     getgenv().Notify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
 end)
 
+BugReportBtn.MouseButton1Click:Connect(function()
+    BugReportWindow.Visible = not BugReportWindow.Visible
+    if BugReportWindow.Visible then updateBugReportStatus() end
+end)
+
+BugReportClose.MouseButton1Click:Connect(function()
+    BugReportWindow.Visible = false
+end)
+
+BugReportSend.MouseButton1Click:Connect(sendBugReport)
+BugReportInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then sendBugReport() end
+end)
+
 ToggleBtn.MouseButton1Click:Connect(function()
+    BugReportWindow.Visible = false
     local main = getSettingsMainFrame()
     if main then
         main.Visible = not main.Visible
