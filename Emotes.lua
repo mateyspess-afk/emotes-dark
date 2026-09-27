@@ -1858,21 +1858,23 @@ ClassificationTitle.TextSize = 14
 ClassificationTitle.TextXAlignment = Enum.TextXAlignment.Left
 ClassificationTitle.ZIndex = 5102
 
-local ClassificationDescription = Instance.new("TextLabel")
-ClassificationDescription.Parent = ClassificationPanel
-ClassificationDescription.BackgroundTransparency = 1
-ClassificationDescription.Position = UDim2.fromOffset(14, 40)
-ClassificationDescription.Size = UDim2.new(1, -28, 0, 88)
-ClassificationDescription.Font = Enum.Font.Gotham
-ClassificationDescription.Text = "O ranking dos doadores aparecerá aqui quando o sistema registrar as compras.
+local ClassificationList = Instance.new("ScrollingFrame")
+ClassificationList.Parent = ClassificationPanel
+ClassificationList.BackgroundTransparency = 1
+ClassificationList.BorderSizePixel = 0
+ClassificationList.Position = UDim2.fromOffset(10, 40)
+ClassificationList.Size = UDim2.new(1, -20, 1, -48)
+ClassificationList.ScrollBarThickness = 4
+ClassificationList.CanvasSize = UDim2.fromOffset(0, 0)
+ClassificationList.ZIndex = 5102
 
-Bronze: 10+  •  Prata: 100+  •  Ouro: 500+  •  Diamante: 1000+ Robux"
-ClassificationDescription.TextColor3 = Color3.fromRGB(185, 194, 206)
-ClassificationDescription.TextSize = 13
-ClassificationDescription.TextWrapped = true
-ClassificationDescription.TextXAlignment = Enum.TextXAlignment.Left
-ClassificationDescription.TextYAlignment = Enum.TextYAlignment.Top
-ClassificationDescription.ZIndex = 5102
+local ClassificationLayout = Instance.new("UIListLayout")
+ClassificationLayout.Padding = UDim.new(0, 3)
+ClassificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ClassificationLayout.Parent = ClassificationList
+ClassificationLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ClassificationList.CanvasSize = UDim2.fromOffset(0, ClassificationLayout.AbsoluteContentSize.Y + 8)
+end)
 
 local DonationStatus = Instance.new("TextLabel")
 DonationStatus.Parent = DonationWindow
@@ -1950,6 +1952,83 @@ for index, amount in ipairs(DonationAmounts) do
     end)
 end
 
+local function clearDonationLeaderboard()
+    for _, child in ipairs(ClassificationList:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+end
+
+local function addDonationLeaderboardMessage(message, color)
+    local row = Instance.new("TextLabel")
+    row.Name = "LeaderboardMessage"
+    row.LayoutOrder = 1
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, -8, 0, 24)
+    row.Font = Enum.Font.Gotham
+    row.Text = message
+    row.TextColor3 = color or Color3.fromRGB(185, 194, 206)
+    row.TextSize = 13
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.ZIndex = 5103
+    row.Parent = ClassificationList
+end
+
+local function renderDonationLeaderboard(entries)
+    clearDonationLeaderboard()
+    if type(entries) ~= "table" or #entries == 0 then
+        addDonationLeaderboardMessage("Ainda não há doadores verificados.")
+        return
+    end
+
+    for rank, entry in ipairs(entries) do
+        if rank > 100 then break end
+        local userName = tostring(entry.Name or ("User " .. tostring(entry.UserId or "?")))
+        local amount = tonumber(entry.Amount) or 0
+        local row = Instance.new("TextLabel")
+        row.Name = "Donor" .. tostring(rank)
+        row.LayoutOrder = rank
+        row.BackgroundColor3 = rank <= 3 and Color3.fromRGB(58, 53, 38) or Color3.fromRGB(38, 43, 52)
+        row.BackgroundTransparency = rank <= 3 and 0 or 0.2
+        row.BorderSizePixel = 0
+        row.Size = UDim2.new(1, -8, 0, 24)
+        row.Font = rank <= 3 and Enum.Font.GothamBold or Enum.Font.Gotham
+        row.Text = string.format("%d. %s  —  %d Robux", rank, userName, amount)
+        row.TextColor3 = rank == 1 and Color3.fromRGB(255, 215, 90) or rank == 2 and Color3.fromRGB(220, 225, 235) or rank == 3 and Color3.fromRGB(225, 165, 105) or Color3.fromRGB(215, 222, 232)
+        row.TextSize = 13
+        row.TextXAlignment = Enum.TextXAlignment.Left
+        row.ZIndex = 5103
+        row.Parent = ClassificationList
+
+        local padding = Instance.new("UIPadding")
+        padding.PaddingLeft = UDim.new(0, 8)
+        padding.Parent = row
+    end
+end
+
+local function refreshDonationLeaderboard()
+    clearDonationLeaderboard()
+    addDonationLeaderboardMessage("Carregando classificações...", Color3.fromRGB(175, 184, 196))
+
+    local remote = game:GetService("ReplicatedStorage"):FindFirstChild("EmoteDarkDonationLeaderboard")
+    if not remote or not remote:IsA("RemoteFunction") then
+        clearDonationLeaderboard()
+        addDonationLeaderboardMessage("Ranking indisponível: adicione DonationServer.lua ao ServerScriptService.", Color3.fromRGB(255, 190, 90))
+        return
+    end
+
+    local ok, entries = pcall(function()
+        return remote:InvokeServer()
+    end)
+    if not ok then
+        clearDonationLeaderboard()
+        addDonationLeaderboardMessage("Não foi possível carregar as classificações agora.", Color3.fromRGB(255, 120, 120))
+        return
+    end
+    renderDonationLeaderboard(entries)
+end
+
 local donationView = "donate"
 local function setDonationView(view)
     donationView = view == "classifications" and "classifications" or "donate"
@@ -1969,6 +2048,7 @@ end)
 
 ClassificationTab.MouseButton1Click:Connect(function()
     setDonationView("classifications")
+    refreshDonationLeaderboard()
 end)
 
 setDonationView("donate")
