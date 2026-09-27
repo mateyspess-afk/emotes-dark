@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Cole aqui um webhook NOVO, somente no servidor.
 -- Não publique a URL real no GitHub.
-local WEBHOOK_URL = "COLOQUE_O_WEBHOOK_AQUI"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 
 local EXECUTION_COOLDOWN = 10
 local lastExecution = {}
