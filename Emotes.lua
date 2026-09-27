@@ -6,6 +6,7 @@
 
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
+local BUG_REPORT_WEBHOOK_URL = ""
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
@@ -1410,6 +1411,15 @@ local function isOwnerPlayer(player)
     return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
 end
 
+local function isCurrentUserOwner()
+    local player = Players.LocalPlayer
+    if not player then return false end
+    if OWNER_USER_IDS[player.UserId] then return true end
+
+    local experienceOwnerId = getExperienceOwnerUserId()
+    return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
+end
+
 local function announceOwner(player, alreadyPresent)
     if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
     if ownerAlertSeen[player.UserId] then return end
@@ -1477,11 +1487,117 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
+local BugReportBtn = Instance.new("TextButton")
+BugReportBtn.Name = "BugReportButton"
+BugReportBtn.Parent = ToggleContainer
+BugReportBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BugReportBtn.BackgroundTransparency = 0.4
+BugReportBtn.Position = UDim2.new(0, 104, 1, -52)
+BugReportBtn.Size = UDim2.fromOffset(42, 42)
+BugReportBtn.Font = Enum.Font.GothamBold
+BugReportBtn.Text = "🐞"
+BugReportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BugReportBtn.TextSize = 20
+BugReportBtn.AutoButtonColor = true
+
 
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
 DiscordCorner.Parent = DiscordBtn
 
+local BugReportCorner = Instance.new("UICorner")
+BugReportCorner.CornerRadius = UDim.new(0, 10)
+BugReportCorner.Parent = BugReportBtn
+
+local BugReportWindow = Instance.new("Frame")
+BugReportWindow.Name = "BugReportWindow"
+BugReportWindow.Parent = SettingsLib.UI
+BugReportWindow.AnchorPoint = Vector2.new(0, 1)
+BugReportWindow.Position = UDim2.new(0, 10, 1, -118)
+BugReportWindow.Size = UDim2.fromOffset(360, 300)
+BugReportWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+BugReportWindow.BorderSizePixel = 0
+BugReportWindow.Visible = false
+BugReportWindow.ZIndex = 5100
+
+local BugReportWindowCorner = Instance.new("UICorner")
+BugReportWindowCorner.CornerRadius = UDim.new(0, 12)
+BugReportWindowCorner.Parent = BugReportWindow
+
+local BugReportTitle = Instance.new("TextLabel")
+BugReportTitle.Parent = BugReportWindow
+BugReportTitle.BackgroundTransparency = 1
+BugReportTitle.Position = UDim2.fromOffset(14, 10)
+BugReportTitle.Size = UDim2.new(1, -64, 0, 24)
+BugReportTitle.Font = Enum.Font.GothamBold
+BugReportTitle.Text = "REPORTAR BUG"
+BugReportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+BugReportTitle.TextSize = 14
+BugReportTitle.TextXAlignment = Enum.TextXAlignment.Left
+BugReportTitle.ZIndex = 5101
+
+local BugReportClose = Instance.new("TextButton")
+BugReportClose.Parent = BugReportWindow
+BugReportClose.BackgroundTransparency = 1
+BugReportClose.Position = UDim2.new(1, -38, 0, 7)
+BugReportClose.Size = UDim2.fromOffset(28, 28)
+BugReportClose.Font = Enum.Font.GothamBold
+BugReportClose.Text = "×"
+BugReportClose.TextColor3 = Color3.fromRGB(210, 215, 220)
+BugReportClose.TextSize = 22
+BugReportClose.ZIndex = 5101
+
+local BugReportStatus = Instance.new("TextLabel")
+BugReportStatus.Parent = BugReportWindow
+BugReportStatus.BackgroundTransparency = 1
+BugReportStatus.Position = UDim2.fromOffset(14, 38)
+BugReportStatus.Size = UDim2.new(1, -28, 0, 32)
+BugReportStatus.Font = Enum.Font.Gotham
+BugReportStatus.Text = "Descreva o problema abaixo."
+BugReportStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
+BugReportStatus.TextSize = 10
+BugReportStatus.TextWrapped = true
+BugReportStatus.TextXAlignment = Enum.TextXAlignment.Left
+BugReportStatus.ZIndex = 5101
+
+local BugReportInput = Instance.new("TextBox")
+BugReportInput.Parent = BugReportWindow
+BugReportInput.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
+BugReportInput.BorderSizePixel = 0
+BugReportInput.Position = UDim2.fromOffset(10, 78)
+BugReportInput.Size = UDim2.new(1, -20, 0, 145)
+BugReportInput.ClearTextOnFocus = false
+BugReportInput.Font = Enum.Font.Gotham
+BugReportInput.MultiLine = true
+BugReportInput.PlaceholderText = "O que aconteceu? Inclua os passos para reproduzir..."
+BugReportInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
+BugReportInput.Text = ""
+BugReportInput.TextColor3 = Color3.fromRGB(235, 240, 245)
+BugReportInput.TextSize = 11
+BugReportInput.TextWrapped = true
+BugReportInput.TextXAlignment = Enum.TextXAlignment.Left
+BugReportInput.TextYAlignment = Enum.TextYAlignment.Top
+BugReportInput.ZIndex = 5101
+
+local BugReportInputCorner = Instance.new("UICorner")
+BugReportInputCorner.CornerRadius = UDim.new(0, 7)
+BugReportInputCorner.Parent = BugReportInput
+
+local BugReportSend = Instance.new("TextButton")
+BugReportSend.Parent = BugReportWindow
+BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
+BugReportSend.BorderSizePixel = 0
+BugReportSend.Position = UDim2.new(1, -130, 1, -48)
+BugReportSend.Size = UDim2.fromOffset(120, 36)
+BugReportSend.Font = Enum.Font.GothamBold
+BugReportSend.Text = "ENVIAR BUG"
+BugReportSend.TextColor3 = Color3.fromRGB(30, 24, 12)
+BugReportSend.TextSize = 11
+BugReportSend.ZIndex = 5101
+
+local BugReportSendCorner = Instance.new("UICorner")
+BugReportSendCorner.CornerRadius = UDim.new(0, 7)
+BugReportSendCorner.Parent = BugReportSend
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
