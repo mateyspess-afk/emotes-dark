@@ -1494,7 +1494,7 @@ BugReportBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 BugReportBtn.BackgroundTransparency = 0.4
 BugReportBtn.Position = UDim2.new(0, 104, 1, -52)
 BugReportBtn.Size = UDim2.fromOffset(42, 42)
-BugReportBtn.Image = "rbxassetid://7562374862"
+BugReportBtn.Image = "rbxassetid://7562374548"
 BugReportBtn.ScaleType = Enum.ScaleType.Fit
 BugReportBtn.AutoButtonColor = true
 
