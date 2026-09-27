@@ -1752,14 +1752,17 @@ end
 
 function syncGlobalChatVisibility()
     GlobalChatBtn.Visible = Config.GlobalChatVisible ~= false
-    if not Config.GlobalChatVisible then GlobalChatWindow.Visible = false end
+    if Config.GlobalChatVisible == false then GlobalChatWindow.Visible = false end
 end
 
 GlobalChatBtn.MouseButton1Click:Connect(function()
     GlobalChatWindow.Visible = not GlobalChatWindow.Visible
     if GlobalChatWindow.Visible then startGlobalChat() else globalChatRunning = false end
 end)
-GlobalChatClose.MouseButton1Click:Connect(function() GlobalChatWindow.Visible = false globalChatRunning = false end)
+GlobalChatClose.MouseButton1Click:Connect(function()
+    GlobalChatWindow.Visible = false
+    globalChatRunning = false
+end)
 GlobalChatSend.MouseButton1Click:Connect(sendGlobalChatMessage)
 GlobalChatInput.FocusLost:Connect(function(enterPressed) if enterPressed then sendGlobalChatMessage() end end)
 
