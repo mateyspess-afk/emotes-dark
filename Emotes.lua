@@ -10,6 +10,7 @@ local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60
 local BUG_REPORT_MIN_LENGTH = 20
 local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
+local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
@@ -1617,6 +1618,58 @@ local function getBugReportWebhook()
     return type(webhook) == "string" and webhook or ""
 end
 
+local function getBugReportCooldownApi()
+    local env = getBugReportEnvironment()
+    local api = env and env[BUG_REPORT_COOLDOWN_API_ENV_NAME]
+    if type(api) ~= "string" then return "" end
+    return api:gsub("/+$", "")
+end
+
+local function getBugReportHttpClient()
+    return http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+end
+
+local function decodeBugReportApiResponse(response)
+    if not response then return nil end
+    local body = response.Body or response.body
+    if type(body) ~= "string" or body == "" then return nil end
+    local ok, decoded = pcall(function()
+        return HttpService:JSONDecode(body)
+    end)
+    return ok and decoded or nil
+end
+
+local bugReportGlobalStatusCheckedAt = 0
+
+local function queryGlobalBugReportCooldown()
+    local api = getBugReportCooldownApi()
+    if api == "" then return nil end
+
+    local now = os.time()
+    if now - bugReportGlobalStatusCheckedAt < 5 then
+        return bugReportCooldownExpires
+    end
+    bugReportGlobalStatusCheckedAt = now
+
+    local player = Players.LocalPlayer
+    local httpClient = getBugReportHttpClient()
+    if not player or type(httpClient) ~= "function" then return nil end
+
+    local ok, response = pcall(function()
+        return httpClient({
+            Url = api .. "/bug-reports/status/" .. tostring(player.UserId),
+            Method = "GET",
+            Headers = { ["Content-Type"] = "application/json" },
+        })
+    end)
+    if not ok then return nil end
+
+    local decoded = decodeBugReportApiResponse(response)
+    if type(decoded) ~= "table" or type(decoded.remainingSeconds) ~= "number" then return nil end
+    bugReportCooldownExpires = decoded.remainingSeconds > 0 and now + decoded.remainingSeconds or 0
+    return bugReportCooldownExpires
+end
+
 local bugReportOwnerCache = nil
 
 local function isBugReportOwner()
@@ -1638,6 +1691,11 @@ end
 
 local function getBugReportCooldown()
     if isBugReportOwner() then return 0 end
+
+    local globalCooldown = queryGlobalBugReportCooldown()
+    if globalCooldown ~= nil then
+        return globalCooldown
+    end
 
     local now = os.time()
     if bugReportCooldownExpires > now then
@@ -1716,6 +1774,50 @@ local function notifyBugReport(title, content)
     end
 end
 
+local function reserveGlobalBugReportCooldown()
+    local api = getBugReportCooldownApi()
+    if api == "" then return true end
+
+    local player = Players.LocalPlayer
+    local httpClient = getBugReportHttpClient()
+    if not player or type(httpClient) ~= "function" then
+        return false, "Servidor global de cooldown não configurado."
+    end
+
+    local ok, response = pcall(function()
+        return httpClient({
+            Url = api .. "/bug-reports/reserve",
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpService:JSONEncode({ userId = player.UserId }),
+        })
+    end)
+    if not ok then
+        return false, "Servidor global de cooldown indisponível."
+    end
+
+    local decoded = decodeBugReportApiResponse(response)
+    local statusCode = response and tonumber(response.StatusCode)
+    if statusCode == 429 or (type(decoded) == "table" and decoded.allowed == false) then
+        local remaining = type(decoded) == "table" and tonumber(decoded.remainingSeconds) or 0
+        bugReportCooldownExpires = os.time() + math.max(0, remaining)
+        bugReportGlobalStatusCheckedAt = os.time()
+        return false, "Cooldown global: " .. formatBugCooldown(remaining)
+    end
+
+    if statusCode and statusCode >= 400 then
+        return false, "Servidor global de cooldown recusou o report."
+    end
+    if type(decoded) ~= "table" or decoded.allowed ~= true then
+        return false, "Não foi possível validar o cooldown global."
+    end
+
+    local remaining = tonumber(decoded.remainingSeconds) or BUG_REPORT_COOLDOWN_SECONDS
+    bugReportCooldownExpires = os.time() + math.max(0, remaining)
+    bugReportGlobalStatusCheckedAt = os.time()
+    return true
+end
+
 local function submitBugReport(description)
     local webhook = getBugReportWebhook()
     if webhook == "" then
@@ -1729,6 +1831,11 @@ local function submitBugReport(description)
     local cooldown = getBugReportCooldown()
     if cooldown > now then
         return false, "Aguarde " .. formatBugCooldown(cooldown - now) .. "."
+    end
+
+    local globalAllowed, globalMessage = reserveGlobalBugReportCooldown()
+    if not globalAllowed then
+        return false, globalMessage
     end
 
     local device, platform, input, resolution, graphics = auditClientInfo()
