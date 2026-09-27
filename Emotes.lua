@@ -5,22 +5,6 @@
 ]]
 
 
-if _G.EmotesGUIRunning then
-    getgenv().Notify({
-        Title = '7yd7 | Emote',
-        Content = '⚠️ It works It actually works',
-        Duration = 5
-    })
-    return
-end
-_G.EmotesGUIRunning = true
-
--- ============================================================
--- AUDITORIA DE INICIALIZAÇÃO
--- ============================================================
--- O servidor precisa criar um RemoteEvent chamado OwnedScriptStarted.
--- Se o evento não existir, o sistema continua funcionando normalmente.
-
 local function reportScriptStarted()
     local ok, auditEvent = pcall(function()
         return game:GetService("ReplicatedStorage"):FindFirstChild("OwnedScriptStarted")
@@ -36,6 +20,18 @@ local function reportScriptStarted()
 end
 
 reportScriptStarted()
+
+if _G.EmotesGUIRunning then
+    getgenv().Notify({
+        Title = '7yd7 | Emote',
+        Content = '⚠️ It works It actually works',
+        Duration = 5
+    })
+    return
+end
+
+_G.EmotesGUIRunning = true
+
 local offsaleAnimationJson = true
 
 local HttpService = game:GetService("HttpService")
