@@ -1530,7 +1530,7 @@ BugReportTitle.BackgroundTransparency = 1
 BugReportTitle.Position = UDim2.fromOffset(14, 10)
 BugReportTitle.Size = UDim2.new(1, -64, 0, 24)
 BugReportTitle.Font = Enum.Font.GothamBold
-BugReportTitle.Text = "REPORTAR BUG"
+BugReportTitle.Text = "REPORT A BUG"
 BugReportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 BugReportTitle.TextSize = 14
 BugReportTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1553,7 +1553,7 @@ BugReportStatus.BackgroundTransparency = 1
 BugReportStatus.Position = UDim2.fromOffset(14, 38)
 BugReportStatus.Size = UDim2.new(1, -28, 0, 32)
 BugReportStatus.Font = Enum.Font.Gotham
-BugReportStatus.Text = "Descreva o problema abaixo."
+BugReportStatus.Text = "Describe the issue below."
 BugReportStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
 BugReportStatus.TextSize = 10
 BugReportStatus.TextWrapped = true
@@ -1569,7 +1569,7 @@ BugReportInput.Size = UDim2.new(1, -20, 0, 145)
 BugReportInput.ClearTextOnFocus = false
 BugReportInput.Font = Enum.Font.Gotham
 BugReportInput.MultiLine = true
-BugReportInput.PlaceholderText = "O que aconteceu? Inclua os passos para reproduzir..."
+BugReportInput.PlaceholderText = "What happened? Include steps to reproduce..."
 BugReportInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
 BugReportInput.Text = ""
 BugReportInput.TextColor3 = Color3.fromRGB(235, 240, 245)
@@ -1590,7 +1590,7 @@ BugReportSend.BorderSizePixel = 0
 BugReportSend.Position = UDim2.new(1, -130, 1, -48)
 BugReportSend.Size = UDim2.fromOffset(120, 36)
 BugReportSend.Font = Enum.Font.GothamBold
-BugReportSend.Text = "ENVIAR BUG"
+BugReportSend.Text = "SEND REPORT"
 BugReportSend.TextColor3 = Color3.fromRGB(30, 24, 12)
 BugReportSend.TextSize = 11
 BugReportSend.ZIndex = 5101
@@ -1607,7 +1607,7 @@ local BUG_REPORT_COOLDOWN_SECONDS = 24 * 60 * 60
 
 local function formatBugCooldown(seconds)
     local hours = math.max(1, math.ceil(seconds / 3600))
-    return string.format("Cooldown ativo: aguarde %dh para enviar outro bug.", hours)
+    return string.format("Cooldown active: wait %dh before submitting another bug.", hours)
 end
 
 local function getBugReportCooldownRemaining()
@@ -1623,25 +1623,78 @@ local function updateBugReportStatus(message)
     end
 
     if BUG_REPORT_WEBHOOK_URL == "" then
-        BugReportStatus.Text = "Configure BUG_REPORT_WEBHOOK_URL para ativar os reports."
+        BugReportStatus.Text = "Configure BUG_REPORT_WEBHOOK_URL to enable bug reports."
         return
     end
 
     local remaining = getBugReportCooldownRemaining()
     if remaining > 0 then
         BugReportStatus.Text = formatBugCooldown(remaining)
-        BugReportSend.Text = "AGUARDE"
+        BugReportSend.Text = "WAIT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
     else
-        BugReportStatus.Text = isCurrentUserOwner() and "Dono: sem cooldown." or "Descreva o problema abaixo."
-        BugReportSend.Text = "ENVIAR BUG"
+        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below."
+        BugReportSend.Text = "SEND REPORT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
     end
 end
 
+local function getBugReportGameName()
+    local gameName = ""
+    if game.GameId and game.GameId > 0 then
+        local universeInfo = auditJson(
+            "https://games.roblox.com/v1/games?universeIds=" .. tostring(game.GameId)
+        )
+        if universeInfo and universeInfo.data and universeInfo.data[1] and universeInfo.data[1].name then
+            gameName = universeInfo.data[1].name
+        end
+    end
+
+    if gameName == "" then
+        local ok, productInfo = pcall(function()
+            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+        end)
+        if ok and productInfo and productInfo.Name and productInfo.Name ~= "" then
+            gameName = productInfo.Name
+        end
+    end
+
+    if gameName == "" then
+        gameName = tostring(game.Name or ("Place " .. tostring(game.PlaceId)))
+    end
+    return gameName
+end
+
+local function getBugReportProfile(userId)
+    local profileUrl = string.format("https://www.roblox.com/users/%d/profile", userId)
+    local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", userId))
+    local avatarUrl = nil
+    if avatar and avatar.data and avatar.data[1] and avatar.data[1].imageUrl then
+        avatarUrl = avatar.data[1].imageUrl
+    end
+    return profileUrl, avatarUrl
+end
+
+local function getBugReportClientDetails()
+    local inputs = {}
+    if UserInputService.KeyboardEnabled then table.insert(inputs, "Keyboard") end
+    if UserInputService.MouseEnabled then table.insert(inputs, "Mouse") end
+    if UserInputService.TouchEnabled then table.insert(inputs, "Touch") end
+    if UserInputService.GamepadEnabled then table.insert(inputs, "Gamepad") end
+    if #inputs == 0 then table.insert(inputs, "Unknown input") end
+
+    local resolution = "Unknown"
+    local camera = workspace.CurrentCamera
+    if camera then
+        local size = camera.ViewportSize
+        resolution = string.format("%dx%d", math.floor(size.X), math.floor(size.Y))
+    end
+    return table.concat(inputs, " + "), resolution
+end
+
 local function sendBugReport()
     if BUG_REPORT_WEBHOOK_URL == "" then
-        updateBugReportStatus("Configure BUG_REPORT_WEBHOOK_URL numa cópia local do script.")
+        updateBugReportStatus("Configure BUG_REPORT_WEBHOOK_URL in your local copy of the script.")
         return
     end
 
@@ -1653,39 +1706,59 @@ local function sendBugReport()
 
     local content = string.gsub(BugReportInput.Text or "", "^%s*(.-)%s*$", "%1")
     if #content < 10 then
-        updateBugReportStatus("Descreva o bug com pelo menos 10 caracteres.")
+        updateBugReportStatus("Describe the bug using at least 10 characters.")
         return
     end
     if #content > 1800 then
-        updateBugReportStatus("O reporte deve ter no máximo 1800 caracteres.")
+        updateBugReportStatus("The report can be at most 1800 characters.")
         return
     end
 
     local httpClient = http_request or (syn and syn.request) or _G.request or request
     if type(httpClient) ~= "function" then
-        updateBugReportStatus("Seu executor não oferece suporte a envio HTTP.")
+        updateBugReportStatus("Your executor does not support HTTP requests.")
         return
     end
 
     local player = Players.LocalPlayer
     if not player then return end
 
+    local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
+    local gameName = getBugReportGameName()
+    local profileUrl, avatarUrl = getBugReportProfile(player.UserId)
+    local inputMode, resolution = getBugReportClientDetails()
+    local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
+
+    local embed = {
+        title = "🐞 New Bug Report",
+        description = auditTruncate(auditSafe(content), 1800),
+        color = 16760576,
+        timestamp = DateTime.now():ToIsoDate(),
+        author = {
+            name = auditTruncate(string.format("%s (@%s)", auditSafe(displayName), auditSafe(player.Name)), MAX_FIELD_LENGTH),
+            url = profileUrl,
+        },
+        fields = {
+            { name = "👤 Roblox Profile", value = string.format("[%s (@%s)](%s)", auditSafe(displayName), auditSafe(player.Name), profileUrl), inline = false },
+            { name = "🆔 User ID", value = tostring(player.UserId), inline = true },
+            { name = "🎮 Experience", value = auditTruncate(auditSafe(gameName), MAX_FIELD_LENGTH), inline = true },
+            { name = "📍 Place ID", value = tostring(game.PlaceId), inline = true },
+            { name = "🛰️ Server Job ID", value = auditTruncate(auditSafe(jobId), MAX_FIELD_LENGTH), inline = false },
+            { name = "🖥️ Client Input", value = inputMode, inline = true },
+            { name = "🖼️ Screen Resolution", value = resolution, inline = true },
+            { name = "📦 Script Version", value = "emotes-dark-main", inline = false },
+        },
+        footer = { text = "Bug Reports • Emote Dark" },
+    }
+
+    if avatarUrl then
+        embed.author.icon_url = avatarUrl
+        embed.thumbnail = { url = avatarUrl }
+    end
+
     local payload = {
         username = "Emote Dark • Bug Reports",
-        embeds = {{
-            title = "🐞 Novo reporte de bug",
-            description = auditTruncate(auditSafe(content), 1800),
-            color = 16760576,
-            timestamp = DateTime.now():ToIsoDate(),
-            fields = {
-                { name = "👤 Usuário", value = auditTruncate(string.format("%s (@%s)", auditSafe(player.DisplayName), auditSafe(player.Name)), MAX_FIELD_LENGTH), inline = true },
-                { name = "🆔 UserId", value = tostring(player.UserId), inline = true },
-                { name = "🎮 Jogo", value = auditTruncate(auditSafe(game.Name), MAX_FIELD_LENGTH), inline = true },
-                { name = "📍 PlaceId", value = tostring(game.PlaceId), inline = true },
-                { name = "📦 Versão", value = "emotes-dark-main", inline = false },
-            },
-            footer = { text = "Sistema de Reports • Emote Dark" },
-        }},
+        embeds = { embed },
     }
 
     local ok, response = pcall(function()
@@ -1699,7 +1772,7 @@ local function sendBugReport()
 
     local statusCode = tonumber(response and (response.StatusCode or response.status_code)) or 0
     if not ok or statusCode < 200 or statusCode >= 300 then
-        updateBugReportStatus("Não foi possível enviar o reporte. Tente novamente mais tarde.")
+        updateBugReportStatus("Could not send the report. Please try again later.")
         return
     end
 
@@ -1708,7 +1781,7 @@ local function sendBugReport()
         SaveConfig()
     end
     BugReportInput.Text = ""
-    updateBugReportStatus("Reporte enviado. Obrigado por ajudar a corrigir o script!")
+    updateBugReportStatus("Report sent. Thanks for helping improve the script!")
 end
 
 function getSettingsMainFrame()
