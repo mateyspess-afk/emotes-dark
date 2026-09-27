@@ -1591,7 +1591,6 @@ function syncToggleVisibility()
 end
 
 function syncDiscordVisibility()
-syncBugReportVisibility()
     DiscordBtn.Visible = Config.DiscordVisible
 end
 
@@ -2004,6 +2003,7 @@ end)
 applySettingsToggleStyle()
 syncToggleVisibility()
 syncDiscordVisibility()
+syncBugReportVisibility()
 
 do
     local main = getSettingsMainFrame()
