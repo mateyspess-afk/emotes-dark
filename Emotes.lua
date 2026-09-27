@@ -247,6 +247,7 @@ local GuiService = game:GetService("GuiService")
 local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 local request = http_request or (syn and syn.request) or request
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
@@ -255,6 +256,67 @@ local OWNER_USER_IDS = {
 }
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
+
+-- Sons do Dark Emote. Adicione outros rbxassetid://... nas listas se quiser trocar os efeitos.
+local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
+local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
+local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
+
+local function pickSoundId(soundIds)
+    return soundIds[math.random(1, #soundIds)]
+end
+
+local function playDarkEmoteSound(kind)
+    local soundIds = kind == "click" and CLICK_SOUND_IDS
+        or kind == "emote" and EMOTE_SOUND_IDS
+        or OWNER_SOUND_IDS
+    if not soundIds or #soundIds == 0 then return end
+
+    local name = "EmotesDark_" .. tostring(kind) .. "Sound"
+    local sound = SoundService:FindFirstChild(name)
+    if not sound then
+        sound = Instance.new("Sound")
+        sound.Name = name
+        sound.Parent = SoundService
+    end
+
+    sound.SoundId = pickSoundId(soundIds)
+    sound.Volume = kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5)
+    sound.PlaybackSpeed = kind == "emote" and (math.random(90, 112) / 100)
+        or (kind == "owner" and 0.82 or 1.12)
+    sound:Stop()
+    sound:Play()
+end
+
+local function playEmoteSound()
+    playDarkEmoteSound("emote")
+end
+
+local function playOwnerSound()
+    playDarkEmoteSound("owner")
+end
+
+local boundClickButtons = setmetatable({}, { __mode = "k" })
+local boundClickRoots = setmetatable({}, { __mode = "k" })
+
+local function bindDarkEmoteClickSounds(root)
+    if not root or boundClickRoots[root] then return end
+    boundClickRoots[root] = true
+
+    local function bindButton(button)
+        if not button:IsA("GuiButton") or boundClickButtons[button] then return end
+        boundClickButtons[button] = true
+        button.MouseButton1Click:Connect(function()
+            playDarkEmoteSound("click")
+        end)
+    end
+
+    bindButton(root)
+    for _, descendant in ipairs(root:GetDescendants()) do
+        bindButton(descendant)
+    end
+    root.DescendantAdded:Connect(bindButton)
+end
 
 local State = {
     currentMode = "emote",
@@ -1359,6 +1421,7 @@ local function announceOwner(player, alreadyPresent)
     local ok = pcall(function()
         showThemedOwnerAlert(displayName, player.Name, status, playerCount, maxPlayers)
     end)
+    pcall(playOwnerSound)
     if not ok then
         local notify = getgenv().Notify
         if type(notify) == "function" then
@@ -1384,6 +1447,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
+bindDarkEmoteClickSounds(SettingsLib.UI)
 
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
@@ -6779,6 +6843,7 @@ playEmote = function(humanoid, emoteId)
 
     if success and animTrack then
         State.currentEmoteTrack = animTrack
+        playEmoteSound()
         State.currentEmoteTrack.Priority = Enum.AnimationPriority.Action
         State.currentEmoteTrack.Looped = true
         task.wait(0.1)
@@ -6802,6 +6867,7 @@ playRandomEmote = function(humanoid, emoteId)
     end)
     if ok and track and typeof(track) == "Instance" and track:IsA("AnimationTrack") then
         State.currentEmoteTrack = track
+        playEmoteSound()
         if State.speedEmoteEnabled then
             local speedVal = tonumber(UI.SpeedBox.Text) or Config.EmoteSpeed or 1
             track:AdjustSpeed(speedVal)
@@ -9265,6 +9331,7 @@ task.spawn(function()
     while true do
         local robloxGui = game:GetService("CoreGui"):FindFirstChild("RobloxGui")
         local emotesMenu = robloxGui and robloxGui:FindFirstChild("EmotesMenu")
+        if emotesMenu then bindDarkEmoteClickSounds(emotesMenu) end
 
         if not emotesMenu then
             StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, true)
