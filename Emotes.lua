@@ -7,8 +7,6 @@
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 
--- Endpoint público do backend do Chat Global. Preencha após publicar este projeto.
-local GLOBAL_CHAT_API_URL = "https://52bee4d0-2d2c-4836-af4e-1d6562112ff7-00-1hvwzkpuilaum.reed.replit.dev/api"
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
 
@@ -429,7 +427,6 @@ Config = {
     AutoReloadEnabled = false,
     LastPlayedAnimationData = nil,
     DiscordVisible = true,
-    GlobalChatVisible = true
 }
 
 HUD = {
@@ -1241,7 +1238,6 @@ function LoadConfig()
     getgenv().lastPlayedAnimation = Config.LastPlayedAnimationData
 end
 LoadConfig()
-Config.GlobalChatVisible = Config.GlobalChatVisible ~= false
 
 local rawNotify = getgenv().Notify
 getgenv().Notify = function(data)
@@ -1481,295 +1477,11 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
-local GlobalChatBtn = Instance.new("ImageButton")
-GlobalChatBtn.Name = "GlobalChatButton"
-GlobalChatBtn.Parent = ToggleContainer
-GlobalChatBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-GlobalChatBtn.BackgroundTransparency = 0.4
-GlobalChatBtn.Position = UDim2.new(0, 104, 1, -52)
-GlobalChatBtn.Size = UDim2.fromOffset(42, 42)
-GlobalChatBtn.Image = "rbxassetid://6031071053"
-GlobalChatBtn.Visible = false
-
-local GlobalChatCorner = Instance.new("UICorner")
-GlobalChatCorner.CornerRadius = UDim.new(0, 10)
-GlobalChatCorner.Parent = GlobalChatBtn
 
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
 DiscordCorner.Parent = DiscordBtn
 
-local GlobalChatWindow = Instance.new("Frame")
-GlobalChatWindow.Name = "GlobalChatWindow"
-GlobalChatWindow.Parent = SettingsLib.UI
-GlobalChatWindow.AnchorPoint = Vector2.new(0, 1)
-GlobalChatWindow.Position = UDim2.new(0, 10, 1, -118)
-GlobalChatWindow.Size = UDim2.fromOffset(340, 360)
-GlobalChatWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
-GlobalChatWindow.BorderSizePixel = 0
-GlobalChatWindow.Visible = false
-GlobalChatWindow.ZIndex = 5100
-
-local GlobalChatWindowCorner = Instance.new("UICorner")
-GlobalChatWindowCorner.CornerRadius = UDim.new(0, 12)
-GlobalChatWindowCorner.Parent = GlobalChatWindow
-
-local GlobalChatTitle = Instance.new("TextLabel")
-GlobalChatTitle.Parent = GlobalChatWindow
-GlobalChatTitle.BackgroundTransparency = 1
-GlobalChatTitle.Position = UDim2.fromOffset(14, 10)
-GlobalChatTitle.Size = UDim2.new(1, -64, 0, 24)
-GlobalChatTitle.Font = Enum.Font.GothamBold
-GlobalChatTitle.Text = "CHAT GLOBAL  •  EMOTE DARK"
-GlobalChatTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
-GlobalChatTitle.TextSize = 14
-GlobalChatTitle.TextXAlignment = Enum.TextXAlignment.Left
-GlobalChatTitle.ZIndex = 5101
-
-local GlobalChatClose = Instance.new("TextButton")
-GlobalChatClose.Parent = GlobalChatWindow
-GlobalChatClose.BackgroundTransparency = 1
-GlobalChatClose.Position = UDim2.new(1, -38, 0, 7)
-GlobalChatClose.Size = UDim2.fromOffset(28, 28)
-GlobalChatClose.Font = Enum.Font.GothamBold
-GlobalChatClose.Text = "×"
-GlobalChatClose.TextColor3 = Color3.fromRGB(210, 215, 220)
-GlobalChatClose.TextSize = 22
-GlobalChatClose.ZIndex = 5101
-
-local GlobalChatStatus = Instance.new("TextLabel")
-GlobalChatStatus.Parent = GlobalChatWindow
-GlobalChatStatus.BackgroundTransparency = 1
-GlobalChatStatus.Position = UDim2.fromOffset(14, 36)
-GlobalChatStatus.Size = UDim2.new(1, -28, 0, 18)
-GlobalChatStatus.Font = Enum.Font.Gotham
-GlobalChatStatus.Text = "Somente usuários do script podem conversar"
-GlobalChatStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
-GlobalChatStatus.TextSize = 10
-GlobalChatStatus.TextXAlignment = Enum.TextXAlignment.Left
-GlobalChatStatus.ZIndex = 5101
-
-local GlobalChatDivider = Instance.new("Frame")
-GlobalChatDivider.Parent = GlobalChatWindow
-GlobalChatDivider.BackgroundColor3 = Color3.fromRGB(50, 57, 66)
-GlobalChatDivider.BorderSizePixel = 0
-GlobalChatDivider.Position = UDim2.new(0, 10, 0, 59)
-GlobalChatDivider.Size = UDim2.new(1, -20, 0, 1)
-GlobalChatDivider.ZIndex = 5101
-
-local GlobalChatMessages = Instance.new("ScrollingFrame")
-GlobalChatMessages.Parent = GlobalChatWindow
-GlobalChatMessages.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
-GlobalChatMessages.BackgroundTransparency = 0.25
-GlobalChatMessages.BorderSizePixel = 0
-GlobalChatMessages.Position = UDim2.fromOffset(10, 68)
-GlobalChatMessages.Size = UDim2.new(1, -20, 1, -125)
-GlobalChatMessages.CanvasSize = UDim2.new(0, 0, 0, 0)
-GlobalChatMessages.AutomaticCanvasSize = Enum.AutomaticSize.Y
-GlobalChatMessages.ScrollBarThickness = 3
-GlobalChatMessages.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
-GlobalChatMessages.ZIndex = 5101
-
-local GlobalChatList = Instance.new("UIListLayout")
-GlobalChatList.Parent = GlobalChatMessages
-GlobalChatList.Padding = UDim.new(0, 5)
-GlobalChatList.SortOrder = Enum.SortOrder.LayoutOrder
-
-local GlobalChatInput = Instance.new("TextBox")
-GlobalChatInput.Parent = GlobalChatWindow
-GlobalChatInput.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
-GlobalChatInput.BorderSizePixel = 0
-GlobalChatInput.Position = UDim2.new(0, 10, 1, -45)
-GlobalChatInput.Size = UDim2.new(1, -64, 0, 35)
-GlobalChatInput.ClearTextOnFocus = false
-GlobalChatInput.Font = Enum.Font.Gotham
-GlobalChatInput.PlaceholderText = "Escreva para o script..."
-GlobalChatInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
-GlobalChatInput.Text = ""
-GlobalChatInput.TextColor3 = Color3.fromRGB(235, 240, 245)
-GlobalChatInput.TextSize = 11
-GlobalChatInput.TextXAlignment = Enum.TextXAlignment.Left
-GlobalChatInput.ZIndex = 5101
-
-local GlobalChatSend = Instance.new("TextButton")
-GlobalChatSend.Parent = GlobalChatWindow
-GlobalChatSend.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
-GlobalChatSend.BorderSizePixel = 0
-GlobalChatSend.Position = UDim2.new(1, -48, 1, -45)
-GlobalChatSend.Size = UDim2.fromOffset(38, 35)
-GlobalChatSend.Font = Enum.Font.GothamBold
-GlobalChatSend.Text = "➤"
-GlobalChatSend.TextColor3 = Color3.fromRGB(12, 18, 20)
-GlobalChatSend.TextSize = 14
-GlobalChatSend.ZIndex = 5101
-
-local GlobalChatInputCorner = Instance.new("UICorner")
-GlobalChatInputCorner.CornerRadius = UDim.new(0, 7)
-GlobalChatInputCorner.Parent = GlobalChatInput
-
-local GlobalChatSendCorner = Instance.new("UICorner")
-GlobalChatSendCorner.CornerRadius = UDim.new(0, 7)
-GlobalChatSendCorner.Parent = GlobalChatSend
-
-local globalChatSessionToken = nil
-local globalChatLastMessageAt = nil
-local globalChatRunning = false
-local globalChatConnecting = false
-local globalChatSeenIds = {}
-
-local function globalChatNotify(title, content)
-    local notify = getgenv().Notify
-    if type(notify) == "function" then
-        notify({Title = title, Content = content, Duration = 4})
-    end
-end
-
-local function globalChatHeaders()
-    return {
-        ["Content-Type"] = "application/json",
-        ["X-Emote-Dark-Client"] = "emotes-dark-v2",
-    }
-end
-
-local function globalChatClientPath(path)
-    local separator = string.find(path, "?", 1, true) and "&" or "?"
-    return path .. separator .. "client=emotes-dark-v2"
-end
-
-local function globalChatRequest(method, path, body, withSession)
-    if GLOBAL_CHAT_API_URL == "" or type(request) ~= "function" then return nil, "API não configurada" end
-    local headers = globalChatHeaders()
-    if withSession and globalChatSessionToken then headers["Authorization"] = "Bearer " .. globalChatSessionToken end
-    local ok, response = pcall(function()
-        return request({Url = GLOBAL_CHAT_API_URL .. globalChatClientPath(path), Method = method, Headers = headers, Body = body and HttpService:JSONEncode(body) or nil})
-    end)
-    if not ok or not response then return nil, "Falha de conexão" end
-    local statusCode = tonumber(response.StatusCode) or 0
-    if statusCode < 200 or statusCode >= 300 then
-        local detail = "Resposta " .. tostring(statusCode)
-        if response.Body then
-            local okBody, decodedBody = pcall(function() return HttpService:JSONDecode(response.Body) end)
-            if okBody and type(decodedBody) == "table" and decodedBody.error then detail = decodedBody.error end
-        end
-        return nil, detail
-    end
-    local okDecode, decoded = pcall(function() return HttpService:JSONDecode(response.Body or "{}") end)
-    if not okDecode then return nil, "Resposta inválida do servidor" end
-    return decoded, nil
-end
-
-local function renderGlobalChatMessage(message)
-    if not message or not message.id or globalChatSeenIds[message.id] then return end
-    globalChatSeenIds[message.id] = true
-    local mine = message.userId == Players.LocalPlayer.UserId
-    local item = Instance.new("Frame")
-    item.Parent = GlobalChatMessages
-    item.BackgroundColor3 = mine and Color3.fromRGB(0, 85, 61) or Color3.fromRGB(32, 37, 45)
-    item.BackgroundTransparency = mine and 0.18 or 0.08
-    item.BorderSizePixel = 0
-    item.Size = UDim2.new(1, -10, 0, 0)
-    item.AutomaticSize = Enum.AutomaticSize.Y
-    item.ZIndex = 5102
-    local itemCorner = Instance.new("UICorner")
-    itemCorner.CornerRadius = UDim.new(0, 8)
-    itemCorner.Parent = item
-    local author = Instance.new("TextLabel")
-    author.Parent = item
-    author.BackgroundTransparency = 1
-    author.Position = UDim2.fromOffset(10, 6)
-    author.Size = UDim2.new(1, -20, 0, 15)
-    author.Font = Enum.Font.GothamBold
-    author.Text = tostring(message.displayName or "Player")
-    author.TextColor3 = mine and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(170, 185, 195)
-    author.TextSize = 10
-    author.TextXAlignment = Enum.TextXAlignment.Left
-    author.ZIndex = 5103
-    local content = Instance.new("TextLabel")
-    content.Parent = item
-    content.BackgroundTransparency = 1
-    content.Position = UDim2.fromOffset(10, 22)
-    content.Size = UDim2.new(1, -20, 0, 0)
-    content.AutomaticSize = Enum.AutomaticSize.Y
-    content.Font = Enum.Font.Gotham
-    content.Text = tostring(message.content or "")
-    content.TextColor3 = Color3.fromRGB(235, 240, 245)
-    content.TextSize = 11
-    content.TextWrapped = true
-    content.TextXAlignment = Enum.TextXAlignment.Left
-    content.TextYAlignment = Enum.TextYAlignment.Top
-    content.ZIndex = 5103
-    task.defer(function()
-        GlobalChatMessages.CanvasPosition = Vector2.new(0, math.max(0, GlobalChatList.AbsoluteContentSize.Y))
-    end)
-end
-
-local function globalChatPoll()
-    if not globalChatSessionToken then return false end
-    local path = "/chat/messages?limit=50"
-    if globalChatLastMessageAt then path = path .. "&after=" .. HttpService:UrlEncode(globalChatLastMessageAt) end
-    local data, err = globalChatRequest("GET", path, nil, true)
-    if not data then if err == "Sessão do script expirada." then globalChatSessionToken = nil end return false end
-    for _, message in ipairs(data.messages or {}) do
-        renderGlobalChatMessage(message)
-        globalChatLastMessageAt = message.createdAt or globalChatLastMessageAt
-    end
-    return true
-end
-
-local function ensureGlobalChatSession()
-    if globalChatSessionToken or globalChatConnecting then return globalChatSessionToken ~= nil end
-    globalChatConnecting = true
-    GlobalChatStatus.Text = "Conectando ao chat global..."
-    local player = Players.LocalPlayer
-    local data, err = globalChatRequest("POST", "/chat/session", {userId = player.UserId, displayName = player.DisplayName ~= "" and player.DisplayName or player.Name, scriptVersion = "EmotesDarkV2", clientNonce = HttpService:GenerateGUID(false)}, false)
-    globalChatConnecting = false
-    if not data or not data.token then GlobalChatStatus.Text = err or "Não foi possível conectar." return false end
-    globalChatSessionToken = data.token
-    GlobalChatStatus.Text = "Online • usuários do Emote Dark"
-    globalChatPoll()
-    return true
-end
-
-local function startGlobalChat()
-    if GLOBAL_CHAT_API_URL == "" then GlobalChatStatus.Text = "Configure GLOBAL_CHAT_API_URL no script." return end
-    if globalChatRunning then return end
-    globalChatRunning = true
-    task.spawn(function()
-        while globalChatRunning do
-            ensureGlobalChatSession()
-            if globalChatSessionToken then globalChatPoll() end
-            task.wait(4)
-        end
-    end)
-end
-
-local function sendGlobalChatMessage()
-    local content = string.gsub(GlobalChatInput.Text or "", "^%s*(.-)%s*$", "%1")
-    if content == "" then return end
-    if #content > 240 then globalChatNotify("Chat Global", "A mensagem pode ter no máximo 240 caracteres.") return end
-    if not ensureGlobalChatSession() then return end
-    local data, err = globalChatRequest("POST", "/chat/messages", {content = content}, true)
-    if not data or not data.message then globalChatNotify("Chat Global", err or "Não foi possível enviar a mensagem.") return end
-    GlobalChatInput.Text = ""
-    renderGlobalChatMessage(data.message)
-    globalChatLastMessageAt = data.message.createdAt or globalChatLastMessageAt
-end
-
-function syncGlobalChatVisibility()
-    GlobalChatBtn.Visible = Config.GlobalChatVisible ~= false
-    if Config.GlobalChatVisible == false then GlobalChatWindow.Visible = false end
-end
-
-GlobalChatBtn.MouseButton1Click:Connect(function()
-    GlobalChatWindow.Visible = not GlobalChatWindow.Visible
-    if GlobalChatWindow.Visible then startGlobalChat() else globalChatRunning = false end
-end)
-GlobalChatClose.MouseButton1Click:Connect(function()
-    GlobalChatWindow.Visible = false
-    globalChatRunning = false
-end)
-GlobalChatSend.MouseButton1Click:Connect(sendGlobalChatMessage)
-GlobalChatInput.FocusLost:Connect(function(enterPressed) if enterPressed then sendGlobalChatMessage() end end)
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
@@ -1794,8 +1506,6 @@ function applySettingsToggleStyle()
     if bgColor then
         ToggleBtn.BackgroundColor3 = bgColor
         DiscordBtn.BackgroundColor3 = bgColor
-        GlobalChatBtn.BackgroundColor3 = bgColor
-        GlobalChatWindow.BackgroundColor3 = bgColor
     end
 end
 
@@ -1810,7 +1520,6 @@ end
 
 function syncDiscordVisibility()
     DiscordBtn.Visible = Config.DiscordVisible
-    syncGlobalChatVisibility()
 end
 
 DiscordBtn.MouseButton1Click:Connect(function()
@@ -1831,7 +1540,6 @@ end)
 applySettingsToggleStyle()
 syncToggleVisibility()
 syncDiscordVisibility()
-    syncGlobalChatVisibility()
 
 do
     local main = getSettingsMainFrame()
@@ -2169,11 +1877,6 @@ TogglesUI.DiscordVisible = SettingsLib.AddToggle(ButtonsTab, "Discord Button", "
     SaveConfig()
 end)
 
-TogglesUI.GlobalChatVisible = SettingsLib.AddToggle(ButtonsTab, "Global Chat Button", "Show/Hide the Emote Dark global chat button", Config.GlobalChatVisible ~= false, function(v)
-    Config.GlobalChatVisible = v
-    syncGlobalChatVisibility()
-    SaveConfig()
-end)
 
 local cachedOverlay = nil
 local hudEditorItem = SettingsLib.AddItem(ButtonsTab, "HUD Editor", "Reposition buttons & UI elements")
