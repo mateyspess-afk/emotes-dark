@@ -1241,6 +1241,7 @@ function LoadConfig()
     getgenv().lastPlayedAnimation = Config.LastPlayedAnimationData
 end
 LoadConfig()
+Config.GlobalChatVisible = Config.GlobalChatVisible ~= false
 
 local rawNotify = getgenv().Notify
 getgenv().Notify = function(data)
@@ -1502,8 +1503,8 @@ local GlobalChatWindow = Instance.new("Frame")
 GlobalChatWindow.Name = "GlobalChatWindow"
 GlobalChatWindow.Parent = SettingsLib.UI
 GlobalChatWindow.AnchorPoint = Vector2.new(0, 1)
-GlobalChatWindow.Position = UDim2.new(0, 10, 1, -105)
-GlobalChatWindow.Size = UDim2.fromOffset(310, 330)
+GlobalChatWindow.Position = UDim2.new(0, 10, 1, -118)
+GlobalChatWindow.Size = UDim2.fromOffset(340, 360)
 GlobalChatWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
 GlobalChatWindow.BorderSizePixel = 0
 GlobalChatWindow.Visible = false
@@ -1517,9 +1518,9 @@ local GlobalChatTitle = Instance.new("TextLabel")
 GlobalChatTitle.Parent = GlobalChatWindow
 GlobalChatTitle.BackgroundTransparency = 1
 GlobalChatTitle.Position = UDim2.fromOffset(14, 10)
-GlobalChatTitle.Size = UDim2.new(1, -54, 0, 24)
+GlobalChatTitle.Size = UDim2.new(1, -64, 0, 24)
 GlobalChatTitle.Font = Enum.Font.GothamBold
-GlobalChatTitle.Text = "CHAT GLOBAL"
+GlobalChatTitle.Text = "CHAT GLOBAL  •  EMOTE DARK"
 GlobalChatTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
 GlobalChatTitle.TextSize = 14
 GlobalChatTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1542,19 +1543,27 @@ GlobalChatStatus.BackgroundTransparency = 1
 GlobalChatStatus.Position = UDim2.fromOffset(14, 36)
 GlobalChatStatus.Size = UDim2.new(1, -28, 0, 18)
 GlobalChatStatus.Font = Enum.Font.Gotham
-GlobalChatStatus.Text = "Apenas usuários do Emote Dark"
+GlobalChatStatus.Text = "Somente usuários do script podem conversar"
 GlobalChatStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
 GlobalChatStatus.TextSize = 10
 GlobalChatStatus.TextXAlignment = Enum.TextXAlignment.Left
 GlobalChatStatus.ZIndex = 5101
+
+local GlobalChatDivider = Instance.new("Frame")
+GlobalChatDivider.Parent = GlobalChatWindow
+GlobalChatDivider.BackgroundColor3 = Color3.fromRGB(50, 57, 66)
+GlobalChatDivider.BorderSizePixel = 0
+GlobalChatDivider.Position = UDim2.new(0, 10, 0, 59)
+GlobalChatDivider.Size = UDim2.new(1, -20, 0, 1)
+GlobalChatDivider.ZIndex = 5101
 
 local GlobalChatMessages = Instance.new("ScrollingFrame")
 GlobalChatMessages.Parent = GlobalChatWindow
 GlobalChatMessages.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
 GlobalChatMessages.BackgroundTransparency = 0.25
 GlobalChatMessages.BorderSizePixel = 0
-GlobalChatMessages.Position = UDim2.fromOffset(10, 60)
-GlobalChatMessages.Size = UDim2.new(1, -20, 1, -112)
+GlobalChatMessages.Position = UDim2.fromOffset(10, 68)
+GlobalChatMessages.Size = UDim2.new(1, -20, 1, -125)
 GlobalChatMessages.CanvasSize = UDim2.new(0, 0, 0, 0)
 GlobalChatMessages.AutomaticCanvasSize = Enum.AutomaticSize.Y
 GlobalChatMessages.ScrollBarThickness = 3
@@ -1570,8 +1579,8 @@ local GlobalChatInput = Instance.new("TextBox")
 GlobalChatInput.Parent = GlobalChatWindow
 GlobalChatInput.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
 GlobalChatInput.BorderSizePixel = 0
-GlobalChatInput.Position = UDim2.new(0, 10, 1, -43)
-GlobalChatInput.Size = UDim2.new(1, -63, 0, 33)
+GlobalChatInput.Position = UDim2.new(0, 10, 1, -45)
+GlobalChatInput.Size = UDim2.new(1, -64, 0, 35)
 GlobalChatInput.ClearTextOnFocus = false
 GlobalChatInput.Font = Enum.Font.Gotham
 GlobalChatInput.PlaceholderText = "Escreva para o script..."
@@ -1586,8 +1595,8 @@ local GlobalChatSend = Instance.new("TextButton")
 GlobalChatSend.Parent = GlobalChatWindow
 GlobalChatSend.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
 GlobalChatSend.BorderSizePixel = 0
-GlobalChatSend.Position = UDim2.new(1, -48, 1, -43)
-GlobalChatSend.Size = UDim2.fromOffset(38, 33)
+GlobalChatSend.Position = UDim2.new(1, -48, 1, -45)
+GlobalChatSend.Size = UDim2.fromOffset(38, 35)
 GlobalChatSend.Font = Enum.Font.GothamBold
 GlobalChatSend.Text = "➤"
 GlobalChatSend.TextColor3 = Color3.fromRGB(12, 18, 20)
@@ -1647,20 +1656,46 @@ end
 local function renderGlobalChatMessage(message)
     if not message or not message.id or globalChatSeenIds[message.id] then return end
     globalChatSeenIds[message.id] = true
-    local item = Instance.new("TextLabel")
+    local mine = message.userId == Players.LocalPlayer.UserId
+    local item = Instance.new("Frame")
     item.Parent = GlobalChatMessages
-    item.BackgroundTransparency = 1
-    item.Size = UDim2.new(1, -8, 0, 0)
+    item.BackgroundColor3 = mine and Color3.fromRGB(0, 85, 61) or Color3.fromRGB(32, 37, 45)
+    item.BackgroundTransparency = mine and 0.18 or 0.08
+    item.BorderSizePixel = 0
+    item.Size = UDim2.new(1, -10, 0, 0)
     item.AutomaticSize = Enum.AutomaticSize.Y
-    item.Font = Enum.Font.Gotham
-    item.Text = string.format("%s: %s", tostring(message.displayName or "Player"), tostring(message.content or ""))
-    item.TextColor3 = message.userId == Players.LocalPlayer.UserId and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(225, 230, 235)
-    item.TextSize = 11
-    item.TextWrapped = true
-    item.TextXAlignment = Enum.TextXAlignment.Left
-    item.TextYAlignment = Enum.TextYAlignment.Top
     item.ZIndex = 5102
-    GlobalChatMessages.CanvasPosition = Vector2.new(0, math.max(0, GlobalChatList.AbsoluteContentSize.Y))
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 8)
+    itemCorner.Parent = item
+    local author = Instance.new("TextLabel")
+    author.Parent = item
+    author.BackgroundTransparency = 1
+    author.Position = UDim2.fromOffset(10, 6)
+    author.Size = UDim2.new(1, -20, 0, 15)
+    author.Font = Enum.Font.GothamBold
+    author.Text = tostring(message.displayName or "Player")
+    author.TextColor3 = mine and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(170, 185, 195)
+    author.TextSize = 10
+    author.TextXAlignment = Enum.TextXAlignment.Left
+    author.ZIndex = 5103
+    local content = Instance.new("TextLabel")
+    content.Parent = item
+    content.BackgroundTransparency = 1
+    content.Position = UDim2.fromOffset(10, 22)
+    content.Size = UDim2.new(1, -20, 0, 0)
+    content.AutomaticSize = Enum.AutomaticSize.Y
+    content.Font = Enum.Font.Gotham
+    content.Text = tostring(message.content or "")
+    content.TextColor3 = Color3.fromRGB(235, 240, 245)
+    content.TextSize = 11
+    content.TextWrapped = true
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.ZIndex = 5103
+    task.defer(function()
+        GlobalChatMessages.CanvasPosition = Vector2.new(0, math.max(0, GlobalChatList.AbsoluteContentSize.Y))
+    end)
 end
 
 local function globalChatPoll()
@@ -1716,7 +1751,7 @@ local function sendGlobalChatMessage()
 end
 
 function syncGlobalChatVisibility()
-    GlobalChatBtn.Visible = Config.GlobalChatVisible
+    GlobalChatBtn.Visible = Config.GlobalChatVisible ~= false
     if not Config.GlobalChatVisible then GlobalChatWindow.Visible = false end
 end
 
@@ -2126,7 +2161,7 @@ TogglesUI.DiscordVisible = SettingsLib.AddToggle(ButtonsTab, "Discord Button", "
     SaveConfig()
 end)
 
-TogglesUI.GlobalChatVisible = SettingsLib.AddToggle(ButtonsTab, "Global Chat Button", "Show/Hide the Emote Dark global chat button", Config.GlobalChatVisible, function(v)
+TogglesUI.GlobalChatVisible = SettingsLib.AddToggle(ButtonsTab, "Global Chat Button", "Show/Hide the Emote Dark global chat button", Config.GlobalChatVisible ~= false, function(v)
     Config.GlobalChatVisible = v
     syncGlobalChatVisibility()
     SaveConfig()
