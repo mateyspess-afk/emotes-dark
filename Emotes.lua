@@ -1602,6 +1602,23 @@ ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
 
 local BUG_REPORT_COOLDOWN_SECONDS = 24 * 60 * 60
+local BUG_REPORT_READY_PLACEHOLDER = "What happened? Include steps to reproduce and what you expected..."
+local BUG_REPORT_LOCKED_PLACEHOLDER = "Input locked while cooldown is active."
+local bugReportInputEnabled = nil
+
+local function setBugReportInputEnabled(enabled)
+    if bugReportInputEnabled == enabled then return end
+    bugReportInputEnabled = enabled
+    BugReportInput.TextEditable = enabled
+    BugReportInput.Active = enabled
+    BugReportInput.Selectable = enabled
+    if not enabled then
+        pcall(function() BugReportInput:ReleaseFocus() end)
+        BugReportInput.PlaceholderText = BUG_REPORT_LOCKED_PLACEHOLDER
+    else
+        BugReportInput.PlaceholderText = BUG_REPORT_READY_PLACEHOLDER
+    end
+end
 
 local function formatBugCooldown(seconds)
     local hours = math.max(1, math.ceil(seconds / 3600))
@@ -1627,10 +1644,12 @@ local function updateBugReportStatus(message)
 
     local remaining = getBugReportCooldownRemaining()
     if remaining > 0 then
+        setBugReportInputEnabled(false)
         BugReportStatus.Text = formatBugCooldown(remaining)
         BugReportSend.Text = "WAIT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
     else
+        setBugReportInputEnabled(true)
         BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below. PC details are attached automatically."
         BugReportSend.Text = "SEND REPORT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
@@ -1877,6 +1896,15 @@ end)
 BugReportSend.MouseButton1Click:Connect(sendBugReport)
 BugReportInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then sendBugReport() end
+end)
+
+task.spawn(function()
+    while BugReportWindow.Parent do
+        task.wait(1)
+        if BugReportWindow.Visible then
+            updateBugReportStatus()
+        end
+    end
 end)
 
 ToggleBtn.MouseButton1Click:Connect(function()
