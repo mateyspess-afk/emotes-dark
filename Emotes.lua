@@ -1487,17 +1487,15 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
-local BugReportBtn = Instance.new("TextButton")
+local BugReportBtn = Instance.new("ImageButton")
 BugReportBtn.Name = "BugReportButton"
 BugReportBtn.Parent = ToggleContainer
 BugReportBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 BugReportBtn.BackgroundTransparency = 0.4
 BugReportBtn.Position = UDim2.new(0, 104, 1, -52)
 BugReportBtn.Size = UDim2.fromOffset(42, 42)
-BugReportBtn.Font = Enum.Font.GothamBold
-BugReportBtn.Text = "🐞"
-BugReportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BugReportBtn.TextSize = 20
+BugReportBtn.Image = "rbxassetid://7562374862"
+BugReportBtn.ScaleType = Enum.ScaleType.Fit
 BugReportBtn.AutoButtonColor = true
 
 
