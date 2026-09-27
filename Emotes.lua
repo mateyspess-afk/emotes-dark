@@ -466,6 +466,7 @@ Config = {
     EmoteSpeed = 1,
     EmoteSpeedEnabled = false,
     SelectedTheme = "Default",
+    BugReportLastSentAtByUser = {},
     EmotePage = 1,
     AnimationPage = 1,
     RandomEnabled = true,
@@ -1761,9 +1762,19 @@ local function updateBugReportCooldownLabel(remaining)
     end
 end
 
+local function getBugReportCooldownStore()
+    if type(Config.BugReportLastSentAtByUser) ~= "table" then
+        Config.BugReportLastSentAtByUser = {}
+    end
+    return Config.BugReportLastSentAtByUser
+end
+
 local function getBugReportCooldownRemaining()
     if isCurrentUserOwner() then return 0 end
-    local lastSentAt = tonumber(Config.BugReportLastSentAt) or 0
+    local player = Players.LocalPlayer
+    if not player then return 0 end
+    local cooldowns = getBugReportCooldownStore()
+    local lastSentAt = tonumber(cooldowns[tostring(player.UserId)]) or 0
     return math.max(0, BUG_REPORT_COOLDOWN_SECONDS - (os.time() - lastSentAt))
 end
 
@@ -1984,8 +1995,9 @@ local function sendBugReport()
         return
     end
 
-    if not isCurrentUserOwner() then
-        Config.BugReportLastSentAt = os.time()
+    if not isCurrentUserOwner() and player then
+        local cooldowns = getBugReportCooldownStore()
+        cooldowns[tostring(player.UserId)] = os.time()
         SaveConfig()
     end
     BugReportInput.Text = ""
