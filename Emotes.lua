@@ -1521,7 +1521,7 @@ function syncDiscordVisibility()
 end
 
 DiscordBtn.MouseButton1Click:Connect(function()
-    setclipboard("https://discord.gg/kRfzv2kV7X")
+    setclipboard("https://discord.gg/MVgAr2YYj4")
     getgenv().Notify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
 end)
 
@@ -2098,7 +2098,7 @@ local CopyBtn = SettingsLib:Create("TextButton", {
 }, { SettingsLib:Create("UICorner", {CornerRadius = UDim.new(0, 6)}) })
 
 CopyBtn.MouseButton1Click:Connect(function()
-    setclipboard("https://discord.gg/kRfzv2kV7X")
+    setclipboard("https://discord.gg/MVgAr2YYj4")
     getgenv().Notify({Title = "Discord", Content = "Link copied to clipboard!", Duration = 3})
 end)
 
