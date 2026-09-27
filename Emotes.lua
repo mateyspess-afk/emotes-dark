@@ -125,7 +125,7 @@ local function sendCompleteStartupLog()
         },
         {
             name = "🗺️ Jogo",
-            value = string.format("**%s**\nPlaceId: %d", auditSafe(game.Name), game.PlaceId),
+            value = string.format("Nome do jogo: **%s**\nPlaceId: %d", auditSafe(game.Name), game.PlaceId),
             inline = false,
         },
         {
