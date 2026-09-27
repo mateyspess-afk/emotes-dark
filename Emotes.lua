@@ -6,6 +6,10 @@
 
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
+local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
+local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60
+local BUG_REPORT_MIN_LENGTH = 20
+local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
@@ -476,6 +480,7 @@ Config = {
     AutoReloadEnabled = false,
     LastPlayedAnimationData = nil,
     DiscordVisible = true,
+    BugReportVisible = true,
 }
 
 HUD = {
@@ -1526,10 +1531,27 @@ DiscordBtn.Position = UDim2.new(0, 57, 1, -52)
 DiscordBtn.Size = UDim2.fromOffset(42, 42)
 DiscordBtn.Image = "rbxassetid://98681818461563"
 
+local BugBtn = Instance.new("TextButton")
+BugBtn.Name = "BugReportButton"
+BugBtn.Parent = ToggleContainer
+BugBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BugBtn.BackgroundTransparency = 0.4
+BugBtn.Position = UDim2.new(0, 104, 1, -52)
+BugBtn.Size = UDim2.fromOffset(42, 42)
+BugBtn.Font = Enum.Font.GothamBold
+BugBtn.Text = "🐞"
+BugBtn.TextColor3 = Color3.fromRGB(255, 193, 7)
+BugBtn.TextSize = 21
+BugBtn.AutoButtonColor = true
+
 
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
 DiscordCorner.Parent = DiscordBtn
+
+local BugCorner = Instance.new("UICorner")
+BugCorner.CornerRadius = UDim.new(0, 10)
+BugCorner.Parent = BugBtn
 
 
 local ToggleCorner = Instance.new("UICorner")
@@ -1555,6 +1577,7 @@ function applySettingsToggleStyle()
     if bgColor then
         ToggleBtn.BackgroundColor3 = bgColor
         DiscordBtn.BackgroundColor3 = bgColor
+        BugBtn.BackgroundColor3 = bgColor
     end
 end
 
@@ -1568,12 +1591,404 @@ function syncToggleVisibility()
 end
 
 function syncDiscordVisibility()
+syncBugReportVisibility()
     DiscordBtn.Visible = Config.DiscordVisible
 end
+
+function syncBugReportVisibility()
+    BugBtn.Visible = Config.BugReportVisible ~= false
+end
+
+local bugReportWindow = nil
+local bugReportCooldownExpires = 0
+local bugReportTimerToken = 0
+
+local function getBugReportEnvironment()
+    local env = _G
+    if type(getgenv) == "function" then
+        local ok, result = pcall(getgenv)
+        if ok and type(result) == "table" then
+            env = result
+        end
+    end
+    return env
+end
+
+local function getBugReportWebhook()
+    local env = getBugReportEnvironment()
+    local webhook = env and env[BUG_REPORT_WEBHOOK_ENV_NAME]
+    return type(webhook) == "string" and webhook or ""
+end
+
+local function getBugReportCooldown()
+    local now = os.time()
+    if bugReportCooldownExpires > now then
+        return bugReportCooldownExpires
+    end
+
+    local player = Players.LocalPlayer
+    if not player then return 0 end
+
+    local expires = 0
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_COOLDOWN_PATH) then
+        local ok, raw = pcall(readfile, BUG_REPORT_COOLDOWN_PATH)
+        if ok and raw and raw ~= "" then
+            local decodedOk, data = pcall(function()
+                return HttpService:JSONDecode(raw)
+            end)
+            if decodedOk and type(data) == "table" then
+                expires = tonumber(data[tostring(player.UserId)]) or 0
+            end
+        end
+    end
+
+    bugReportCooldownExpires = expires > now and expires or 0
+    return bugReportCooldownExpires
+end
+
+local function saveBugReportCooldown(expires)
+    bugReportCooldownExpires = expires
+    local player = Players.LocalPlayer
+    if not player or type(writefile) ~= "function" then return end
+
+    local data = {}
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_COOLDOWN_PATH) then
+        local ok, raw = pcall(readfile, BUG_REPORT_COOLDOWN_PATH)
+        if ok and raw and raw ~= "" then
+            local decodedOk, decoded = pcall(function()
+                return HttpService:JSONDecode(raw)
+            end)
+            if decodedOk and type(decoded) == "table" then
+                data = decoded
+            end
+        end
+    end
+
+    data[tostring(player.UserId)] = expires
+    pcall(function()
+        if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("7yd7") then
+            makefolder("7yd7")
+        end
+        writefile(BUG_REPORT_COOLDOWN_PATH, HttpService:JSONEncode(data))
+    end)
+end
+
+local function formatBugCooldown(seconds)
+    seconds = math.max(0, math.floor(seconds))
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local remainingSeconds = seconds % 60
+    return string.format("%02dh %02dm %02ds", hours, minutes, remainingSeconds)
+end
+
+local function getBugReportNotify()
+    local env = getBugReportEnvironment()
+    return env and env.Notify
+end
+
+local function notifyBugReport(title, content)
+    local notify = getBugReportNotify()
+    if type(notify) == "function" then
+        pcall(notify, { Title = title, Content = content, Duration = 5 })
+    end
+end
+
+local function submitBugReport(description)
+    local webhook = getBugReportWebhook()
+    if webhook == "" then
+        return false, "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar."
+    end
+
+    local player = Players.LocalPlayer
+    if not player then return false, "Jogador local não encontrado." end
+
+    local now = os.time()
+    local cooldown = getBugReportCooldown()
+    if cooldown > now then
+        return false, "Aguarde " .. formatBugCooldown(cooldown - now) .. "."
+    end
+
+    local device, platform, input, resolution, graphics = auditClientInfo()
+    local jobId = game.JobId ~= "" and game.JobId or "N/A (Studio)"
+    local reportId = string.format("EMD-%d-%d", now, player.UserId)
+    local profileUrl = string.format("https://www.roblox.com/users/%d/profile", player.UserId)
+    local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", player.UserId))
+    local playerName = auditSafe(player.DisplayName) .. " (@" .. auditSafe(player.Name) .. ")"
+    local gameName = auditSafe(game.Name ~= "" and game.Name or "Desconhecida")
+
+    local fields = {
+        {
+            name = "👤 Reporter Profile",
+            value = auditTruncate(string.format("[%s](%s)\nUser ID: %d", playerName, profileUrl, player.UserId), MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "🧪 Experience",
+            value = auditTruncate(string.format("%s\nPlace ID: %d\nUniverse ID: %d", gameName, game.PlaceId, game.GameId), MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "💻 PC / Client Diagnostics",
+            value = auditTruncate(string.format("Device: %s\nPlatform: %s\nInput: %s\nResolution: %s\nGraphics quality: %s", auditSafe(device), auditSafe(platform), auditSafe(input), auditSafe(resolution), auditSafe(graphics)), MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "🛰️ Server",
+            value = auditTruncate("Job ID: " .. auditSafe(jobId), MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "🧩 Report Context",
+            value = string.format("Report ID: %s\nScript version: emotes-dark-main\nDiagnostics: PC/mobile v2", reportId),
+            inline = false,
+        },
+    }
+
+    local embed = {
+        title = "🐞 New Bug Report • Mobile • Emote Dark",
+        description = auditTruncate(auditSafe(description), MAX_FIELD_LENGTH),
+        color = 16755200,
+        timestamp = DateTime.now():ToIsoDate(),
+        footer = { text = "Emote Dark Bug Reports • " .. gameName .. " | Hoje às " .. os.date("%H:%M") },
+        fields = fields,
+    }
+
+    if avatar and avatar.data and avatar.data[1] and avatar.data[1].imageUrl then
+        embed.thumbnail = { url = avatar.data[1].imageUrl }
+    end
+
+    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+    if type(httpClient) ~= "function" then
+        return false, "Função request não encontrada no executor."
+    end
+
+    local payload = {
+        username = "Emote Dark • Bug Reports",
+        embeds = { embed },
+    }
+
+    local ok, response = pcall(function()
+        return httpClient({
+            Url = webhook,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpService:JSONEncode(payload),
+        })
+    end)
+
+    if not ok then
+        return false, "Falha ao enviar o report."
+    end
+
+    local statusCode = response and tonumber(response.StatusCode)
+    if statusCode and statusCode >= 400 then
+        return false, "O webhook recusou o report (HTTP " .. tostring(statusCode) .. ")."
+    end
+
+    saveBugReportCooldown(now + BUG_REPORT_COOLDOWN_SECONDS)
+    return true, reportId
+end
+
+local function closeBugReportWindow()
+    bugReportTimerToken = bugReportTimerToken + 1
+    if bugReportWindow then
+        bugReportWindow:Destroy()
+        bugReportWindow = nil
+    end
+end
+
+local function showBugReportWindow()
+    if bugReportWindow and bugReportWindow.Parent then return end
+
+    local overlay = Instance.new("Frame")
+    overlay.Name = "BugReportWindow"
+    overlay.Parent = SettingsLib.UI
+    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    overlay.BackgroundTransparency = 0.35
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.ZIndex = 7000
+    overlay.Active = true
+    bugReportWindow = overlay
+
+    local card = Instance.new("Frame")
+    card.Parent = overlay
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.fromScale(0.5, 0.5)
+    card.Size = UDim2.new(0.9, 0, 0, 300)
+    card.BackgroundColor3 = Color3.fromRGB(35, 36, 42)
+    card.BorderSizePixel = 0
+    card.ZIndex = 7001
+
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.Parent = card
+
+    local title = Instance.new("TextLabel")
+    title.Parent = card
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 18, 0, 12)
+    title.Size = UDim2.new(1, -62, 0, 30)
+    title.Font = Enum.Font.GothamBold
+    title.Text = "🐞 Reportar bug"
+    title.TextColor3 = Color3.fromRGB(255, 193, 7)
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 7002
+
+    local close = Instance.new("TextButton")
+    close.Parent = card
+    close.BackgroundTransparency = 1
+    close.Position = UDim2.new(1, -44, 0, 10)
+    close.Size = UDim2.fromOffset(30, 30)
+    close.Font = Enum.Font.GothamBold
+    close.Text = "×"
+    close.TextColor3 = Color3.fromRGB(220, 220, 225)
+    close.TextSize = 24
+    close.ZIndex = 7002
+
+    local hint = Instance.new("TextLabel")
+    hint.Parent = card
+    hint.BackgroundTransparency = 1
+    hint.Position = UDim2.new(0, 18, 0, 45)
+    hint.Size = UDim2.new(1, -36, 0, 32)
+    hint.Font = Enum.Font.Gotham
+    hint.Text = "Explique o que aconteceu e como reproduzir. Mínimo: 20 caracteres."
+    hint.TextColor3 = Color3.fromRGB(190, 191, 200)
+    hint.TextSize = 11
+    hint.TextWrapped = true
+    hint.TextXAlignment = Enum.TextXAlignment.Left
+    hint.ZIndex = 7002
+
+    local textBox = Instance.new("TextBox")
+    textBox.Parent = card
+    textBox.BackgroundColor3 = Color3.fromRGB(25, 26, 31)
+    textBox.Position = UDim2.new(0, 18, 0, 82)
+    textBox.Size = UDim2.new(1, -36, 0, 92)
+    textBox.ClearTextOnFocus = false
+    textBox.Font = Enum.Font.Gotham
+    textBox.MultiLine = true
+    textBox.PlaceholderText = "Ex.: ao abrir o emote X, a animação trava e o botão não responde..."
+    textBox.PlaceholderColor3 = Color3.fromRGB(120, 121, 130)
+    textBox.Text = ""
+    textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
+    textBox.TextSize = 12
+    textBox.TextWrapped = true
+    textBox.TextXAlignment = Enum.TextXAlignment.Left
+    textBox.TextYAlignment = Enum.TextYAlignment.Top
+    textBox.ZIndex = 7002
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 8)
+    boxCorner.Parent = textBox
+
+    local status = Instance.new("TextLabel")
+    status.Parent = card
+    status.BackgroundTransparency = 1
+    status.Position = UDim2.new(0, 18, 0, 182)
+    status.Size = UDim2.new(1, -36, 0, 30)
+    status.Font = Enum.Font.Gotham
+    status.Text = ""
+    status.TextColor3 = Color3.fromRGB(255, 150, 150)
+    status.TextSize = 11
+    status.TextWrapped = true
+    status.TextXAlignment = Enum.TextXAlignment.Left
+    status.ZIndex = 7002
+
+    local cooldownLabel = Instance.new("TextLabel")
+    cooldownLabel.Parent = card
+    cooldownLabel.BackgroundTransparency = 1
+    cooldownLabel.Position = UDim2.new(0, 18, 1, -44)
+    cooldownLabel.Size = UDim2.new(1, -150, 0, 24)
+    cooldownLabel.Font = Enum.Font.Gotham
+    cooldownLabel.TextColor3 = Color3.fromRGB(190, 191, 200)
+    cooldownLabel.TextSize = 11
+    cooldownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    cooldownLabel.ZIndex = 7002
+
+    local send = Instance.new("TextButton")
+    send.Parent = card
+    send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+    send.Position = UDim2.new(1, -122, 1, -50)
+    send.Size = UDim2.fromOffset(104, 32)
+    send.Font = Enum.Font.GothamBold
+    send.Text = "ENVIAR"
+    send.TextColor3 = Color3.fromRGB(30, 30, 35)
+    send.TextSize = 12
+    send.ZIndex = 7002
+
+    local sendCorner = Instance.new("UICorner")
+    sendCorner.CornerRadius = UDim.new(0, 7)
+    sendCorner.Parent = send
+
+    local token = bugReportTimerToken + 1
+    bugReportTimerToken = token
+    local function refreshCooldown()
+        if not overlay.Parent or bugReportTimerToken ~= token then return false end
+        local remaining = getBugReportCooldown() - os.time()
+        if remaining > 0 then
+            cooldownLabel.Text = "Cooldown: " .. formatBugCooldown(remaining)
+            cooldownLabel.TextColor3 = Color3.fromRGB(255, 193, 7)
+            send.Active = false
+            send.AutoButtonColor = false
+            send.BackgroundColor3 = Color3.fromRGB(95, 88, 55)
+        else
+            cooldownLabel.Text = "Disponível • cooldown de 15 horas por usuário"
+            cooldownLabel.TextColor3 = Color3.fromRGB(160, 220, 170)
+            send.Active = true
+            send.AutoButtonColor = true
+            send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+        end
+        return true
+    end
+
+    close.MouseButton1Click:Connect(closeBugReportWindow)
+    send.MouseButton1Click:Connect(function()
+        local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+        if #description < BUG_REPORT_MIN_LENGTH then
+            status.TextColor3 = Color3.fromRGB(255, 150, 150)
+            status.Text = "Descreva o bug com pelo menos 20 caracteres."
+            return
+        end
+
+        local remaining = getBugReportCooldown() - os.time()
+        if remaining > 0 then
+            status.TextColor3 = Color3.fromRGB(255, 193, 7)
+            status.Text = "Cooldown ativo: " .. formatBugCooldown(remaining)
+            return
+        end
+
+        send.Active = false
+        status.TextColor3 = Color3.fromRGB(190, 191, 200)
+        status.Text = "Enviando report..."
+        local success, result = submitBugReport(description)
+        if success then
+            status.TextColor3 = Color3.fromRGB(160, 220, 170)
+            status.Text = "Report enviado: " .. tostring(result)
+            notifyBugReport("Bug report", "Report enviado com sucesso")
+            refreshCooldown()
+        else
+            status.TextColor3 = Color3.fromRGB(255, 150, 150)
+            status.Text = tostring(result)
+            send.Active = true
+        end
+    end)
+
+    refreshCooldown()
+    task.spawn(function()
+        while refreshCooldown() do
+            task.wait(1)
+        end
+    end)
+end
+
 
 DiscordBtn.MouseButton1Click:Connect(function()
     setclipboard("https://discord.gg/MVgAr2YYj4")
     getgenv().Notify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
+end)
+
+BugBtn.MouseButton1Click:Connect(function()
+    showBugReportWindow()
 end)
 
 ToggleBtn.MouseButton1Click:Connect(function()
@@ -1923,6 +2338,12 @@ end)
 TogglesUI.DiscordVisible = SettingsLib.AddToggle(ButtonsTab, "Discord Button", "Show/Hide the discord link button", Config.DiscordVisible, function(v)
     Config.DiscordVisible = v
     syncDiscordVisibility()
+    SaveConfig()
+end)
+
+TogglesUI.BugReportVisible = SettingsLib.AddToggle(ButtonsTab, "Bug Report Button", "Show/Hide the bug report button", Config.BugReportVisible, function(v)
+    Config.BugReportVisible = v
+    syncBugReportVisibility()
     SaveConfig()
 end)
 
