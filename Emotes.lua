@@ -1577,7 +1577,19 @@ BugReportBtn.Size = UDim2.fromOffset(42, 42)
 BugReportBtn.Image = "rbxassetid://7562374548"
 BugReportBtn.ScaleType = Enum.ScaleType.Fit
 BugReportBtn.AutoButtonColor = true
+BugReportBtn.ZIndex = 5001
 
+local DonationBtn = Instance.new("ImageButton")
+DonationBtn.Name = "DonationButton"
+DonationBtn.Parent = ToggleContainer
+DonationBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DonationBtn.BackgroundTransparency = 0.4
+DonationBtn.Position = UDim2.new(0, 10, 1, -99)
+DonationBtn.Size = UDim2.fromOffset(42, 42)
+DonationBtn.Image = "rbxassetid://11560341132"
+DonationBtn.ScaleType = Enum.ScaleType.Fit
+DonationBtn.AutoButtonColor = true
+DonationBtn.ZIndex = 5001
 
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
@@ -1586,6 +1598,10 @@ DiscordCorner.Parent = DiscordBtn
 local BugReportCorner = Instance.new("UICorner")
 BugReportCorner.CornerRadius = UDim.new(0, 10)
 BugReportCorner.Parent = BugReportBtn
+
+local DonationCorner = Instance.new("UICorner")
+DonationCorner.CornerRadius = UDim.new(0, 10)
+DonationCorner.Parent = DonationBtn
 
 local BugReportWindow = Instance.new("Frame")
 BugReportWindow.Name = "BugReportWindow"
@@ -1715,6 +1731,151 @@ BugReportHelp.TextWrapped = true
 BugReportHelp.TextXAlignment = Enum.TextXAlignment.Left
 BugReportHelp.TextYAlignment = Enum.TextYAlignment.Top
 BugReportHelp.ZIndex = 5101
+
+local DonationPassIds = {
+    -- Configure manualmente com os IDs oficiais das suas Game Passes.
+    [10] = 0,
+    [50] = 0,
+    [100] = 0,
+    [200] = 0,
+    [300] = 0,
+    [400] = 0,
+    [500] = 0,
+    [1000] = 0,
+}
+
+local DonationWindow = Instance.new("Frame")
+DonationWindow.Name = "DonationWindow"
+DonationWindow.Parent = SettingsLib.UI
+DonationWindow.AnchorPoint = Vector2.new(0, 1)
+DonationWindow.Position = UDim2.new(0, 10, 1, -128)
+DonationWindow.Size = UDim2.fromOffset(500, 330)
+DonationWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+DonationWindow.BorderSizePixel = 0
+DonationWindow.Visible = false
+DonationWindow.ZIndex = 5100
+
+local DonationWindowCorner = Instance.new("UICorner")
+DonationWindowCorner.CornerRadius = UDim.new(0, 12)
+DonationWindowCorner.Parent = DonationWindow
+
+local DonationWindowStroke = Instance.new("UIStroke")
+DonationWindowStroke.Color = Color3.fromRGB(75, 82, 94)
+DonationWindowStroke.Thickness = 1
+DonationWindowStroke.Transparency = 0.2
+DonationWindowStroke.Parent = DonationWindow
+
+local DonationTitle = Instance.new("TextLabel")
+DonationTitle.Parent = DonationWindow
+DonationTitle.BackgroundTransparency = 1
+DonationTitle.Position = UDim2.fromOffset(18, 12)
+DonationTitle.Size = UDim2.new(1, -70, 0, 32)
+DonationTitle.Font = Enum.Font.GothamBold
+DonationTitle.Text = "DOAR ROBUX"
+DonationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+DonationTitle.TextSize = 20
+DonationTitle.TextXAlignment = Enum.TextXAlignment.Left
+DonationTitle.ZIndex = 5101
+
+local DonationClose = Instance.new("TextButton")
+DonationClose.Parent = DonationWindow
+DonationClose.BackgroundTransparency = 1
+DonationClose.Position = UDim2.new(1, -42, 0, 6)
+DonationClose.Size = UDim2.fromOffset(32, 32)
+DonationClose.Font = Enum.Font.GothamBold
+DonationClose.Text = "×"
+DonationClose.TextColor3 = Color3.fromRGB(210, 215, 220)
+DonationClose.TextSize = 26
+DonationClose.ZIndex = 5101
+
+local DonationSubtitle = Instance.new("TextLabel")
+DonationSubtitle.Parent = DonationWindow
+DonationSubtitle.BackgroundTransparency = 1
+DonationSubtitle.Position = UDim2.fromOffset(18, 52)
+DonationSubtitle.Size = UDim2.new(1, -36, 0, 40)
+DonationSubtitle.Font = Enum.Font.Gotham
+DonationSubtitle.Text = "Escolha um valor para apoiar o Emote Dark. A compra será aberta pelo Roblox."
+DonationSubtitle.TextColor3 = Color3.fromRGB(175, 184, 196)
+DonationSubtitle.TextSize = 14
+DonationSubtitle.TextWrapped = true
+DonationSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+DonationSubtitle.ZIndex = 5101
+
+local DonationStatus = Instance.new("TextLabel")
+DonationStatus.Parent = DonationWindow
+DonationStatus.BackgroundTransparency = 1
+DonationStatus.Position = UDim2.fromOffset(18, 98)
+DonationStatus.Size = UDim2.new(1, -36, 0, 30)
+DonationStatus.Font = Enum.Font.Gotham
+DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
+DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
+DonationStatus.TextSize = 12
+DonationStatus.TextWrapped = true
+DonationStatus.TextXAlignment = Enum.TextXAlignment.Left
+DonationStatus.ZIndex = 5101
+
+local DonationOptions = Instance.new("Frame")
+DonationOptions.Parent = DonationWindow
+DonationOptions.BackgroundTransparency = 1
+DonationOptions.Position = UDim2.fromOffset(18, 138)
+DonationOptions.Size = UDim2.new(1, -36, 0, 104)
+DonationOptions.ZIndex = 5101
+
+local DonationGrid = Instance.new("UIGridLayout")
+DonationGrid.CellSize = UDim2.fromOffset(108, 46)
+DonationGrid.CellPadding = UDim2.fromOffset(8, 8)
+DonationGrid.FillDirectionMaxCells = 4
+DonationGrid.SortOrder = Enum.SortOrder.LayoutOrder
+DonationGrid.Parent = DonationOptions
+
+local DonationAmounts = { 10, 50, 100, 200, 300, 400, 500, 1000 }
+for index, amount in ipairs(DonationAmounts) do
+    local donationAmount = amount
+    local DonationOption = Instance.new("TextButton")
+    DonationOption.Name = "Donation" .. tostring(donationAmount)
+    DonationOption.LayoutOrder = index
+    DonationOption.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
+    DonationOption.BorderSizePixel = 0
+    DonationOption.Font = Enum.Font.GothamBold
+    DonationOption.Text = tostring(donationAmount) .. " ROBUX"
+    DonationOption.TextColor3 = Color3.fromRGB(30, 24, 12)
+    DonationOption.TextSize = 14
+    DonationOption.AutoButtonColor = true
+    DonationOption.ZIndex = 5102
+    DonationOption.Parent = DonationOptions
+
+    local DonationOptionCorner = Instance.new("UICorner")
+    DonationOptionCorner.CornerRadius = UDim.new(0, 8)
+    DonationOptionCorner.Parent = DonationOption
+
+    DonationOption.MouseButton1Click:Connect(function()
+        local passId = tonumber(DonationPassIds[donationAmount]) or 0
+        if passId <= 0 then
+            DonationStatus.Text = "Configure o ID da Game Pass de " .. tostring(donationAmount) .. " Robux em DonationPassIds."
+            DonationStatus.TextColor3 = Color3.fromRGB(255, 190, 90)
+            return
+        end
+
+        local player = Players.LocalPlayer
+        if not player then
+            DonationStatus.Text = "Não foi possível encontrar o jogador local."
+            DonationStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
+        end
+
+        local ok, err = pcall(function()
+            game:GetService("MarketplaceService"):PromptGamePassPurchase(player, passId)
+        end)
+        if ok then
+            DonationStatus.Text = "Janela de compra aberta para " .. tostring(donationAmount) .. " Robux."
+            DonationStatus.TextColor3 = Color3.fromRGB(100, 225, 130)
+        else
+            DonationStatus.Text = "Não foi possível abrir a compra dessa Game Pass."
+            DonationStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+            warn("[EmotesDark] Donation purchase failed: " .. tostring(err))
+        end
+    end)
+end
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
@@ -2025,6 +2186,8 @@ function applySettingsToggleStyle()
         DiscordBtn.BackgroundColor3 = bgColor
         BugReportBtn.BackgroundColor3 = bgColor
         BugReportWindow.BackgroundColor3 = bgColor
+        DonationBtn.BackgroundColor3 = bgColor
+        DonationWindow.BackgroundColor3 = bgColor
     end
 end
 
@@ -2047,8 +2210,20 @@ DiscordBtn.MouseButton1Click:Connect(function()
 end)
 
 BugReportBtn.MouseButton1Click:Connect(function()
+    DonationWindow.Visible = false
     BugReportWindow.Visible = not BugReportWindow.Visible
     if BugReportWindow.Visible then updateBugReportStatus() end
+end)
+
+DonationBtn.MouseButton1Click:Connect(function()
+    BugReportWindow.Visible = false
+    DonationStatus.Text = "Configure os IDs em DonationPassIds para ativar os botões."
+    DonationStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
+    DonationWindow.Visible = not DonationWindow.Visible
+end)
+
+DonationClose.MouseButton1Click:Connect(function()
+    DonationWindow.Visible = false
 end)
 
 BugReportClose.MouseButton1Click:Connect(function()
@@ -2079,6 +2254,7 @@ end)
 
 ToggleBtn.MouseButton1Click:Connect(function()
     BugReportWindow.Visible = false
+    DonationWindow.Visible = false
     local main = getSettingsMainFrame()
     if main then
         main.Visible = not main.Visible
