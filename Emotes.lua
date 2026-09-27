@@ -246,6 +246,7 @@ local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local request = http_request or (syn and syn.request) or request
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
@@ -1209,6 +1210,169 @@ local function isOwnerPlayer(player)
 end
 
 local ownerAlertSeen = {}
+local ownerAlertOrder = 0
+
+local function getOwnerAlertPalette()
+    local theme = State.EmoteTheme
+    return {
+        background = (theme and theme.Background) or Color3.fromRGB(28, 30, 32),
+        accent = (theme and theme.Accent) or Color3.fromRGB(0, 255, 150),
+        text = (theme and theme.ImageColor) or Color3.fromRGB(255, 255, 255),
+    }
+end
+
+local function showThemedOwnerAlert(displayName, username, status, playerCount, maxPlayers)
+    local palette = getOwnerAlertPalette()
+    local alertGui = CoreGui:FindFirstChild("EmotesDarkOwnerAlerts")
+    if not alertGui then
+        alertGui = Instance.new("ScreenGui")
+        alertGui.Name = "EmotesDarkOwnerAlerts"
+        alertGui.IgnoreGuiInset = true
+        alertGui.ResetOnSpawn = false
+        alertGui.DisplayOrder = 10001
+        alertGui.Parent = CoreGui
+
+        local stack = Instance.new("Frame")
+        stack.Name = "Stack"
+        stack.AnchorPoint = Vector2.new(1, 0)
+        stack.Position = UDim2.new(1, -24, 0, 24)
+        stack.Size = UDim2.fromOffset(360, 420)
+        stack.BackgroundTransparency = 1
+        stack.Parent = alertGui
+
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 8)
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = stack
+    end
+
+    local stack = alertGui:FindFirstChild("Stack")
+    if not stack then return end
+
+    ownerAlertOrder = ownerAlertOrder + 1
+    local card = Instance.new("Frame")
+    card.Name = "OwnerAlert_" .. tostring(ownerAlertOrder)
+    card.LayoutOrder = ownerAlertOrder
+    card.Size = UDim2.new(1, 0, 0, 84)
+    card.BackgroundColor3 = palette.background
+    card.BackgroundTransparency = 1
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Parent = stack
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = palette.accent
+    stroke.Thickness = 1.5
+    stroke.Transparency = 1
+    stroke.Parent = card
+
+    local accentBar = Instance.new("Frame")
+    accentBar.Name = "AccentBar"
+    accentBar.Size = UDim2.new(0, 4, 1, -20)
+    accentBar.Position = UDim2.fromOffset(10, 10)
+    accentBar.BackgroundColor3 = palette.accent
+    accentBar.BackgroundTransparency = 1
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = card
+
+    local accentCorner = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(1, 0)
+    accentCorner.Parent = accentBar
+
+    local icon = Instance.new("TextLabel")
+    icon.Name = "Icon"
+    icon.BackgroundTransparency = 1
+    icon.Position = UDim2.fromOffset(28, 12)
+    icon.Size = UDim2.fromOffset(32, 32)
+    icon.Font = Enum.Font.GothamBold
+    icon.Text = "👑"
+    icon.TextColor3 = palette.accent
+    icon.TextSize = 22
+    icon.TextTransparency = 1
+    icon.Parent = card
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.fromOffset(68, 10)
+    title.Size = UDim2.new(1, -82, 0, 22)
+    title.Font = Enum.Font.GothamBold
+    title.Text = OWNER_ALERT_TITLE
+    title.TextColor3 = palette.accent
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextTransparency = 1
+    title.Parent = card
+
+    local content = Instance.new("TextLabel")
+    content.Name = "Content"
+    content.BackgroundTransparency = 1
+    content.Position = UDim2.fromOffset(68, 34)
+    content.Size = UDim2.new(1, -82, 0, 38)
+    content.Font = Enum.Font.Gotham
+    content.Text = string.format("%s (@%s) %s\nServidor: %d/%d jogadores", displayName, username, status, playerCount, maxPlayers)
+    content.TextColor3 = palette.text
+    content.TextSize = 12
+    content.TextWrapped = true
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.TextTransparency = 1
+    content.Parent = card
+
+    local fadeIn = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    TweenService:Create(card, fadeIn, { BackgroundTransparency = 0.08 }):Play()
+    TweenService:Create(stroke, fadeIn, { Transparency = 0.35 }):Play()
+    TweenService:Create(accentBar, fadeIn, { BackgroundTransparency = 0 }):Play()
+    TweenService:Create(icon, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(title, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(content, fadeIn, { TextTransparency = 0.08 }):Play()
+
+    task.delay(OWNER_ALERT_DURATION, function()
+        if not card.Parent then return end
+        local fadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(card, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(stroke, fadeOut, { Transparency = 1 }):Play()
+        TweenService:Create(accentBar, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(icon, fadeOut, { TextTransparency = 1 }):Play()
+        TweenService:Create(title, fadeOut, { TextTransparency = 1 }):Play()
+        TweenService:Create(content, fadeOut, { TextTransparency = 1 }):Play()
+        task.wait(0.22)
+        if card then card:Destroy() end
+    end)
+end
+
+local function getExperienceOwnerUserId()
+    local creatorType = game.CreatorType
+    if creatorType == Enum.CreatorType.User then
+        return tonumber(game.CreatorId)
+    end
+
+    if creatorType == Enum.CreatorType.Group then
+        local ok, groupInfo = pcall(function()
+            return game:GetService("GroupService"):GetGroupInfoAsync(game.CreatorId)
+        end)
+        if ok and groupInfo and groupInfo.Owner then
+            return tonumber(groupInfo.Owner.Id)
+        end
+    end
+
+    return nil
+end
+
+local function isOwnerPlayer(player)
+    if not player or player == Players.LocalPlayer then return false end
+    if OWNER_USER_IDS[player.UserId] then return true end
+
+    local experienceOwnerId = getExperienceOwnerUserId()
+    return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
+end
+
 local function announceOwner(player, alreadyPresent)
     if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
     if ownerAlertSeen[player.UserId] then return end
@@ -1218,14 +1382,19 @@ local function announceOwner(player, alreadyPresent)
     local playerCount = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers
     local status = alreadyPresent and "já está neste servidor" or "entrou no mesmo servidor"
-    local notify = getgenv().Notify
-    if type(notify) ~= "function" then return end
-
-    notify({
-        Title = OWNER_ALERT_TITLE,
-        Content = string.format("%s (@%s) %s • %d/%d jogadores", displayName, player.Name, status, playerCount, maxPlayers),
-        Duration = OWNER_ALERT_DURATION,
-    })
+    local ok = pcall(function()
+        showThemedOwnerAlert(displayName, player.Name, status, playerCount, maxPlayers)
+    end)
+    if not ok then
+        local notify = getgenv().Notify
+        if type(notify) == "function" then
+            notify({
+                Title = OWNER_ALERT_TITLE,
+                Content = string.format("%s (@%s) %s • %d/%d jogadores", displayName, player.Name, status, playerCount, maxPlayers),
+                Duration = OWNER_ALERT_DURATION,
+            })
+        end
+    end
 end
 
 Players.PlayerAdded:Connect(function(player)
