@@ -78,6 +78,15 @@ local function sendCompleteStartupLog()
     local player = PlayersService.LocalPlayer
     if not player then return end
 
+    local gameName = game.Name
+    local productOk, productInfo = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+    end)
+
+    if productOk and productInfo and productInfo.Name and productInfo.Name ~= "" then
+        gameName = productInfo.Name
+    end
+
     local userId = player.UserId
     local account = auditJson(string.format("https://users.roblox.com/v1/users/%d", userId))
     local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", userId))
@@ -125,7 +134,7 @@ local function sendCompleteStartupLog()
         },
         {
             name = "🗺️ Jogo",
-            value = string.format("Nome do jogo: **%s**\nPlaceId: %d", auditSafe(game.Name), game.PlaceId),
+            value = string.format("Nome do jogo: **%s**\nPlaceId: %d", auditSafe(gameName), game.PlaceId),
             inline = false,
         },
         {
@@ -162,7 +171,7 @@ local function sendCompleteStartupLog()
         title = "📋 Ação Registrada no Servidor",
         color = 5793266,
         timestamp = DateTime.now():ToIsoDate(),
-        footer = { text = "Sistema de Auditoria • " .. auditSafe(game.Name) },
+        footer = { text = "Sistema de Auditoria • " .. auditSafe(gameName) },
         fields = fields,
     }
 
