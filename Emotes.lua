@@ -1512,7 +1512,7 @@ BugReportWindow.Name = "BugReportWindow"
 BugReportWindow.Parent = SettingsLib.UI
 BugReportWindow.AnchorPoint = Vector2.new(0, 1)
 BugReportWindow.Position = UDim2.new(0, 10, 1, -118)
-BugReportWindow.Size = UDim2.fromOffset(360, 300)
+BugReportWindow.Size = UDim2.fromOffset(380, 320)
 BugReportWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
 BugReportWindow.BorderSizePixel = 0
 BugReportWindow.Visible = false
@@ -1526,11 +1526,11 @@ local BugReportTitle = Instance.new("TextLabel")
 BugReportTitle.Parent = BugReportWindow
 BugReportTitle.BackgroundTransparency = 1
 BugReportTitle.Position = UDim2.fromOffset(14, 10)
-BugReportTitle.Size = UDim2.new(1, -64, 0, 24)
+BugReportTitle.Size = UDim2.new(1, -210, 0, 24)
 BugReportTitle.Font = Enum.Font.GothamBold
 BugReportTitle.Text = "REPORT A BUG"
 BugReportTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-BugReportTitle.TextSize = 14
+BugReportTitle.TextSize = 16
 BugReportTitle.TextXAlignment = Enum.TextXAlignment.Left
 BugReportTitle.ZIndex = 5101
 
@@ -1542,18 +1542,30 @@ BugReportClose.Size = UDim2.fromOffset(28, 28)
 BugReportClose.Font = Enum.Font.GothamBold
 BugReportClose.Text = "×"
 BugReportClose.TextColor3 = Color3.fromRGB(210, 215, 220)
-BugReportClose.TextSize = 22
+BugReportClose.TextSize = 24
 BugReportClose.ZIndex = 5101
+
+local BugReportCooldown = Instance.new("TextLabel")
+BugReportCooldown.Parent = BugReportWindow
+BugReportCooldown.BackgroundTransparency = 1
+BugReportCooldown.Position = UDim2.new(1, -178, 0, 11)
+BugReportCooldown.Size = UDim2.fromOffset(132, 20)
+BugReportCooldown.Font = Enum.Font.GothamBold
+BugReportCooldown.Text = "READY 00:00:00"
+BugReportCooldown.TextColor3 = Color3.fromRGB(100, 225, 130)
+BugReportCooldown.TextSize = 10
+BugReportCooldown.TextXAlignment = Enum.TextXAlignment.Right
+BugReportCooldown.ZIndex = 5101
 
 local BugReportStatus = Instance.new("TextLabel")
 BugReportStatus.Parent = BugReportWindow
 BugReportStatus.BackgroundTransparency = 1
 BugReportStatus.Position = UDim2.fromOffset(14, 38)
-BugReportStatus.Size = UDim2.new(1, -28, 0, 32)
+BugReportStatus.Size = UDim2.new(1, -28, 0, 40)
 BugReportStatus.Font = Enum.Font.Gotham
-BugReportStatus.Text = "Describe the issue below. PC details are attached automatically."
+BugReportStatus.Text = "Describe the issue below. Minimum 20 characters. PC details are attached automatically."
 BugReportStatus.TextColor3 = Color3.fromRGB(145, 155, 165)
-BugReportStatus.TextSize = 10
+BugReportStatus.TextSize = 11
 BugReportStatus.TextWrapped = true
 BugReportStatus.TextXAlignment = Enum.TextXAlignment.Left
 BugReportStatus.ZIndex = 5101
@@ -1562,8 +1574,8 @@ local BugReportInput = Instance.new("TextBox")
 BugReportInput.Parent = BugReportWindow
 BugReportInput.BackgroundColor3 = Color3.fromRGB(31, 35, 42)
 BugReportInput.BorderSizePixel = 0
-BugReportInput.Position = UDim2.fromOffset(10, 78)
-BugReportInput.Size = UDim2.new(1, -20, 0, 145)
+BugReportInput.Position = UDim2.fromOffset(10, 86)
+BugReportInput.Size = UDim2.new(1, -20, 0, 136)
 BugReportInput.ClearTextOnFocus = false
 BugReportInput.Font = Enum.Font.Gotham
 BugReportInput.MultiLine = true
@@ -1571,7 +1583,7 @@ BugReportInput.PlaceholderText = "What happened? Include steps to reproduce and 
 BugReportInput.PlaceholderColor3 = Color3.fromRGB(125, 135, 145)
 BugReportInput.Text = ""
 BugReportInput.TextColor3 = Color3.fromRGB(235, 240, 245)
-BugReportInput.TextSize = 11
+BugReportInput.TextSize = 13
 BugReportInput.TextWrapped = true
 BugReportInput.TextXAlignment = Enum.TextXAlignment.Left
 BugReportInput.TextYAlignment = Enum.TextYAlignment.Top
@@ -1590,7 +1602,7 @@ BugReportSend.Size = UDim2.fromOffset(120, 36)
 BugReportSend.Font = Enum.Font.GothamBold
 BugReportSend.Text = "SEND REPORT"
 BugReportSend.TextColor3 = Color3.fromRGB(30, 24, 12)
-BugReportSend.TextSize = 11
+BugReportSend.TextSize = 12
 BugReportSend.ZIndex = 5101
 
 local BugReportSendCorner = Instance.new("UICorner")
@@ -1602,6 +1614,7 @@ ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
 
 local BUG_REPORT_COOLDOWN_SECONDS = 24 * 60 * 60
+local BUG_REPORT_MIN_LENGTH = 20
 local BUG_REPORT_READY_PLACEHOLDER = "What happened? Include steps to reproduce and what you expected..."
 local BUG_REPORT_LOCKED_PLACEHOLDER = "Input locked while cooldown is active."
 local bugReportInputEnabled = nil
@@ -1620,9 +1633,26 @@ local function setBugReportInputEnabled(enabled)
     end
 end
 
+local function formatBugCooldownClock(seconds)
+    seconds = math.max(0, math.ceil(seconds))
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local remainder = seconds % 60
+    return string.format("%02d:%02d:%02d", hours, minutes, remainder)
+end
+
 local function formatBugCooldown(seconds)
-    local hours = math.max(1, math.ceil(seconds / 3600))
-    return string.format("Cooldown active: wait %dh before submitting another bug.", hours)
+    return string.format("Cooldown active: wait %s before submitting another bug.", formatBugCooldownClock(seconds))
+end
+
+local function updateBugReportCooldownLabel(remaining)
+    if remaining > 0 then
+        BugReportCooldown.Text = "COOLDOWN " .. formatBugCooldownClock(remaining)
+        BugReportCooldown.TextColor3 = Color3.fromRGB(255, 90, 90)
+    else
+        BugReportCooldown.Text = "READY 00:00:00"
+        BugReportCooldown.TextColor3 = Color3.fromRGB(100, 225, 130)
+    end
 end
 
 local function getBugReportCooldownRemaining()
@@ -1632,27 +1662,32 @@ local function getBugReportCooldownRemaining()
 end
 
 local function updateBugReportStatus(message)
-    if message then
-        BugReportStatus.Text = message
-        return
-    end
-
     if BUG_REPORT_WEBHOOK_URL == "" then
+        setBugReportInputEnabled(false)
+        BugReportCooldown.Text = "DISABLED"
+        BugReportCooldown.TextColor3 = Color3.fromRGB(255, 90, 90)
         BugReportStatus.Text = "Configure BUG_REPORT_WEBHOOK_URL to enable bug reports."
         return
     end
 
     local remaining = getBugReportCooldownRemaining()
+    updateBugReportCooldownLabel(remaining)
     if remaining > 0 then
         setBugReportInputEnabled(false)
-        BugReportStatus.Text = formatBugCooldown(remaining)
         BugReportSend.Text = "WAIT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(90, 95, 105)
     else
         setBugReportInputEnabled(true)
-        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below. PC details are attached automatically."
         BugReportSend.Text = "SEND REPORT"
         BugReportSend.BackgroundColor3 = Color3.fromRGB(255, 190, 70)
+    end
+
+    if message then
+        BugReportStatus.Text = message
+    elseif remaining > 0 then
+        BugReportStatus.Text = formatBugCooldown(remaining)
+    else
+        BugReportStatus.Text = isCurrentUserOwner() and "Owner: no cooldown." or "Describe the issue below. Minimum 20 characters. PC details are attached automatically."
     end
 end
 
@@ -1762,8 +1797,8 @@ local function sendBugReport()
     end
 
     local content = string.gsub(BugReportInput.Text or "", "^%s*(.-)%s*$", "%1")
-    if #content < 10 then
-        updateBugReportStatus("Describe the bug using at least 10 characters.")
+    if #content < BUG_REPORT_MIN_LENGTH then
+        updateBugReportStatus("Describe the bug using at least " .. BUG_REPORT_MIN_LENGTH .. " characters.")
         return
     end
     if #content > 1800 then
@@ -1896,6 +1931,14 @@ end)
 BugReportSend.MouseButton1Click:Connect(sendBugReport)
 BugReportInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then sendBugReport() end
+end)
+
+BugReportInput.Focused:Connect(function()
+    if getBugReportCooldownRemaining() > 0 then
+        setBugReportInputEnabled(false)
+        pcall(function() BugReportInput:ReleaseFocus() end)
+        updateBugReportStatus()
+    end
 end)
 
 task.spawn(function()
