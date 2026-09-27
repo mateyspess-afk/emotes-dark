@@ -1447,7 +1447,6 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
-bindDarkEmoteClickSounds(SettingsLib.UI)
 
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
@@ -9331,7 +9330,17 @@ task.spawn(function()
     while true do
         local robloxGui = game:GetService("CoreGui"):FindFirstChild("RobloxGui")
         local emotesMenu = robloxGui and robloxGui:FindFirstChild("EmotesMenu")
-        if emotesMenu then bindDarkEmoteClickSounds(emotesMenu) end
+        if emotesMenu then
+            local children = emotesMenu:FindFirstChild("Children")
+            local main = children and children:FindFirstChild("Main")
+            local wheel = main and main:FindFirstChild("EmotesWheel")
+            if wheel then
+                local front = wheel:FindFirstChild("Front")
+                local back = wheel:FindFirstChild("Back")
+                bindDarkEmoteClickSounds(front and front:FindFirstChild("EmotesButtons"))
+                bindDarkEmoteClickSounds(back and back:FindFirstChild("EmotesButtons"))
+            end
+        end
 
         if not emotesMenu then
             StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, true)
