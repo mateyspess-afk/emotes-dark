@@ -37,6 +37,13 @@ function numberOrNull(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeName(value) {
+  return clean(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function normalizePosition(value) {
   if (!value || typeof value !== "object") return null;
   const x = numberOrNull(value.x);
@@ -69,14 +76,28 @@ function isOwnerRequest(req, body) {
   return OWNER_USER_IDS.has(clean(body.userId));
 }
 
-function findClient(body, gameId) {
+function findClient(body, gameId, placeId) {
   const wantedId = clean(body.targetUserId);
-  const wantedName = clean(body.targetUsername).toLowerCase();
+  const wantedName = normalizeName(body.targetUsername);
   const active = [...clients.values()].filter(
-    (client) => client.gameId === gameId && Date.now() - client.lastSeenAt <= CLIENT_TTL_MS
+    (client) => client.gameId === gameId && client.placeId === placeId && Date.now() - client.lastSeenAt <= CLIENT_TTL_MS
   );
-  return active.find((client) => wantedId && client.userId === wantedId) ||
-    active.find((client) => wantedName && (client.username.toLowerCase() === wantedName || client.displayName.toLowerCase() === wantedName));
+
+  if (wantedId) {
+    const client = active.find((candidate) => candidate.userId === wantedId) || null;
+    return { client, matches: client ? [client] : [] };
+  }
+  if (!wantedName) return { client: null, matches: [] };
+  if (wantedName.length < 2) {
+    return { client: null, matches: [], error: "partial_name_requires_two_letters" };
+  }
+
+  const matches = active.filter((client) => {
+    const username = normalizeName(client.username);
+    const displayName = normalizeName(client.displayName);
+    return username.startsWith(wantedName) || displayName.startsWith(wantedName);
+  });
+  return { client: matches.length === 1 ? matches[0] : null, matches };
 }
 
 function prune() {
@@ -141,7 +162,28 @@ function queueCommand(body, req) {
       .sort((a, b) => a.lastSeenAt - b.lastSeenAt)[0] || null;
     if (!target) return { status: 404, body: { ok: false, message: "no_active_target" } };
   } else if (action !== "global_message") {
-    target = findClient(body, gameId);
+    if (!clean(body.targetUserId) && !clean(body.targetUsername)) {
+      return { status: 422, body: { ok: false, message: "target_required" } };
+    }
+    const resolved = findClient(body, gameId, placeId);
+    if (resolved.error) {
+      return { status: 422, body: { ok: false, message: resolved.error } };
+    }
+    if (resolved.matches.length > 1) {
+      return {
+        status: 409,
+        body: {
+          ok: false,
+          message: "ambiguous_target",
+          candidates: resolved.matches.slice(0, 8).map((client) => ({
+            userId: client.userId,
+            username: client.username,
+            displayName: client.displayName,
+          })),
+        },
+      };
+    }
+    target = resolved.client;
     if (!target) return { status: 404, body: { ok: false, message: "target_not_running_script" } };
   }
 
@@ -175,7 +217,16 @@ function queueCommand(body, req) {
     createdAt: Date.now(),
   };
   commands.push(command);
-  return { status: 202, body: { ok: true, commandId: command.id, targetUserId: command.targetUserId } };
+  return {
+    status: 202,
+    body: {
+      ok: true,
+      commandId: command.id,
+      targetUserId: command.targetUserId,
+      targetUsername: target?.username || "",
+      targetDisplayName: target?.displayName || "",
+    },
+  };
 }
 
 const server = http.createServer(async (req, res) => {
