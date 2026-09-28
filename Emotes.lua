@@ -1741,83 +1741,88 @@ local function emotesDarkTagAttach(player)
 
     local isOwner = isKnownOwnerPlayer(player)
     local tag = Instance.new("BillboardGui")
-    tag.Name = isOwner and "EmotesDarkOwnerTag" or "EmotesDarkScriptTag"
+    tag.Name = isOwner and "EmotesDarkCreatorTag" or "EmotesDarkScriptTag"
     tag.Adornee = head
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
-    tag.Size = isOwner and UDim2.fromOffset(210, 60) or UDim2.fromOffset(150, 30)
+    tag.Size = isOwner and UDim2.fromOffset(250, 58) or UDim2.fromOffset(150, 30)
     tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.15, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
     if isOwner then
-          local card = Instance.new("Frame")
-          card.Name = "OwnerCard"
-          card.Size = UDim2.fromScale(1, 1)
-          card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-          card.BackgroundTransparency = 0
-          card.BorderSizePixel = 0
-          card.ClipsDescendants = true
-          card.Parent = tag
+        local creatorTag = Instance.new("Frame")
+        creatorTag.Name = "CreatorTag"
+        creatorTag.Size = UDim2.fromScale(1, 1)
+        creatorTag.BackgroundTransparency = 1
+        creatorTag.Parent = tag
 
-          local corner = Instance.new("UICorner")
-          corner.CornerRadius = UDim.new(0, 10)
-          corner.Parent = card
+        local nick = Instance.new("TextLabel")
+        nick.Name = "CreatorNick"
+        nick.BackgroundTransparency = 1
+        nick.Position = UDim2.fromOffset(0, 0)
+        nick.Size = UDim2.new(1, -38, 0, 34)
+        nick.Font = Enum.Font.GothamBlack
+        nick.Text = player.Name
+        nick.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nick.TextSize = 18
+        nick.TextXAlignment = Enum.TextXAlignment.Right
+        nick.TextYAlignment = Enum.TextYAlignment.Center
+        nick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        nick.TextStrokeTransparency = 0.05
+        nick.TextTruncate = Enum.TextTruncate.AtEnd
+        nick.Parent = creatorTag
 
-          local stroke = Instance.new("UIStroke")
-          stroke.Color = Color3.fromRGB(255, 204, 74)
-          stroke.Thickness = 1.4
-          stroke.Transparency = 0.12
-          stroke.Parent = card
+        local nickGradient = Instance.new("UIGradient")
+        nickGradient.Name = "RGBGradient"
+        nickGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 45, 95)),
+            ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 220, 45)),
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(70, 255, 125)),
+            ColorSequenceKeypoint.new(0.6, Color3.fromRGB(45, 220, 255)),
+            ColorSequenceKeypoint.new(0.8, Color3.fromRGB(115, 80, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 45, 220)),
+        })
+        nickGradient.Rotation = 0
+        nickGradient.Parent = nick
 
-          local accent = Instance.new("Frame")
-          accent.Name = "GoldAccent"
-          accent.BackgroundColor3 = Color3.fromRGB(255, 204, 74)
-          accent.BorderSizePixel = 0
-          accent.Position = UDim2.fromOffset(0, 0)
-          accent.Size = UDim2.new(1, 0, 0, 3)
-          accent.Parent = card
+        local hammer = Instance.new("TextLabel")
+        hammer.Name = "Hammer"
+        hammer.BackgroundTransparency = 1
+        hammer.Position = UDim2.new(1, -38, 0, 0)
+        hammer.Size = UDim2.fromOffset(38, 34)
+        hammer.Font = Enum.Font.GothamBlack
+        hammer.Text = "🔨"
+        hammer.TextColor3 = Color3.fromRGB(255, 210, 75)
+        hammer.TextSize = 22
+        hammer.TextXAlignment = Enum.TextXAlignment.Center
+        hammer.TextYAlignment = Enum.TextYAlignment.Center
+        hammer.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        hammer.TextStrokeTransparency = 0.1
+        hammer.Parent = creatorTag
 
-          local crown = Instance.new("TextLabel")
-          crown.Name = "Crown"
-          crown.BackgroundTransparency = 1
-          crown.Position = UDim2.fromOffset(10, 13)
-          crown.Size = UDim2.fromOffset(27, 27)
-          crown.Font = Enum.Font.GothamBlack
-          crown.Text = "♛"
-          crown.TextColor3 = Color3.fromRGB(255, 204, 74)
-          crown.TextSize = 22
-          crown.TextXAlignment = Enum.TextXAlignment.Center
-          crown.TextYAlignment = Enum.TextYAlignment.Center
-          crown.Parent = card
+        local subtitle = Instance.new("TextLabel")
+        subtitle.Name = "CreatorSubtitle"
+        subtitle.BackgroundTransparency = 1
+        subtitle.Position = UDim2.fromOffset(0, 34)
+        subtitle.Size = UDim2.new(1, 0, 0, 22)
+        subtitle.Font = Enum.Font.GothamMedium
+        subtitle.Text = "Creator Script"
+        subtitle.TextColor3 = Color3.fromRGB(230, 230, 230)
+        subtitle.TextSize = 12
+        subtitle.TextXAlignment = Enum.TextXAlignment.Center
+        subtitle.TextYAlignment = Enum.TextYAlignment.Center
+        subtitle.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        subtitle.TextStrokeTransparency = 0.15
+        subtitle.Parent = creatorTag
 
-          local title = Instance.new("TextLabel")
-          title.Name = "Title"
-          title.BackgroundTransparency = 1
-          title.Position = UDim2.fromOffset(45, 9)
-          title.Size = UDim2.new(1, -55, 0, 22)
-          title.Font = Enum.Font.GothamBlack
-          title.Text = "OWNER USER"
-          title.TextColor3 = Color3.fromRGB(255, 255, 255)
-          title.TextSize = 15
-          title.TextXAlignment = Enum.TextXAlignment.Left
-          title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-          title.TextStrokeTransparency = 0.1
-          title.Parent = card
-
-          local subtitle = Instance.new("TextLabel")
-          subtitle.Name = "Subtitle"
-          subtitle.BackgroundTransparency = 1
-          subtitle.Position = UDim2.fromOffset(45, 32)
-          subtitle.Size = UDim2.new(1, -55, 0, 17)
-          subtitle.Font = Enum.Font.GothamMedium
-          subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
-          subtitle.TextColor3 = Color3.fromRGB(178, 178, 178)
-          subtitle.TextSize = 11
-          subtitle.TextXAlignment = Enum.TextXAlignment.Left
-          subtitle.TextTruncate = Enum.TextTruncate.AtEnd
-          subtitle.Parent = card
-          else
+        task.spawn(function()
+            while creatorTag.Parent do
+                nickGradient.Rotation = (nickGradient.Rotation + 4) % 360
+                task.wait(0.035)
+            end
+        end)
+    else
         local card = Instance.new("Frame")
         card.Name = "DarkUserCard"
         card.Size = UDim2.fromScale(1, 1)
