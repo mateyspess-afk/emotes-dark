@@ -1953,6 +1953,8 @@ end
 
 local emotesDarkKickListening = true
 local emotesDarkKickedMessage = ""
+local emotesDarkPendingKickCommand = nil
+local emotesDarkHandledKickCommands = {}
 
 local function emotesDarkNormalizeKickName(value)
     value = tostring(value or ""):lower():gsub("^@", "")
@@ -2009,8 +2011,23 @@ local function emotesDarkHandleKickCommand(sender, message)
     local command, arguments = message:match("^%s*/(%S+)%s*(.-)%s*$")
     if not command or command:lower() ~= "kick" then return end
     local target, reason = arguments:match("^(%S+)%s*(.-)%s*$")
-    if not target or not emotesDarkKickTargetMatches(target) then return end
-    emotesDarkKickSelf(reason or "")
+    if not target then return end
+
+    -- O owner publica o comando no registro compartilhado para os outros clientes.
+    if sender == Players.LocalPlayer then
+        emotesDarkPendingKickCommand = {
+            nonce = tostring(os.time()) .. ":" .. tostring(math.random(1000, 9999)),
+            senderUserId = sender.UserId,
+            target = target,
+            reason = reason or "",
+            expiresAt = os.time() + 15,
+        }
+    end
+
+    -- Também atende o próprio owner caso ele seja o alvo.
+    if emotesDarkKickTargetMatches(target) then
+        emotesDarkKickSelf(reason or "")
+    end
 end
 
 local function emotesDarkBindKickChat(player)
@@ -2138,6 +2155,11 @@ end
 
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
+    local kickCommand = emotesDarkPendingKickCommand
+    if kickCommand and kickCommand.expiresAt and kickCommand.expiresAt <= os.time() then
+        emotesDarkPendingKickCommand = nil
+        kickCommand = nil
+    end
     return {
         userId = localPlayer and localPlayer.UserId or 0,
         username = localPlayer and localPlayer.Name or "",
@@ -2146,6 +2168,7 @@ local function emotesDarkTagClientInfo()
         placeId = tostring(game.PlaceId or 0),
         jobId = tostring(game.JobId or ""),
         sessionId = emotesDarkTagSessionId,
+        kickCommand = kickCommand,
     }
 end
 
@@ -2422,6 +2445,18 @@ task.spawn(function()
         )
         local response = emotesDarkTagRequest("GET", query)
         if response and type(response.clients) == "table" then
+            for _, client in ipairs(response.clients) do
+                local command = type(client) == "table" and client.kickCommand or nil
+                local sender = command and Players:GetPlayerByUserId(tonumber(command.senderUserId))
+                local nonce = command and tostring(command.nonce or "") or ""
+                if sender and isKnownOwnerPlayer(sender) and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
+                    emotesDarkHandledKickCommands[nonce] = true
+                    if emotesDarkKickTargetMatches(tostring(command.target or "")) then
+                        emotesDarkKickSelf(tostring(command.reason or ""))
+                        break
+                    end
+                end
+            end
             emotesDarkTagSync(response.clients)
         end
         task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
