@@ -243,6 +243,16 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const client = clientFrom(body);
       if (!client) return sendJson(res, 422, { ok: false, message: "userId_required" });
+      const previous = clients.get(client.userId);
+      const newSession = !previous || previous.gameId !== client.gameId || previous.placeId !== client.placeId || previous.jobId !== client.jobId;
+      if (newSession) {
+        // Sessão nova começa no fim da fila: mensagens e jumpscares antigos não voltam.
+        client.sessionCursor = nextCommandId - 1;
+        client.deliveredCursor = client.sessionCursor;
+      } else {
+        client.sessionCursor = previous.sessionCursor || 0;
+        client.deliveredCursor = previous.deliveredCursor || client.sessionCursor;
+      }
       clients.set(client.userId, client);
       return sendJson(res, 200, { ok: true, serverTime: Date.now(), client: { userId: client.userId, gameId: client.gameId, placeId: client.placeId } });
     } catch (error) {
@@ -265,10 +275,11 @@ const server = http.createServer(async (req, res) => {
     const gameId = clean(url.searchParams.get("gameId"));
     const placeId = clean(url.searchParams.get("placeId"));
     const jobId = clean(url.searchParams.get("jobId"));
-    const cursor = Number(url.searchParams.get("cursor")) || 0;
+    const requestedCursor = Number(url.searchParams.get("cursor")) || 0;
     if (!userId || !gameId || !placeId) return sendJson(res, 422, { ok: false, message: "userId_gameId_placeId_required" });
 
     const client = clients.get(userId);
+    const cursor = Math.max(requestedCursor, Number(client?.deliveredCursor || client?.sessionCursor || 0));
     if (client) {
       client.lastSeenAt = Date.now();
       client.gameId = gameId;
@@ -283,7 +294,8 @@ const server = http.createServer(async (req, res) => {
       (command.targetUserId === "*" || command.targetUserId === userId) &&
       (!command.targetJobId || !jobId || command.targetJobId === jobId)
     );
-    const nextCursor = commands.length ? commands[commands.length - 1].id : cursor;
+    const nextCursor = commands.length ? Math.max(cursor, commands[commands.length - 1].id) : cursor;
+    if (client) client.deliveredCursor = nextCursor;
     return sendJson(res, 200, { ok: true, commands: available, cursor: nextCursor });
   }
 
