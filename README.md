@@ -7,6 +7,7 @@ Uma reimplementação modular do script de emotes, criada para ser mais estável
 - Não depende da estrutura interna `CoreGui.RobloxGui.EmotesMenu` para renderizar a interface.
 - Painel radial inspirado no menu original do Roblox, com oito posições numeradas ao redor do personagem.
 - Busca por nome ou ID no topo da roda.
+- No painel Owner, o alvo pode ser localizado por nome parcial usando duas ou mais letras iniciais.
 - Favoritos persistentes em `EmotesDarkV2/Favorites.json`.
 - Cache local do catálogo em `EmotesDarkV2/Emotes.json`.
 - Fallback com emotes básicos se o catálogo remoto estiver indisponível.
