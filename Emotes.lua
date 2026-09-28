@@ -1726,6 +1726,10 @@ end
 local function emotesDarkTagAttach(player)
     if not player then return end
     local key = tostring(player.UserId)
+    if Players.LocalPlayer and player == Players.LocalPlayer then
+        emotesDarkTagRemove(key)
+        return
+    end
     if not emotesDarkTagUsers[key] then
         emotesDarkTagRemove(key)
         return
@@ -1746,7 +1750,7 @@ local function emotesDarkTagAttach(player)
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
     tag.Size = isOwner and UDim2.fromOffset(250, 58) or UDim2.fromOffset(150, 30)
-    tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.15, 0)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.25, 0) or Vector3.new(0, 2.65, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
