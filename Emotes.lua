@@ -56,7 +56,22 @@ local function emotesDarkNotify(payload)
     end
 end
 
+local function emotesDarkResponseBody(response)
+    if type(response) == "string" then return response end
+    if type(response) ~= "table" then return nil end
+    return response.Body or response.body or response.Data or response.data
+end
+
+local function emotesDarkUsableBody(body)
+    if type(body) ~= "string" or body == "" then return nil end
+    local prefix = body:sub(1, 256):lower()
+    if prefix:find("<!doctype") or prefix:find("<html") or prefix:find("<head") then return nil end
+    return body
+end
+
 local function emotesDarkDownload(url)
+    if type(url) ~= "string" or url == "" then return nil end
+
     local client = emotesDarkGetRequest()
     if client then
         local ok, response = pcall(client, {
@@ -65,14 +80,21 @@ local function emotesDarkDownload(url)
             Headers = { ["Accept"] = "text/plain" },
         })
         local statusCode = tonumber(response and (response.StatusCode or response.Status or response.status_code or response.statusCode))
-        local responseBody = response and (response.Body or response.body)
-        if ok and type(responseBody) == "string" and responseBody ~= "" and (not statusCode or statusCode < 400) then
+        local responseBody = emotesDarkUsableBody(emotesDarkResponseBody(response))
+        if ok and responseBody and (not statusCode or statusCode < 400) then
             return responseBody
         end
     end
 
     local ok, responseBody = pcall(function() return game:HttpGet(url) end)
-    if ok and type(responseBody) == "string" and responseBody ~= "" then return responseBody end
+    responseBody = emotesDarkUsableBody(responseBody)
+    if ok and responseBody then return responseBody end
+
+    local httpService = game:GetService("HttpService")
+    local asyncOk, asyncBody = pcall(function() return httpService:GetAsync(url) end)
+    asyncBody = emotesDarkUsableBody(asyncBody)
+    if asyncOk and asyncBody then return asyncBody end
+
     return nil
 end
 
@@ -2055,7 +2077,7 @@ local function getBugReportCooldownApi()
 end
 
 local function getBugReportHttpClient()
-    return http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+    return emotesDarkGetRequest()
 end
 
 local function decodeBugReportApiResponse(response)
@@ -2338,7 +2360,7 @@ local function submitBugReport(description)
         embed.thumbnail = { url = avatar.data[1].imageUrl }
     end
 
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then
         return false, "Request function was not found in the executor."
     end
