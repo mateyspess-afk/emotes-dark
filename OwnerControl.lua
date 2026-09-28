@@ -89,6 +89,8 @@ local ownerControlNotificationGui = nil
 local ownerControlActiveJumpscare = nil
 local ownerControlPollRunning = false
 local ownerControlCursor = ""
+local ownerControlScriptTags = {}
+local ownerControlScriptUsers = {}
 
 local function ownerControlTrim(value)
     return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
@@ -279,6 +281,73 @@ local function ownerControlShowNotification(title, content, duration, accent)
         if gui and gui.Parent then gui:Destroy() end
         if ownerControlNotificationGui == gui then ownerControlNotificationGui = nil end
     end)
+end
+
+local function ownerControlRemoveScriptTag(userId)
+    local key = tostring(userId or "")
+    local tag = ownerControlScriptTags[key]
+    if tag then pcall(function() tag:Destroy() end) end
+    ownerControlScriptTags[key] = nil
+end
+
+local function ownerControlAttachScriptTag(player)
+    if not player then return end
+    local key = tostring(player.UserId)
+    if not ownerControlScriptUsers[key] then
+        ownerControlRemoveScriptTag(key)
+        return
+    end
+
+    local character = player.Character
+    local head = character and (character:FindFirstChild("Head") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart"))
+    if not head then return end
+
+    local existing = ownerControlScriptTags[key]
+    if existing and existing.Parent == head then return end
+    ownerControlRemoveScriptTag(key)
+
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "EmotesDarkScriptTag"
+    tag.Adornee = head
+    tag.AlwaysOnTop = true
+    tag.MaxDistance = 1000
+    tag.Size = UDim2.fromOffset(130, 28)
+    tag.StudsOffset = Vector3.new(0, 3.15, 0)
+    tag.Parent = head
+
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.fromScale(1, 1)
+    label.Font = Enum.Font.GothamBold
+    label.Text = "SCRIPT ATIVO"
+    label.TextColor3 = Color3.fromRGB(105, 255, 165)
+    label.TextSize = 13
+    label.TextStrokeColor3 = Color3.fromRGB(8, 20, 14)
+    label.TextStrokeTransparency = 0.25
+    label.Parent = tag
+    ownerControlScriptTags[key] = tag
+end
+
+local function ownerControlSyncScriptTags(activeClients)
+    local nextUsers = {}
+    for _, client in ipairs(activeClients or {}) do
+        if type(client) == "table" and client.userId ~= nil then
+            nextUsers[tostring(client.userId)] = client
+        end
+    end
+    ownerControlScriptUsers = nextUsers
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local key = tostring(player.UserId)
+        if ownerControlScriptUsers[key] then
+            ownerControlAttachScriptTag(player)
+        else
+            ownerControlRemoveScriptTag(key)
+        end
+    end
+    for key in pairs(ownerControlScriptTags) do
+        if not ownerControlScriptUsers[key] then ownerControlRemoveScriptTag(key) end
+    end
 end
 
 local function ownerControlDestroyWindow()
@@ -620,6 +689,9 @@ local function ownerControlStartPolling()
                 if type(commands) == "table" then
                     for _, command in ipairs(commands) do ownerControlApplyCommand(command) end
                 end
+                if type(response.activeClients) == "table" then
+                    ownerControlSyncScriptTags(response.activeClients)
+                end
                 if response.cursor ~= nil then ownerControlCursor = tostring(response.cursor) end
             end
                 task.wait(OWNER_CONTROL_POLL_SECONDS)
@@ -714,6 +786,20 @@ local function ownerControlOpen()
         card.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
     end)
 end
+
+local function ownerControlWatchPlayer(player)
+    if not player then return end
+    player.CharacterAdded:Connect(function()
+        task.wait(0.25)
+        ownerControlAttachScriptTag(player)
+    end)
+end
+
+Players.PlayerAdded:Connect(ownerControlWatchPlayer)
+Players.PlayerRemoving:Connect(function(player)
+    ownerControlRemoveScriptTag(player.UserId)
+end)
+for _, player in ipairs(Players:GetPlayers()) do ownerControlWatchPlayer(player) end
 
 OwnerBtn.Image = OWNER_CONTROL_BUTTON_IMAGE
 OwnerBtn.Visible = true
