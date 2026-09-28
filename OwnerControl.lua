@@ -274,6 +274,13 @@ local function ownerControlParseTarget()
     if value == "" then return nil, nil end
     local userId = tonumber(value)
     if userId then return userId, nil end
+
+    local length = #value
+    local ok, unicodeLength = pcall(function() return utf8.len(value) end)
+    if ok and unicodeLength then length = unicodeLength end
+    if length < 2 then
+        return nil, value, "Digite pelo menos duas letras do nome do usuário."
+    end
     return nil, value
 end
 
@@ -297,9 +304,13 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
         return
     end
 
-    local targetUserId, targetUsername = ownerControlParseTarget()
+    local targetUserId, targetUsername, targetError = ownerControlParseTarget()
+    if targetError then
+        ownerControlSetStatus(targetError, Color3.fromRGB(255, 150, 150))
+        return
+    end
     if needsTarget and not targetUserId and not targetUsername then
-        ownerControlSetStatus("Informe o nome de usuário ou UserId do alvo.", Color3.fromRGB(255, 150, 150))
+        ownerControlSetStatus("Informe pelo menos duas letras do nome ou o UserId do alvo.", Color3.fromRGB(255, 150, 150))
         return
     end
 
@@ -328,14 +339,24 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
 
     local response, err = ownerControlRequest("POST", "/commands", command)
     if err then
-        ownerControlSetStatus(err, Color3.fromRGB(255, 175, 125))
+        local friendlyError = err
+        if string.find(err, "ambiguous_target", 1, true) then
+            friendlyError = "Mais de uma pessoa começa com esse nome; use mais letras ou o UserId."
+        elseif string.find(err, "partial_name_requires_two_letters", 1, true) then
+            friendlyError = "Digite pelo menos duas letras do nome."
+        elseif string.find(err, "target_not_running_script", 1, true) then
+            friendlyError = "Nenhum jogador ativo foi encontrado com esse nome."
+        end
+        ownerControlSetStatus(friendlyError, Color3.fromRGB(255, 175, 125))
         return
     end
     if response and response.ok == false then
         ownerControlSetStatus(response.message or "O bridge recusou o comando.", Color3.fromRGB(255, 150, 150))
         return
     end
-    ownerControlSetStatus("Comando enviado: " .. action, Color3.fromRGB(135, 230, 165))
+    local resolvedName = response and (response.targetDisplayName or response.targetUsername) or ""
+    local targetSuffix = resolvedName ~= "" and (" • alvo: " .. tostring(resolvedName)) or ""
+    ownerControlSetStatus("Comando enviado: " .. action .. targetSuffix, Color3.fromRGB(135, 230, 165))
 end
 
 local function ownerControlCreateJumpscare(level, payload)
@@ -483,10 +504,10 @@ local function ownerControlOpen()
     cardStroke.Parent = card
 
     local title = ownerControlMakeLabel(card, "👑 OWNER CONTROL", UDim2.fromOffset(20, 14), UDim2.new(1, -80, 0, 30), 18, Color3.fromRGB(205, 165, 255))
-    ownerControlMakeLabel(card, "Alvo precisa estar online e executar o script; TP/Goto precisam de posição. Kick exige motivo.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
+    ownerControlMakeLabel(card, "Use duas ou mais letras iniciais para localizar o alvo; ele precisa estar online e executar o script.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
     ownerControlMakeButton(card, "×", UDim2.new(1, -52, 0, 14), UDim2.fromOffset(32, 28), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
 
-    ownerControlTargetInput = ownerControlMakeInput(card, "Nome de usuário ou UserId do usuário", UDim2.fromOffset(20, 78), UDim2.new(1, -40, 0, 34))
+    ownerControlTargetInput = ownerControlMakeInput(card, "Nome parcial (2+ letras), usuário ou UserId", UDim2.fromOffset(20, 78), UDim2.new(1, -40, 0, 34))
     ownerControlReasonInput = ownerControlMakeInput(card, "Motivo obrigatório para kick", UDim2.fromOffset(20, 120), UDim2.new(0.62, -25, 0, 34))
     ownerControlMessageInput = ownerControlMakeInput(card, "Mensagem para o usuário ou global", UDim2.new(0.62, 5, 0, 120), UDim2.new(0.38, -25, 0, 34))
 
