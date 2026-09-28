@@ -6,7 +6,8 @@
 
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_ENV_NAME = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 local BUG_REPORT_MIN_LENGTH = 20
 local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
@@ -1616,19 +1617,13 @@ end
 local function getBugReportWebhook()
     local env = getBugReportEnvironment()
 
-    -- Aceita tanto getgenv().EMOTES_DARK_BUG_WEBHOOK quanto a URL editada diretamente na constante.
     local namedWebhook = env and env.EMOTES_DARK_BUG_WEBHOOK
     if type(namedWebhook) == "string" and namedWebhook ~= "" then
         return namedWebhook
     end
 
-    local configuredWebhook = env and env[BUG_REPORT_WEBHOOK_ENV_NAME]
-    if type(configuredWebhook) == "string" and configuredWebhook ~= "" then
-        return configuredWebhook
-    end
-
-    if type(BUG_REPORT_WEBHOOK_ENV_NAME) == "string" and BUG_REPORT_WEBHOOK_ENV_NAME:match("^https://discord%.com/api/webhooks/") then
-        return BUG_REPORT_WEBHOOK_ENV_NAME
+    if type(BUG_REPORT_WEBHOOK_URL) == "string" and BUG_REPORT_WEBHOOK_URL ~= "" then
+        return BUG_REPORT_WEBHOOK_URL
     end
 
     return ""
