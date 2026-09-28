@@ -1783,7 +1783,7 @@ local function reserveGlobalBugReportCooldown()
     local player = Players.LocalPlayer
     local httpClient = getBugReportHttpClient()
     if not player or type(httpClient) ~= "function" then
-        return false, "Servidor global de cooldown não configurado."
+        return false, "Global cooldown server is not configured."
     end
 
     local ok, response = pcall(function()
@@ -1795,7 +1795,7 @@ local function reserveGlobalBugReportCooldown()
         })
     end)
     if not ok then
-        return false, "Servidor global de cooldown indisponível."
+        return false, "Global cooldown server is unavailable."
     end
 
     local decoded = decodeBugReportApiResponse(response)
@@ -1804,14 +1804,14 @@ local function reserveGlobalBugReportCooldown()
         local remaining = type(decoded) == "table" and tonumber(decoded.remainingSeconds) or 0
         bugReportCooldownExpires = os.time() + math.max(0, remaining)
         bugReportGlobalStatusCheckedAt = os.time()
-        return false, "Cooldown global: " .. formatBugCooldown(remaining)
+        return false, "Global cooldown: " .. formatBugCooldown(remaining)
     end
 
     if statusCode and statusCode >= 400 then
-        return false, "Servidor global de cooldown recusou o report."
+        return false, "Global cooldown server rejected the report."
     end
     if type(decoded) ~= "table" or decoded.allowed ~= true then
-        return false, "Não foi possível validar o cooldown global."
+        return false, "Could not validate the global cooldown."
     end
 
     local remaining = tonumber(decoded.remainingSeconds) or BUG_REPORT_COOLDOWN_SECONDS
@@ -1823,16 +1823,16 @@ end
 local function submitBugReport(description)
     local webhook = getBugReportWebhook()
     if webhook == "" then
-        return false, "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar."
+        return false, "Configure EMOTES_DARK_BUG_WEBHOOK before sending."
     end
 
     local player = Players.LocalPlayer
-    if not player then return false, "Jogador local não encontrado." end
+    if not player then return false, "Local player not found." end
 
     local now = os.time()
     local cooldown = getBugReportCooldown()
     if cooldown > now then
-        return false, "Aguarde " .. formatBugCooldown(cooldown - now) .. "."
+        return false, "Wait " .. formatBugCooldown(cooldown - now) .. "."
     end
 
     local globalAllowed, globalMessage = reserveGlobalBugReportCooldown()
@@ -1881,7 +1881,7 @@ local function submitBugReport(description)
         description = auditTruncate(auditSafe(description), MAX_FIELD_LENGTH),
         color = 16755200,
         timestamp = DateTime.now():ToIsoDate(),
-        footer = { text = "Emote Dark Bug Reports • " .. gameName .. " | Hoje às " .. os.date("%H:%M") },
+        footer = { text = "Emote Dark Bug Reports • " .. gameName .. " | Today at " .. os.date("%H:%M") },
         fields = fields,
     }
 
@@ -1891,7 +1891,7 @@ local function submitBugReport(description)
 
     local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
     if type(httpClient) ~= "function" then
-        return false, "Função request não encontrada no executor."
+        return false, "Request function was not found in the executor."
     end
 
     local payload = {
@@ -1909,19 +1909,19 @@ local function submitBugReport(description)
     end)
 
     if not ok then
-        return false, "Falha ao enviar o report."
+        return false, "Failed to send the report."
     end
 
     if not response then
-        return false, "O executor não recebeu resposta do webhook."
+        return false, "The executor did not receive a response from the webhook."
     end
 
     local statusCode = tonumber(response.StatusCode)
     if not statusCode then
-        return false, "Resposta inválida do webhook."
+        return false, "Invalid response from the webhook."
     end
     if statusCode >= 400 then
-        return false, "O webhook recusou o report (HTTP " .. tostring(statusCode) .. ")."
+        return false, "The webhook rejected the report (HTTP " .. tostring(statusCode) .. ")."
     end
 
     saveBugReportCooldown(now + BUG_REPORT_COOLDOWN_SECONDS)
@@ -1978,6 +1978,7 @@ local function showBugReportWindow()
     title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 7002
+    title.Active = true
 
     local close = Instance.new("TextButton")
     close.Parent = card
@@ -2008,7 +2009,7 @@ local function showBugReportWindow()
     hint.Position = UDim2.new(0, 18, 0, 45)
     hint.Size = UDim2.new(1, -36, 0, 30)
     hint.Font = Enum.Font.Gotham
-    hint.Text = "Explique o que aconteceu e como reproduzir. Mínimo: 20 caracteres."
+    hint.Text = "Explain what happened and how to reproduce it. Minimum: 20 characters."
     hint.TextColor3 = Color3.fromRGB(170, 171, 181)
     hint.TextSize = 10
     hint.TextWrapped = true
@@ -2023,7 +2024,7 @@ local function showBugReportWindow()
     textBox.ClearTextOnFocus = false
     textBox.Font = Enum.Font.Gotham
     textBox.MultiLine = true
-    textBox.PlaceholderText = "Ex.: ao abrir o emote X, a animação trava e o botão não responde..."
+    textBox.PlaceholderText = "E.g.: opening emote X freezes the animation and the button stops responding..."
     textBox.PlaceholderColor3 = Color3.fromRGB(120, 121, 130)
     textBox.Text = ""
     textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
@@ -2089,10 +2090,73 @@ local function showBugReportWindow()
         cardScale.Scale = math.min(desiredWidth / currentWidth, desiredHeight / currentHeight)
     end
 
+    local function positionBugReportCard()
+        if not overlay.Parent then return end
+
+        local viewport = overlay.AbsoluteSize
+        if viewport.X <= 0 then return end
+
+        local margin = math.max(16, viewport.X * 0.04)
+        local desiredX = viewport.X * 0.12
+        local maxX = math.max(margin, viewport.X - card.AbsoluteSize.X - margin)
+        desiredX = math.min(math.max(desiredX, margin), maxX)
+
+        local parent = overlay.Parent
+        local parentWidth = viewport.X
+        if parent and parent:IsA("GuiObject") and parent.AbsoluteSize.X > 0 then
+            parentWidth = parent.AbsoluteSize.X
+        end
+        local localX = desiredX * parentWidth / viewport.X
+        card.Position = UDim2.new(0, localX, 0.5, 0)
+    end
+
+    local function refreshBugReportLayout()
+        fitBugReportCard()
+        task.defer(positionBugReportCard)
+    end
+
     overlay:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        task.defer(fitBugReportCard)
+        task.defer(refreshBugReportLayout)
     end)
-    task.defer(fitBugReportCard)
+    task.defer(refreshBugReportLayout)
+
+    local dragging = false
+    local dragInput = nil
+    local dragStart = nil
+    local dragStartPosition = nil
+
+    title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragInput = input
+            dragStart = input.Position
+            dragStartPosition = card.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    dragInput = nil
+                end
+            end)
+        end
+    end)
+
+    title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging or input ~= dragInput or not dragStart or not dragStartPosition then return end
+        local delta = input.Position - dragStart
+        card.Position = UDim2.new(
+            dragStartPosition.X.Scale,
+            dragStartPosition.X.Offset + delta.X,
+            dragStartPosition.Y.Scale,
+            dragStartPosition.Y.Offset + delta.Y
+        )
+    end)
 
     local token = bugReportTimerToken + 1
     bugReportTimerToken = token
@@ -2132,26 +2196,26 @@ local function showBugReportWindow()
         local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
         if #description < BUG_REPORT_MIN_LENGTH then
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = "Descreva o bug com pelo menos 20 caracteres."
+            status.Text = "Describe the bug with at least 20 characters."
             return
         end
 
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
-            status.Text = "Cooldown ativo: " .. formatBugCooldown(remaining)
+            status.Text = "Cooldown active: " .. formatBugCooldown(remaining)
             refreshCooldown()
             return
         end
 
         send.Active = false
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
-        status.Text = "Enviando report..."
+        status.Text = "Sending report..."
         local success, result = submitBugReport(description)
         if success then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
-            status.Text = "Report enviado: " .. tostring(result)
-            notifyBugReport("Dark | Bug report", "Report enviado com sucesso")
+            status.Text = "Report sent: " .. tostring(result)
+            notifyBugReport("Dark | Bug report", "Report sent successfully")
             refreshCooldown()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
