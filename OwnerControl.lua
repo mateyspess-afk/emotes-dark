@@ -72,6 +72,7 @@ OwnerCorner.Parent = OwnerBtn
 local OWNER_CONTROL_API_ENV_NAME = "EMOTES_DARK_OWNER_API"
 local OWNER_CONTROL_TOKEN_ENV_NAME = "EMOTES_DARK_OWNER_TOKEN"
 local OWNER_CONTROL_DEFAULT_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
+local OWNER_CONTROL_EXPECTED_BRIDGE_VERSION = "2026-09-28-session-broadcast-v2"
 local OWNER_CONTROL_BUTTON_IMAGE = "rbxassetid://125710311764143"
 local OWNER_CONTROL_POLL_SECONDS = 3
 local OwnerControlHttpService = game:GetService("HttpService")
@@ -763,7 +764,12 @@ local function ownerControlOpen()
         if healthError then
             ownerControlSetStatus("Bridge offline: " .. healthError, Color3.fromRGB(255, 175, 125))
         elseif health and health.ok then
-            ownerControlSetStatus("Bridge online • " .. tostring(health.clients or 0) .. " cliente(s)", Color3.fromRGB(135, 230, 165))
+            local bridgeVersion = tostring(health.version or "")
+            if bridgeVersion ~= OWNER_CONTROL_EXPECTED_BRIDGE_VERSION then
+                ownerControlSetStatus("Bridge desatualizado • publique a versão nova", Color3.fromRGB(255, 175, 125))
+            else
+                ownerControlSetStatus("Bridge online • " .. tostring(health.clients or 0) .. " cliente(s)", Color3.fromRGB(135, 230, 165))
+            end
         end
     end)
     ownerControlMakeLabel(card, "Ações remotas são aceitas somente pelo bridge configurado. O servidor deve validar o UserId real do dono.", UDim2.fromOffset(20, 365), UDim2.new(1, -40, 0, 45), 11, Color3.fromRGB(150, 155, 170))
