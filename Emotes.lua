@@ -7230,10 +7230,9 @@ applyAnimation = function(animationData)
     for cat, data in pairs(mappingMap) do
         local categoryFolder = animate:FindFirstChild(data.folderName)
         if not categoryFolder then
-            continue
-        end
-
-        local items = data.items
+            -- Categoria ausente: não há nada para sincronizar.
+        else
+            local items = data.items
 
         local sourceByName = {}
         for name, m in pairs(items) do
@@ -7261,6 +7260,7 @@ applyAnimation = function(animationData)
             animObj.Name = m.name
             applyAnimationToObject(animObj, m.animationId, m.weights)
             animObj.Parent = categoryFolder
+        end
         end
     end
     
