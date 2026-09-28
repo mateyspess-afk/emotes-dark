@@ -5517,7 +5517,13 @@ player.CharacterAdded:Connect(gatherAuthenticEmotes)
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
+local lastEmoteMenuSync = 0
+local EMOTE_MENU_SYNC_INTERVAL = 0.1
 RunService.Heartbeat:Connect(function()
+    local now = os.clock()
+    if now - lastEmoteMenuSync < EMOTE_MENU_SYNC_INTERVAL then return end
+    lastEmoteMenuSync = now
+
     local success, menu = pcall(function() return CoreGui.RobloxGui.EmotesMenu.Children end)
     if not (success and menu) then return end
     
@@ -10599,7 +10605,13 @@ player.CharacterAdded:Connect(function(char)
 end)
 
 
+local lastHudVisualRefresh = 0
+local HUD_VISUAL_REFRESH_INTERVAL = 0.15
 RunService.Heartbeat:Connect(function()
+    local now = os.clock()
+    if now - lastHudVisualRefresh < HUD_VISUAL_REFRESH_INTERVAL then return end
+    lastHudVisualRefresh = now
+
     if not State.isGUICreated then
         checkAndRecreateGUI()
     else
