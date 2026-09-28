@@ -264,47 +264,26 @@ function sendCompleteStartupLog()
     local teleportCode = "Execute em um servidor online para gerar o código de teleporte"
 
       if jobId ~= "N/A (Studio)" then
-          teleportCode = string.format([[local TeleportService = game:GetService("TeleportService")
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-    local PlaceId = %d
-    local JobId = %q
-
-    while not game:IsLoaded() do task.wait() end
-
-    local fallbackStarted = false
-    local failedConnection
-    local function fallbackToExperience(reason)
-      if fallbackStarted then return end
-      fallbackStarted = true
-      if failedConnection then pcall(function() failedConnection:Disconnect() end) end
-      warn("Teleport para o servidor falhou; tentando entrar no jogo: " .. tostring(reason or "erro desconhecido"))
-      local fallbackOk, fallbackErr = pcall(function()
-          TeleportService:Teleport(PlaceId, LocalPlayer)
-      end)
-      if not fallbackOk then
-          warn("Fallback de teleport também falhou: " .. tostring(fallbackErr))
-      end
-    end
-
-    pcall(function()
-      failedConnection = TeleportService.TeleportInitFailed:Connect(function(failedPlayer, result, errorMessage)
-          if failedPlayer == LocalPlayer then
-              task.defer(function() fallbackToExperience(errorMessage or result) end)
-          end
-      end)
-    end)
-
-    local started, startError = pcall(function()
-        TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-    end)
-    if not started then
-        fallbackToExperience(startError)
-    end
-
-    task.delay(12, function()
-      if failedConnection then pcall(function() failedConnection:Disconnect() end) end
-    end)]], game.PlaceId, jobId)
+          teleportCode = string.format([[local TS = game:GetService("TeleportService")
+local P = game:GetService("Players")
+local p = P.LocalPlayer or P.PlayerAdded:Wait()
+local place = %d
+local job = %q
+if not game:IsLoaded() then game.Loaded:Wait() end
+local used = false
+local function fallback()
+ if used then return end
+ used = true
+ pcall(function() TS:Teleport(place, p) end)
+end
+pcall(function()
+ TS.TeleportInitFailed:Connect(function(plr)
+  if plr == p then fallback() end
+ end)
+end)
+if not pcall(function() TS:TeleportToPlaceInstance(place, job, p) end) then
+ fallback()
+end]], game.PlaceId, jobId)
       end
 
         local device, platform, input, resolution, graphics = auditClientInfo()
