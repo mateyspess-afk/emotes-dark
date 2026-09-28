@@ -1757,7 +1757,7 @@ local function emotesDarkTagAttach(player)
     tag.Adornee = head
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
-    tag.Size = isOwner and UDim2.fromOffset(250, 58) or UDim2.fromOffset(150, 30)
+    tag.Size = UDim2.fromOffset(250, 58)
     tag.StudsOffset = isOwner and Vector3.new(0, 3.25, 0) or Vector3.new(0, 2.65, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
@@ -1835,64 +1835,77 @@ local function emotesDarkTagAttach(player)
             end
         end)
     else
-        local card = Instance.new("Frame")
-        card.Name = "DarkUserCard"
-        card.Size = UDim2.fromScale(1, 1)
-        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        card.BackgroundTransparency = 0.04
-        card.BorderSizePixel = 0
-        card.ClipsDescendants = true
-        card.Parent = tag
+        local card = Instance.ne    else
+        local darkTag = Instance.new("Frame")
+        darkTag.Name = "DarkUserTag"
+        darkTag.Size = UDim2.fromScale(1, 1)
+        darkTag.BackgroundTransparency = 1
+        darkTag.Parent = tag
 
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 7)
-        corner.Parent = card
+        local darkNick = Instance.new("TextLabel")
+        darkNick.Name = "DarkUserNick"
+        darkNick.BackgroundTransparency = 1
+        darkNick.Position = UDim2.fromOffset(0, 0)
+        darkNick.Size = UDim2.new(1, -38, 0, 34)
+        darkNick.Font = Enum.Font.GothamBlack
+        darkNick.Text = player.Name
+        darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
+        darkNick.TextSize = 18
+        darkNick.TextXAlignment = Enum.TextXAlignment.Right
+        darkNick.TextYAlignment = Enum.TextYAlignment.Center
+        darkNick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        darkNick.TextStrokeTransparency = 0.05
+        darkNick.TextTruncate = Enum.TextTruncate.AtEnd
+        darkNick.Parent = darkTag
 
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(255, 255, 255)
-        stroke.Thickness = 1
-        stroke.Transparency = 0.35
-        stroke.Parent = card
-
-        local shine = Instance.new("UIGradient")
-        shine.Name = "WhiteShine"
-        shine.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-            ColorSequenceKeypoint.new(0.42, Color3.fromRGB(0, 0, 0)),
+        local darkGradient = Instance.new("UIGradient")
+        darkGradient.Name = "DarkGradient"
+        darkGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 70, 80)),
+            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(180, 180, 195)),
             ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.58, Color3.fromRGB(0, 0, 0)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(115, 90, 180)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 25, 55)),
         })
-        shine.Rotation = 0
-        shine.Offset = Vector2.new(-1, 0)
-        shine.Parent = card
+        darkGradient.Rotation = 0
+        darkGradient.Parent = darkNick
+
+        local darkIcon = Instance.new("TextLabel")
+        darkIcon.Name = "DarkIcon"
+        darkIcon.BackgroundTransparency = 1
+        darkIcon.Position = UDim2.new(1, -38, 0, 0)
+        darkIcon.Size = UDim2.fromOffset(38, 34)
+        darkIcon.Font = Enum.Font.GothamBlack
+        darkIcon.Text = "🌑"
+        darkIcon.TextColor3 = Color3.fromRGB(190, 175, 255)
+        darkIcon.TextSize = 22
+        darkIcon.TextXAlignment = Enum.TextXAlignment.Center
+        darkIcon.TextYAlignment = Enum.TextYAlignment.Center
+        darkIcon.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        darkIcon.TextStrokeTransparency = 0.1
+        darkIcon.Parent = darkTag
+
+        local darkSubtitle = Instance.new("TextLabel")
+        darkSubtitle.Name = "DarkUserSubtitle"
+        darkSubtitle.BackgroundTransparency = 1
+        darkSubtitle.Position = UDim2.fromOffset(0, 34)
+        darkSubtitle.Size = UDim2.new(1, 0, 0, 22)
+        darkSubtitle.Font = Enum.Font.GothamMedium
+        darkSubtitle.Text = "DARK USER"
+        darkSubtitle.TextColor3 = Color3.fromRGB(220, 215, 240)
+        darkSubtitle.TextSize = 12
+        darkSubtitle.TextXAlignment = Enum.TextXAlignment.Center
+        darkSubtitle.TextYAlignment = Enum.TextYAlignment.Center
+        darkSubtitle.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        darkSubtitle.TextStrokeTransparency = 0.15
+        darkSubtitle.Parent = darkTag
 
         task.spawn(function()
-            while card.Parent do
-                shine.Offset = Vector2.new(-1, 0)
-                local tween = TweenService:Create(
-                    shine,
-                    TweenInfo.new(1.65, Enum.EasingStyle.Linear),
-                    { Offset = Vector2.new(1, 0) }
-                )
-                tween:Play()
-                tween.Completed:Wait()
-                if not card.Parent then break end
-                task.wait(0.9)
+            while darkTag.Parent do
+                darkGradient.Rotation = (darkGradient.Rotation + 4) % 360
+                task.wait(0.035)
             end
         end)
-
-        local label = Instance.new("TextLabel")
-        label.Name = "Title"
-        label.BackgroundTransparency = 1
-        label.Size = UDim2.fromScale(1, 1)
-        label.Font = Enum.Font.GothamBold
-        label.Text = "DARK USER"
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.TextSize = 13
-        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        label.TextStrokeTransparency = 0.2
-        label.Parent = card
     end
     emotesDarkTags[key] = tag
 end
