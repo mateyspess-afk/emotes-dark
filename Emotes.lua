@@ -1582,6 +1582,255 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     end)
 end
 
+local UPDATE_INFO_ITEMS = {
+    { kind = "ADD", text = "Som de inicialização aleatório" },
+    { kind = "ADD", text = "Entrada suave da bolinha superior" },
+    { kind = "FIXED", text = "Travamentos após alguns minutos" },
+    { kind = "REMOVED", text = "Som de inicialização antigo" },
+    { kind = "ADD", text = "Janela de informações de atualizações" },
+}
+
+local function showUpdateInfoWindow()
+    local sharedEnv = emotesDarkExecutorEnv()
+    local oldConnection = sharedEnv and sharedEnv.EmotesDarkUpdateInfoInputConnection
+    if oldConnection then
+        pcall(function() oldConnection:Disconnect() end)
+        sharedEnv.EmotesDarkUpdateInfoInputConnection = nil
+    end
+
+    local oldGui = CoreGui:FindFirstChild("EmotesDarkUpdateInfo")
+    if oldGui then oldGui:Destroy() end
+
+    local theme = State and State.EmoteTheme
+    local palette = {
+        background = (theme and theme.Background) or Color3.fromRGB(7, 14, 29),
+        accent = (theme and theme.Accent) or Color3.fromRGB(54, 157, 255),
+        text = (theme and theme.ImageColor) or Color3.fromRGB(235, 242, 255),
+    }
+    local statusColors = {
+        ADD = Color3.fromRGB(112, 255, 188),
+        FIXED = Color3.fromRGB(92, 205, 255),
+        REMOVED = Color3.fromRGB(255, 100, 115),
+    }
+    local statusPrefixes = {
+        ADD = "+ Add:",
+        FIXED = "✓ Fixed:",
+        REMOVED = "− Removed:",
+    }
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EmotesDarkUpdateInfo"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 10002
+    gui.Parent = CoreGui
+
+    local scrim = Instance.new("Frame")
+    scrim.Name = "Scrim"
+    scrim.Size = UDim2.fromScale(1, 1)
+    scrim.BackgroundColor3 = Color3.fromRGB(0, 3, 12)
+    scrim.BackgroundTransparency = 1
+    scrim.BorderSizePixel = 0
+    scrim.Parent = gui
+
+    local modal = Instance.new("Frame")
+    modal.Name = "UpdateCard"
+    modal.AnchorPoint = Vector2.new(0.5, 0.5)
+    modal.Position = UDim2.fromScale(0.5, 0.5)
+    modal.Size = UDim2.new(0.86, 0, 0, 360)
+    modal.BackgroundColor3 = palette.background
+    modal.BackgroundTransparency = 1
+    modal.BorderSizePixel = 0
+    modal.Parent = gui
+
+    local sizeConstraint = Instance.new("UISizeConstraint")
+    sizeConstraint.MinSize = Vector2.new(300, 340)
+    sizeConstraint.MaxSize = Vector2.new(520, 390)
+    sizeConstraint.Parent = modal
+
+    local modalCorner = Instance.new("UICorner")
+    modalCorner.CornerRadius = UDim.new(0, 14)
+    modalCorner.Parent = modal
+
+    local modalStroke = Instance.new("UIStroke")
+    modalStroke.Color = palette.accent
+    modalStroke.Thickness = 1.5
+    modalStroke.Transparency = 1
+    modalStroke.Parent = modal
+
+    local icon = Instance.new("TextLabel")
+    icon.Name = "InfoIcon"
+    icon.AnchorPoint = Vector2.new(0, 0.5)
+    icon.Position = UDim2.fromOffset(18, 40)
+    icon.Size = UDim2.fromOffset(42, 42)
+    icon.BackgroundColor3 = palette.accent
+    icon.BackgroundTransparency = 1
+    icon.BorderSizePixel = 0
+    icon.Font = Enum.Font.GothamBold
+    icon.Text = "i"
+    icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    icon.TextSize = 25
+    icon.TextTransparency = 1
+    icon.Parent = modal
+
+    local iconCorner = Instance.new("UICorner")
+    iconCorner.CornerRadius = UDim.new(1, 0)
+    iconCorner.Parent = icon
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.fromOffset(76, 17)
+    title.Size = UDim2.new(1, -94, 0, 25)
+    title.Font = Enum.Font.GothamMedium
+    title.Text = "Informações"
+    title.TextColor3 = palette.text
+    title.TextSize = 19
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextTransparency = 1
+    title.Parent = modal
+
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Name = "UpdatedAt"
+    subtitle.BackgroundTransparency = 1
+    subtitle.Position = UDim2.fromOffset(76, 42)
+    subtitle.Size = UDim2.new(1, -94, 0, 19)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.Text = "Atualizado em " .. os.date("%d/%m/%Y às %H:%M")
+    subtitle.TextColor3 = Color3.fromRGB(178, 196, 222)
+    subtitle.TextSize = 12
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    subtitle.TextTransparency = 1
+    subtitle.Parent = modal
+
+    local list = Instance.new("Frame")
+    list.Name = "Changes"
+    list.BackgroundTransparency = 1
+    list.Position = UDim2.fromOffset(16, 78)
+    list.Size = UDim2.new(1, -32, 0, 200)
+    list.Parent = modal
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 5)
+    listLayout.FillDirection = Enum.FillDirection.Vertical
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Parent = list
+
+    local rows = {}
+    for index, item in ipairs(UPDATE_INFO_ITEMS) do
+        local color = statusColors[item.kind] or statusColors.ADD
+        local row = Instance.new("Frame")
+        row.Name = "Change_" .. tostring(index)
+        row.LayoutOrder = index
+        row.Size = UDim2.new(1, 0, 0, 35)
+        row.BackgroundColor3 = color
+        row.BackgroundTransparency = 1
+        row.BorderSizePixel = 0
+        row.Parent = list
+
+        local rowCorner = Instance.new("UICorner")
+        rowCorner.CornerRadius = UDim.new(0, 8)
+        rowCorner.Parent = row
+
+        local rowStroke = Instance.new("UIStroke")
+        rowStroke.Color = color
+        rowStroke.Thickness = 1
+        rowStroke.Transparency = 1
+        rowStroke.Parent = row
+
+        local label = Instance.new("TextLabel")
+        label.Name = "Text"
+        label.BackgroundTransparency = 1
+        label.Position = UDim2.fromOffset(13, 0)
+        label.Size = UDim2.new(1, -23, 1, 0)
+        label.Font = Enum.Font.Gotham
+        label.Text = statusPrefixes[item.kind] .. " " .. item.text
+        label.TextColor3 = color
+        label.TextSize = 13
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextTransparency = 1
+        label.Parent = row
+
+        table.insert(rows, { row = row, stroke = rowStroke, label = label })
+    end
+
+    local confirm = Instance.new("TextButton")
+    confirm.Name = "Confirm"
+    confirm.AnchorPoint = Vector2.new(0.5, 0)
+    confirm.Position = UDim2.new(0.5, 0, 1, -55)
+    confirm.Size = UDim2.fromOffset(180, 42)
+    confirm.BackgroundColor3 = Color3.fromRGB(20, 55, 112)
+    confirm.BackgroundTransparency = 1
+    confirm.BorderSizePixel = 0
+    confirm.Font = Enum.Font.Gotham
+    confirm.Text = "Confirm"
+    confirm.TextColor3 = palette.text
+    confirm.TextSize = 15
+    confirm.TextTransparency = 1
+    confirm.AutoButtonColor = true
+    confirm.Parent = modal
+
+    local confirmCorner = Instance.new("UICorner")
+    confirmCorner.CornerRadius = UDim.new(0, 10)
+    confirmCorner.Parent = confirm
+
+    local confirmStroke = Instance.new("UIStroke")
+    confirmStroke.Color = palette.accent
+    confirmStroke.Thickness = 1.2
+    confirmStroke.Transparency = 1
+    confirmStroke.Parent = confirm
+
+    local fadeIn = TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    TweenService:Create(scrim, fadeIn, { BackgroundTransparency = 0.35 }):Play()
+    TweenService:Create(modal, fadeIn, { BackgroundTransparency = 0.06 }):Play()
+    TweenService:Create(modalStroke, fadeIn, { Transparency = 0.2 }):Play()
+    TweenService:Create(icon, fadeIn, { BackgroundTransparency = 0.05, TextTransparency = 0 }):Play()
+    TweenService:Create(title, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(subtitle, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(confirm, fadeIn, { BackgroundTransparency = 0.05, TextTransparency = 0 }):Play()
+    TweenService:Create(confirmStroke, fadeIn, { Transparency = 0.15 }):Play()
+    for index, entry in ipairs(rows) do
+        task.delay((index - 1) * 0.04, function()
+            if not entry.row.Parent then return end
+            TweenService:Create(entry.row, fadeIn, { BackgroundTransparency = 0.14 }):Play()
+            TweenService:Create(entry.stroke, fadeIn, { Transparency = 0.45 }):Play()
+            TweenService:Create(entry.label, fadeIn, { TextTransparency = 0 }):Play()
+        end)
+    end
+
+    local closed = false
+    local inputConnection
+    local function closeWindow()
+        if closed then return end
+        closed = true
+        if inputConnection then inputConnection:Disconnect() end
+        if sharedEnv and sharedEnv.EmotesDarkUpdateInfoInputConnection == inputConnection then
+            sharedEnv.EmotesDarkUpdateInfoInputConnection = nil
+        end
+        local fadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(scrim, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(modal, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(modalStroke, fadeOut, { Transparency = 1 }):Play()
+        task.delay(0.22, function()
+            if gui then gui:Destroy() end
+        end)
+    end
+
+    confirm.MouseButton1Click:Connect(closeWindow)
+    inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == Enum.KeyCode.Escape then
+            closeWindow()
+        end
+    end)
+    if sharedEnv then
+        sharedEnv.EmotesDarkUpdateInfoInputConnection = inputConnection
+    end
+end
+
+task.defer(function()
+    pcall(showUpdateInfoWindow)
+end)
+
 function getExperienceOwnerUserId()
     local creatorType = game.CreatorType
     if creatorType == Enum.CreatorType.User then
