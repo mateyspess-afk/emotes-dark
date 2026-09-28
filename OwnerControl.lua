@@ -70,6 +70,7 @@ OwnerCorner.Parent = OwnerBtn
 
 local OWNER_CONTROL_API_ENV_NAME = "EMOTES_DARK_OWNER_API"
 local OWNER_CONTROL_TOKEN_ENV_NAME = "EMOTES_DARK_OWNER_TOKEN"
+local OWNER_CONTROL_DEFAULT_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
 local OWNER_CONTROL_BUTTON_IMAGE = "rbxassetid://125710311764143"
 local OWNER_CONTROL_POLL_SECONDS = 3
 local OwnerControlHttpService = game:GetService("HttpService")
@@ -93,7 +94,9 @@ end
 local function ownerControlApiUrl()
     local env = ownerControlEnvironment()
     local value = env and env[OWNER_CONTROL_API_ENV_NAME]
-    if type(value) ~= "string" or ownerControlTrim(value) == "" then return "" end
+    if type(value) ~= "string" or ownerControlTrim(value) == "" then
+        return OWNER_CONTROL_DEFAULT_API
+    end
     return ownerControlTrim(value):gsub("/+$", "")
 end
 
