@@ -28,6 +28,43 @@ const clients = new Map();
 const commands = [];
 let nextCommandId = 1;
 
+function clientKey(value) {
+  return [clean(value.userId), clean(value.gameId), clean(value.placeId), clean(value.jobId), clean(value.sessionId)].join("|");
+}
+
+function activeClientsFor(gameId, placeId, jobId) {
+  const now = Date.now();
+  return [...clients.values()]
+    .filter((client) =>
+      client.gameId === gameId &&
+      client.placeId === placeId &&
+      (!jobId || client.jobId === jobId) &&
+      now - client.lastSeenAt <= CLIENT_TTL_MS
+    )
+    .map((client) => ({
+      userId: client.userId,
+      username: client.username,
+      displayName: client.displayName,
+      gameId: client.gameId,
+      placeId: client.placeId,
+      jobId: client.jobId,
+    }));
+}
+
+function findOwnerClient(body) {
+  const exact = clients.get(clientKey(body));
+  if (exact) return exact;
+  return [...clients.values()]
+    .filter((client) =>
+      client.userId === clean(body.userId) &&
+      client.gameId === clean(body.gameId) &&
+      client.placeId === clean(body.placeId) &&
+      (!clean(body.jobId) || client.jobId === clean(body.jobId)) &&
+      Date.now() - client.lastSeenAt <= CLIENT_TTL_MS
+    )
+    .sort((a, b) => b.lastSeenAt - a.lastSeenAt)[0] || null;
+}
+
 function clean(value) {
   return String(value == null ? "" : value).trim();
 }
@@ -104,7 +141,14 @@ function findClient(body, gameId, placeId) {
 function prune() {
   const now = Date.now();
   for (const [key, client] of clients) {
-    if (now - client.lastSeenAt > CLIENT_TTL_MS) clients.delete(key);
+    if (now - client.lastSeenAt > CLIENT_TTL_MS) {
+      clients.delete(key);
+      continue;
+    }
+    if (client.deliveredIds instanceof Set) {
+      const liveIds = new Set(commands.map((command) => command.id));
+      for (const id of client.deliveredIds) if (!liveIds.has(id)) client.deliveredIds.delete(id);
+    }
   }
   while (commands.length && (now - commands[0].createdAt > COMMAND_TTL_MS || commands.length > 2_000)) {
     commands.shift();
@@ -151,7 +195,7 @@ function queueCommand(body, req) {
   const action = clean(body.action);
   if (!ALLOWED_ACTIONS.has(action)) return { status: 422, body: { ok: false, message: "unsupported_action" } };
 
-  const owner = clients.get(clean(body.userId));
+  const owner = findOwnerClient(body);
   const isGlobalMessage = action === "global_message";
   const gameId = isGlobalMessage ? "*" : clean(body.gameId || owner?.gameId);
   const placeId = isGlobalMessage ? "*" : clean(body.placeId || owner?.placeId);
@@ -245,17 +289,18 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const client = clientFrom(body);
       if (!client) return sendJson(res, 422, { ok: false, message: "userId_required" });
-      const previous = clients.get(client.userId);
-      const newSession = !previous || previous.gameId !== client.gameId || previous.placeId !== client.placeId || previous.jobId !== client.jobId || (client.sessionId && client.sessionId !== previous.sessionId);
-      if (newSession) {
-        // Sessão nova começa no fim da fila: mensagens e jumpscares antigos não voltam.
+      const key = clientKey(client);
+      const previous = clients.get(key);
+      if (!previous) {
+        // Cada execução em cada servidor começa no fim da fila.
         client.sessionCursor = nextCommandId - 1;
-        client.deliveredCursor = client.sessionCursor;
+        client.deliveredIds = new Set();
       } else {
         client.sessionCursor = previous.sessionCursor || 0;
-        client.deliveredCursor = previous.deliveredCursor || client.sessionCursor;
+        client.deliveredIds = previous.deliveredIds instanceof Set ? previous.deliveredIds : new Set();
       }
-      clients.set(client.userId, client);
+      client.clientKey = key;
+      clients.set(key, client);
       return sendJson(res, 200, { ok: true, serverTime: Date.now(), client: { userId: client.userId, gameId: client.gameId, placeId: client.placeId } });
     } catch (error) {
       return sendJson(res, error.message === "payload_too_large" ? 413 : 400, { ok: false, message: error.message });
@@ -281,26 +326,39 @@ const server = http.createServer(async (req, res) => {
     const requestedCursor = Number(url.searchParams.get("cursor")) || 0;
     if (!userId || !gameId || !placeId) return sendJson(res, 422, { ok: false, message: "userId_gameId_placeId_required" });
 
-    const client = clients.get(userId);
-    const cursor = Math.max(requestedCursor, Number(client?.deliveredCursor || client?.sessionCursor || 0));
+    const lookup = { userId, gameId, placeId, jobId, sessionId };
+    const key = clientKey(lookup);
+    const client = clients.get(key) || [...clients.values()].find((candidate) =>
+      candidate.userId === userId && candidate.gameId === gameId && candidate.placeId === placeId && candidate.jobId === jobId
+    );
+    const sessionCursor = Number(client?.sessionCursor || requestedCursor || 0);
     if (client) {
       client.lastSeenAt = Date.now();
       client.gameId = gameId;
       client.placeId = placeId;
       client.jobId = jobId || client.jobId;
       client.sessionId = sessionId || client.sessionId;
+      if (!(client.deliveredIds instanceof Set)) client.deliveredIds = new Set();
     }
 
     const available = commands.filter((command) =>
-      command.id > cursor &&
+      command.id > sessionCursor &&
+      !(client?.deliveredIds instanceof Set && client.deliveredIds.has(command.id)) &&
       ((command.gameId === gameId && command.placeId === placeId) ||
         (command.action === "global_message" && command.gameId === "*" && command.placeId === "*")) &&
       (command.targetUserId === "*" || command.targetUserId === userId) &&
-      (!command.targetJobId || !jobId || command.targetJobId === jobId)
+      (!command.targetJobId || command.targetJobId === jobId)
     );
-    const nextCursor = commands.length ? Math.max(cursor, commands[commands.length - 1].id) : cursor;
-    if (client) client.deliveredCursor = nextCursor;
-    return sendJson(res, 200, { ok: true, commands: available, cursor: nextCursor });
+    if (client) {
+      for (const command of available) client.deliveredIds.add(command.id);
+    }
+    const nextCursor = available.reduce((max, command) => Math.max(max, command.id), sessionCursor);
+    return sendJson(res, 200, {
+      ok: true,
+      commands: available,
+      cursor: nextCursor,
+      activeClients: activeClientsFor(gameId, placeId, jobId),
+    });
   }
 
   return sendJson(res, 404, { ok: false, message: "not_found" });
