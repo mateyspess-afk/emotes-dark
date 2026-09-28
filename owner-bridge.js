@@ -62,6 +62,7 @@ function clientFrom(body) {
     gameId: clean(body.gameId),
     placeId: clean(body.placeId),
     jobId: clean(body.jobId),
+    sessionId: clean(body.sessionId),
     position: normalizePosition(body.position),
     lastSeenAt: Date.now(),
   };
@@ -151,9 +152,10 @@ function queueCommand(body, req) {
   if (!ALLOWED_ACTIONS.has(action)) return { status: 422, body: { ok: false, message: "unsupported_action" } };
 
   const owner = clients.get(clean(body.userId));
-  const gameId = clean(body.gameId || owner?.gameId);
-  const placeId = clean(body.placeId || owner?.placeId);
-  if (!gameId || !placeId) return { status: 422, body: { ok: false, message: "gameId_and_placeId_required" } };
+  const isGlobalMessage = action === "global_message";
+  const gameId = isGlobalMessage ? "*" : clean(body.gameId || owner?.gameId);
+  const placeId = isGlobalMessage ? "*" : clean(body.placeId || owner?.placeId);
+  if (!isGlobalMessage && (!gameId || !placeId)) return { status: 422, body: { ok: false, message: "gameId_and_placeId_required" } };
 
   let target = null;
   if (action === "next_player") {
@@ -244,7 +246,7 @@ const server = http.createServer(async (req, res) => {
       const client = clientFrom(body);
       if (!client) return sendJson(res, 422, { ok: false, message: "userId_required" });
       const previous = clients.get(client.userId);
-      const newSession = !previous || previous.gameId !== client.gameId || previous.placeId !== client.placeId || previous.jobId !== client.jobId;
+      const newSession = !previous || previous.gameId !== client.gameId || previous.placeId !== client.placeId || previous.jobId !== client.jobId || (client.sessionId && client.sessionId !== previous.sessionId);
       if (newSession) {
         // Sessão nova começa no fim da fila: mensagens e jumpscares antigos não voltam.
         client.sessionCursor = nextCommandId - 1;
@@ -275,6 +277,7 @@ const server = http.createServer(async (req, res) => {
     const gameId = clean(url.searchParams.get("gameId"));
     const placeId = clean(url.searchParams.get("placeId"));
     const jobId = clean(url.searchParams.get("jobId"));
+    const sessionId = clean(url.searchParams.get("sessionId"));
     const requestedCursor = Number(url.searchParams.get("cursor")) || 0;
     if (!userId || !gameId || !placeId) return sendJson(res, 422, { ok: false, message: "userId_gameId_placeId_required" });
 
@@ -285,12 +288,13 @@ const server = http.createServer(async (req, res) => {
       client.gameId = gameId;
       client.placeId = placeId;
       client.jobId = jobId || client.jobId;
+      client.sessionId = sessionId || client.sessionId;
     }
 
     const available = commands.filter((command) =>
       command.id > cursor &&
-      command.gameId === gameId &&
-      command.placeId === placeId &&
+      ((command.gameId === gameId && command.placeId === placeId) ||
+        (command.action === "global_message" && command.gameId === "*" && command.placeId === "*")) &&
       (command.targetUserId === "*" || command.targetUserId === userId) &&
       (!command.targetJobId || !jobId || command.targetJobId === jobId)
     );
