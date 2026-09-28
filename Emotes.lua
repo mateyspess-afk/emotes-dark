@@ -1758,7 +1758,7 @@ local function emotesDarkTagAttach(player)
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
     tag.Size = UDim2.fromOffset(250, 58)
-    tag.StudsOffset = Vector3.new(0, 1.75, 0)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.25, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
@@ -1772,7 +1772,7 @@ local function emotesDarkTagAttach(player)
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
         nameRow.Size = UDim2.new(1, 0, 0, 34)
-        nameRow.Position = UDim2.fromOffset(-17, 0)
+        nameRow.Position = UDim2.fromOffset(17, 0)
         nameRow.BackgroundTransparency = 1
         nameRow.Parent = creatorTag
 
@@ -1788,7 +1788,7 @@ local function emotesDarkTagAttach(player)
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
         nick.Size = UDim2.fromOffset(0, 34)
-        nick.LayoutOrder = 2
+        nick.LayoutOrder = 1
         nick.AutomaticSize = Enum.AutomaticSize.X
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
@@ -1818,7 +1818,7 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Name = "OwnerIcon"
         ownerIcon.BackgroundTransparency = 1
         ownerIcon.Size = UDim2.fromOffset(30, 30)
-        ownerIcon.LayoutOrder = 1
+        ownerIcon.LayoutOrder = 2
         ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
@@ -1854,7 +1854,7 @@ local function emotesDarkTagAttach(player)
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
         darkNameRow.Size = UDim2.new(1, 0, 0, 34)
-        darkNameRow.Position = UDim2.fromOffset(-17, 0)
+        darkNameRow.Position = UDim2.fromOffset(17, 0)
         darkNameRow.BackgroundTransparency = 1
         darkNameRow.Parent = darkTag
 
