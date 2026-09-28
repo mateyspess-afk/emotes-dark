@@ -1775,6 +1775,8 @@ local function notifyBugReport(title, content)
 end
 
 local function reserveGlobalBugReportCooldown()
+    if isBugReportOwner() then return true end
+
     local api = getBugReportCooldownApi()
     if api == "" then return true end
 
@@ -2023,6 +2025,17 @@ local function showBugReportWindow()
     boxCorner.CornerRadius = UDim.new(0, 7)
     boxCorner.Parent = textBox
 
+    local function setBugReportInputEnabled(enabled)
+        textBox.TextEditable = enabled
+        if enabled then
+            textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
+            textBox.PlaceholderColor3 = Color3.fromRGB(120, 121, 130)
+        else
+            textBox.TextColor3 = Color3.fromRGB(145, 145, 155)
+            textBox.PlaceholderColor3 = Color3.fromRGB(95, 95, 105)
+        end
+    end
+
     local status = Instance.new("TextLabel")
     status.Parent = card
     status.BackgroundTransparency = 1
@@ -2056,6 +2069,7 @@ local function showBugReportWindow()
     local function refreshCooldown()
         if not overlay.Parent or bugReportTimerToken ~= token then return false end
         if isBugReportOwner() then
+            setBugReportInputEnabled(true)
             cooldownLabel.Text = "00h 00m 00s"
             cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
@@ -2066,12 +2080,14 @@ local function showBugReportWindow()
 
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
+            setBugReportInputEnabled(false)
             cooldownLabel.Text = formatBugCooldown(remaining)
             cooldownLabel.TextColor3 = Color3.fromRGB(255, 105, 105)
             send.Active = false
             send.AutoButtonColor = false
             send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
         else
+            setBugReportInputEnabled(true)
             cooldownLabel.Text = "00h 00m 00s"
             cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
