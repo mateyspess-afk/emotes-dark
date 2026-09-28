@@ -1943,7 +1943,7 @@ local function showBugReportWindow()
     overlay.Name = "BugReportWindow"
     overlay.Parent = SettingsLib.UI
     overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    overlay.BackgroundTransparency = 0.35
+    overlay.BackgroundTransparency = 1
     overlay.Size = UDim2.fromScale(1, 1)
     overlay.ZIndex = 7000
     overlay.Active = true
