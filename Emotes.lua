@@ -1624,85 +1624,126 @@ local function emotesDarkTagAttach(player)
     tag.Adornee = head
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
-    tag.Size = isOwner and UDim2.fromOffset(190, 54) or UDim2.fromOffset(150, 30)
-    tag.StudsOffset = isOwner and Vector3.new(0, 3.65, 0) or Vector3.new(0, 3.15, 0)
+    tag.Size = isOwner and UDim2.fromOffset(176, 48) or UDim2.fromOffset(150, 30)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.55, 0) or Vector3.new(0, 3.15, 0)
+    tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
     if isOwner then
         local card = Instance.new("Frame")
         card.Name = "OwnerCard"
         card.Size = UDim2.fromScale(1, 1)
-        card.BackgroundColor3 = Color3.fromRGB(28, 12, 48)
-        card.BackgroundTransparency = 0.08
+        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        card.BackgroundTransparency = 0.05
         card.BorderSizePixel = 0
+        card.ClipsDescendants = true
         card.Parent = tag
 
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 9)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = card
 
         local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(255, 204, 82)
+        stroke.Color = Color3.fromRGB(42, 42, 42)
         stroke.Thickness = 1.5
         stroke.Transparency = 0.05
         stroke.Parent = card
 
-        local gradient = Instance.new("UIGradient")
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 193, 68)),
-            ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 235, 150)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(181, 87, 255)),
-        })
-        gradient.Rotation = 25
-        gradient.Parent = card
-
         local crown = Instance.new("TextLabel")
         crown.Name = "Crown"
         crown.BackgroundTransparency = 1
-        crown.Position = UDim2.fromOffset(7, 3)
-        crown.Size = UDim2.fromOffset(27, 24)
+        crown.Position = UDim2.fromOffset(8, 5)
+        crown.Size = UDim2.fromOffset(24, 22)
         crown.Font = Enum.Font.GothamBold
-        crown.Text = "👑"
-        crown.TextColor3 = Color3.fromRGB(255, 239, 161)
-        crown.TextSize = 18
+        crown.Text = "★"
+        crown.TextColor3 = Color3.fromRGB(255, 255, 255)
+        crown.TextSize = 16
         crown.Parent = card
 
         local title = Instance.new("TextLabel")
         title.Name = "Title"
         title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(36, 4)
-        title.Size = UDim2.new(1, -43, 0, 23)
+        title.Position = UDim2.fromOffset(35, 5)
+        title.Size = UDim2.new(1, -42, 0, 21)
         title.Font = Enum.Font.GothamBlack
-        title.Text = "DONO • EMOTES DARK"
-        title.TextColor3 = Color3.fromRGB(255, 247, 209)
+        title.Text = "OWNER USER"
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.TextSize = 14
         title.TextXAlignment = Enum.TextXAlignment.Left
-        title.TextStrokeColor3 = Color3.fromRGB(72, 24, 93)
-        title.TextStrokeTransparency = 0.35
+        title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        title.TextStrokeTransparency = 0.15
         title.Parent = card
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "Subtitle"
         subtitle.BackgroundTransparency = 1
-        subtitle.Position = UDim2.fromOffset(10, 28)
-        subtitle.Size = UDim2.new(1, -20, 0, 19)
+        subtitle.Position = UDim2.fromOffset(10, 27)
+        subtitle.Size = UDim2.new(1, -20, 0, 17)
         subtitle.Font = Enum.Font.GothamMedium
         subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
-        subtitle.TextColor3 = Color3.fromRGB(243, 225, 255)
-        subtitle.TextSize = 12
+        subtitle.TextColor3 = Color3.fromRGB(220, 220, 220)
+        subtitle.TextSize = 11
         subtitle.TextTruncate = Enum.TextTruncate.AtEnd
         subtitle.Parent = card
     else
+        local card = Instance.new("Frame")
+        card.Name = "DarkUserCard"
+        card.Size = UDim2.fromScale(1, 1)
+        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        card.BackgroundTransparency = 0.04
+        card.BorderSizePixel = 0
+        card.ClipsDescendants = true
+        card.Parent = tag
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 7)
+        corner.Parent = card
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 1
+        stroke.Transparency = 0.35
+        stroke.Parent = card
+
+        local shine = Instance.new("UIGradient")
+        shine.Name = "WhiteShine"
+        shine.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(0.42, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.58, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+        })
+        shine.Rotation = 0
+        shine.Offset = Vector2.new(-1, 0)
+        shine.Parent = card
+
+        task.spawn(function()
+            while card.Parent do
+                shine.Offset = Vector2.new(-1, 0)
+                local tween = TweenService:Create(
+                    shine,
+                    TweenInfo.new(1.65, Enum.EasingStyle.Linear),
+                    { Offset = Vector2.new(1, 0) }
+                )
+                tween:Play()
+                tween.Completed:Wait()
+                if not card.Parent then break end
+                task.wait(0.9)
+            end
+        end)
+
         local label = Instance.new("TextLabel")
+        label.Name = "Title"
         label.BackgroundTransparency = 1
         label.Size = UDim2.fromScale(1, 1)
         label.Font = Enum.Font.GothamBold
-        label.Text = "SCRIPT ATIVO"
-        label.TextColor3 = Color3.fromRGB(105, 255, 165)
+        label.Text = "DARK USER"
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
         label.TextSize = 13
-        label.TextStrokeColor3 = Color3.fromRGB(8, 20, 14)
-        label.TextStrokeTransparency = 0.25
-        label.Parent = tag
+        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        label.TextStrokeTransparency = 0.2
+        label.Parent = card
     end
     emotesDarkTags[key] = tag
 end
