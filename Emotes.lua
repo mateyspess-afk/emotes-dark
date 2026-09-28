@@ -692,7 +692,7 @@ local function showUpdateInfoWindow()
     confirm.MouseButton1Click:Connect(function() closeWindow(true) end)
     inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == Enum.KeyCode.Escape then
-            closeWindow()
+            closeWindow(true)
         end
     end)
     if sharedEnv then
