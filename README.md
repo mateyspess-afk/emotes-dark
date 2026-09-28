@@ -49,7 +49,7 @@ Esta versão foi reestruturada a partir da ideia do script de referência indica
 
 O script agora inclui um botão com a textura 125710311764143 acima do botão de engrenagem. A janela só abre para o dono da experiência ou para um UserId listado em OWNER_USER_IDS; outros usuários recebem a mensagem em português e inglês.
 
-As ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. O script já usa automaticamente esta URL pública do bridge:
+As ações de kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. O script já usa automaticamente esta URL pública do bridge:
 
 ```lua
 getgenv().EMOTES_DARK_OWNER_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
@@ -61,7 +61,7 @@ Se precisar trocar o bridge, sobrescreva `EMOTES_DARK_OWNER_API` antes de execut
 - POST /commands para enviar comandos do owner.
 - GET /commands/poll?userId=&gameId=&placeId=&jobId=&cursor= para entregar comandos ao cliente alvo.
 
-O bridge precisa autenticar o dono no servidor e retornar o polling como { commands = { ... }, cursor = "..." }. Cada comando usa action, targetUserId ou targetUsername e payload. Para ban permanente, envie durationMinutes = 0; para kick, payload.reason é obrigatório.
+O bridge precisa autenticar o dono no servidor e retornar o polling como { commands = { ... }, cursor = "..." }. Cada comando usa action, targetUserId ou targetUsername e payload. Para kick, payload.reason é obrigatório.
 
 Um LocalScript não consegue, sozinho, expulsar, banir ou mover outro cliente. Por isso, sem um bridge autenticado, a janela continua visível para o owner, mas mostra que a API ainda não foi configurada.
 
@@ -92,4 +92,4 @@ getgenv().EMOTES_DARK_OWNER_TOKEN = "o-mesmo-token-do-servidor"
 
 O token não deve ser colocado no GitHub nem compartilhado com usuários comuns. Os clientes enviam `POST /clients/register` a cada ciclo e fazem polling em `GET /commands/poll`; os comandos são enviados por `POST /commands`. O bridge mantém a fila em memória, então reiniciar o processo limpa clientes e comandos pendentes.
 
-O alvo precisa estar online e executando o script. Kick, ban e teleporte são aplicados pelo cliente-alvo; portanto, o bridge não substitui regras ou scripts server-side do jogo.
+O alvo precisa estar online e executando o script. Kick e teleporte são aplicados pelo cliente-alvo; portanto, o bridge não substitui regras ou scripts server-side do jogo.
