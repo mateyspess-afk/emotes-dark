@@ -188,8 +188,6 @@ local function sendCompleteStartupLog()
 
     local device, platform, input, resolution, graphics = auditClientInfo()
 
-    local reportMessage = auditTruncate(auditSafe(description), BUG_REPORT_MESSAGE_LIMIT)
-
     local fields = {
         {
             name = "🎮 Jogador",
@@ -1875,6 +1873,8 @@ local function submitBugReport(description)
     end
     gameName = auditSafe(gameName)
 
+    local reportMessage = auditTruncate(auditSafe(description), BUG_REPORT_MESSAGE_LIMIT)
+
     local fields = {
         {
             name = "👤 Reporter Profile",
@@ -1943,19 +1943,22 @@ local function submitBugReport(description)
     end)
 
     if not ok then
-        return false, "Failed to send the report."
+        return false, "Failed to send the report: " .. auditTruncate(tostring(response), 180)
     end
 
     if not response then
         return false, "The executor did not receive a response from the webhook."
     end
 
-    local statusCode = tonumber(response.StatusCode or response.Status or response.status_code)
+    local statusCode = tonumber(response.StatusCode or response.Status or response.status_code or response.statusCode)
+    local responseBody = response.Body or response.body or ""
     if not statusCode then
         return false, "Invalid response from the webhook."
     end
     if statusCode >= 400 then
-        return false, "The webhook rejected the report (HTTP " .. tostring(statusCode) .. ")."
+        local detail = auditTruncate(tostring(responseBody), 180)
+        if detail == "" then detail = "sem detalhes" end
+        return false, "The webhook rejected the report (HTTP " .. tostring(statusCode) .. "): " .. detail
     end
 
     saveBugReportCooldown(now + BUG_REPORT_COOLDOWN_SECONDS)
