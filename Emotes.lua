@@ -1758,7 +1758,7 @@ local function emotesDarkTagAttach(player)
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
     tag.Size = UDim2.fromOffset(250, 58)
-    tag.StudsOffset = isOwner and Vector3.new(0, 3.25, 0) or Vector3.new(0, 2.65, 0)
+    tag.StudsOffset = Vector3.new(0, 3.25, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
@@ -1769,11 +1769,25 @@ local function emotesDarkTagAttach(player)
         creatorTag.BackgroundTransparency = 1
         creatorTag.Parent = tag
 
+        local nameRow = Instance.new("Frame")
+        nameRow.Name = "NameRow"
+        nameRow.Size = UDim2.new(1, 0, 0, 34)
+        nameRow.BackgroundTransparency = 1
+        nameRow.Parent = creatorTag
+
+        local nameLayout = Instance.new("UIListLayout")
+        nameLayout.FillDirection = Enum.FillDirection.Horizontal
+        nameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        nameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        nameLayout.Padding = UDim.new(0, 4)
+        nameLayout.Parent = nameRow
+
         local nick = Instance.new("TextLabel")
         nick.Name = "CreatorNick"
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
-        nick.Size = UDim2.new(1, 0, 0, 34)
+        nick.Size = UDim2.fromOffset(0, 34)
+        nick.AutomaticSize = Enum.AutomaticSize.X
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
         nick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1783,7 +1797,7 @@ local function emotesDarkTagAttach(player)
         nick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nick.TextStrokeTransparency = 0.05
         nick.TextTruncate = Enum.TextTruncate.AtEnd
-        nick.Parent = creatorTag
+        nick.Parent = nameRow
 
         local nickGradient = Instance.new("UIGradient")
         nickGradient.Name = "RGBGradient"
@@ -1798,20 +1812,14 @@ local function emotesDarkTagAttach(player)
         nickGradient.Rotation = 0
         nickGradient.Parent = nick
 
-        local hammer = Instance.new("TextLabel")
-        hammer.Name = "Hammer"
-        hammer.BackgroundTransparency = 1
-        hammer.Position = UDim2.new(1, -38, 0, 0)
-        hammer.Size = UDim2.fromOffset(38, 34)
-        hammer.Font = Enum.Font.GothamBlack
-        hammer.Text = "🔨"
-        hammer.TextColor3 = Color3.fromRGB(255, 210, 75)
-        hammer.TextSize = 22
-        hammer.TextXAlignment = Enum.TextXAlignment.Center
-        hammer.TextYAlignment = Enum.TextYAlignment.Center
-        hammer.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        hammer.TextStrokeTransparency = 0.1
-        hammer.Parent = creatorTag
+        local ownerIcon = Instance.new("ImageLabel")
+        ownerIcon.Name = "OwnerIcon"
+        ownerIcon.BackgroundTransparency = 1
+        ownerIcon.Size = UDim2.fromOffset(30, 30)
+        ownerIcon.LayoutOrder = 2
+        ownerIcon.Image = "rbxassetid://11322089611"
+        ownerIcon.ScaleType = Enum.ScaleType.Fit
+        ownerIcon.Parent = nameRow
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "CreatorSubtitle"
@@ -1841,11 +1849,25 @@ local function emotesDarkTagAttach(player)
         darkTag.BackgroundTransparency = 1
         darkTag.Parent = tag
 
+        local darkNameRow = Instance.new("Frame")
+        darkNameRow.Name = "DarkNameRow"
+        darkNameRow.Size = UDim2.new(1, 0, 0, 34)
+        darkNameRow.BackgroundTransparency = 1
+        darkNameRow.Parent = darkTag
+
+        local darkNameLayout = Instance.new("UIListLayout")
+        darkNameLayout.FillDirection = Enum.FillDirection.Horizontal
+        darkNameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        darkNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        darkNameLayout.Padding = UDim.new(0, 4)
+        darkNameLayout.Parent = darkNameRow
+
         local darkNick = Instance.new("TextLabel")
         darkNick.Name = "DarkUserNick"
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
-        darkNick.Size = UDim2.new(1, 0, 0, 34)
+        darkNick.Size = UDim2.fromOffset(0, 34)
+        darkNick.AutomaticSize = Enum.AutomaticSize.X
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
         darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1855,7 +1877,7 @@ local function emotesDarkTagAttach(player)
         darkNick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         darkNick.TextStrokeTransparency = 0.05
         darkNick.TextTruncate = Enum.TextTruncate.AtEnd
-        darkNick.Parent = darkTag
+        darkNick.Parent = darkNameRow
 
         local darkGradient = Instance.new("UIGradient")
         darkGradient.Name = "DarkGradient"
@@ -1869,20 +1891,14 @@ local function emotesDarkTagAttach(player)
         darkGradient.Rotation = 0
         darkGradient.Parent = darkNick
 
-        local darkIcon = Instance.new("TextLabel")
+        local darkIcon = Instance.new("ImageLabel")
         darkIcon.Name = "DarkIcon"
         darkIcon.BackgroundTransparency = 1
-        darkIcon.Position = UDim2.new(1, -38, 0, 0)
-        darkIcon.Size = UDim2.fromOffset(38, 34)
-        darkIcon.Font = Enum.Font.GothamBlack
-        darkIcon.Text = "🌑"
-        darkIcon.TextColor3 = Color3.fromRGB(190, 175, 255)
-        darkIcon.TextSize = 22
-        darkIcon.TextXAlignment = Enum.TextXAlignment.Center
-        darkIcon.TextYAlignment = Enum.TextYAlignment.Center
-        darkIcon.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        darkIcon.TextStrokeTransparency = 0.1
-        darkIcon.Parent = darkTag
+        darkIcon.Size = UDim2.fromOffset(30, 30)
+        darkIcon.LayoutOrder = 2
+        darkIcon.Image = "rbxassetid://81489458260315"
+        darkIcon.ScaleType = Enum.ScaleType.Fit
+        darkIcon.Parent = darkNameRow
 
         local darkSubtitle = Instance.new("TextLabel")
         darkSubtitle.Name = "DarkUserSubtitle"
