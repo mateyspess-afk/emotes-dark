@@ -5,8 +5,8 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local STARTUP_WEBHOOK_URL = ""
+local BUG_REPORT_WEBHOOK_URL = ""
 local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 local BUG_REPORT_MIN_LENGTH = 20
@@ -16,6 +16,69 @@ local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
+
+-- Compatibilidade entre executores: Delta expõe request em versões onde game:HttpGet falha.
+local function emotesDarkExecutorEnv()
+    if type(getgenv) == "function" then
+        local ok, env = pcall(getgenv)
+        if ok and type(env) == "table" then return env end
+    end
+    return _G
+end
+
+local function emotesDarkReadField(object, key)
+    if object == nil then return nil end
+    local ok, value = pcall(function() return object[key] end)
+    return ok and value or nil
+end
+
+local function emotesDarkGetRequest()
+    local env = emotesDarkExecutorEnv()
+    local synRequest = emotesDarkReadField(syn, "request")
+    local httpRequest = emotesDarkReadField(http, "request")
+    local fluxusRequest = emotesDarkReadField(fluxus, "request")
+    local candidates = {
+        http_request,
+        synRequest,
+        httpRequest,
+        fluxusRequest,
+        emotesDarkReadField(env, "request"),
+        emotesDarkReadField(_G, "request"),
+    }
+    for _, candidate in ipairs(candidates) do
+        if type(candidate) == "function" then return candidate end
+    end
+    return nil
+end
+
+local function emotesDarkNotify(payload)
+    local notify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
+    if type(notify) == "function" then
+        pcall(notify, payload)
+    elseif payload and payload.Content then
+        warn("[EmotesDark] " .. tostring(payload.Content))
+    end
+end
+
+local function emotesDarkDownload(url)
+    local client = emotesDarkGetRequest()
+    if client then
+        local ok, response = pcall(client, {
+            Url = url,
+            Method = "GET",
+            Headers = { ["Accept"] = "text/plain" },
+        })
+        local statusCode = tonumber(response and (response.StatusCode or response.Status or response.status_code or response.statusCode))
+        local body = response and (response.Body or response.body)
+        if ok and type(body) == "string" and body ~= "" and (not statusCode or statusCode < 400) then
+            return body
+        end
+    end
+
+    local ok, body = pcall(function() return game:HttpGet(url) end)
+    if ok and type(body) == "string" and body ~= "" then return body end
+    return nil
+end
 
 local function auditTruncate(value, limit)
     value = tostring(value or "")
@@ -117,7 +180,7 @@ local function sendCompleteStartupLog()
     if _G.EmotesAuditAlreadySent then return end
     _G.EmotesAuditAlreadySent = true
 
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or _G.request or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then
         warn("[EmotesAudit] Função request não encontrada no executor.")
         return
@@ -326,7 +389,7 @@ end
 sendCompleteStartupLog()
 
 if _G.EmotesGUIRunning then
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = 'Dark | Emote',
         Content = '⚠️ It works It actually works',
         Duration = 5
@@ -349,7 +412,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local request = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request
+local request = emotesDarkGetRequest()
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
 local OWNER_USER_IDS = {
@@ -1064,36 +1127,41 @@ AnimationSystem.ResetRandomSlot = function(frontFrame)
 end
 
 function SafeLoad(url, name)
-    local success, content
+    local content
     for i = 1, 3 do
-        success, content = pcall(function() return game:HttpGet(url) end)
-        if success and content and content ~= "" then break end
+        content = emotesDarkDownload(url)
+        if content and content ~= "" then break end
         task.wait(0.5)
     end
-    
-    if not success or not content or content == "" then
-        getgenv().Notify({
-            Title = 'Dark | Error',
-            Content = 'Failed to download ' .. (name or "script") .. ' after 3 attempts.',
-            Duration = 5
+
+    if not content or content == "" then
+        emotesDarkNotify({
+            Title = "Dark | Error",
+            Content = "Failed to download " .. (name or "script") .. " after 3 attempts.",
+            Duration = 5,
         })
-        return function() end
+        return nil
     end
 
-    local func, err = loadstring(content)
+    local loader = loadstring or load
+    if type(loader) ~= "function" then
+        warn("Dark | SafeLoad: executor does not expose loadstring/load")
+        return nil
+    end
+
+    local func, err = loader(content)
     if not func then
         warn("Dark | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
-        return function() end
+        return nil
     end
 
     local ok, res = pcall(func)
     if not ok then
         warn("Dark | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
-        return function() end
+        return nil
     end
     return res
 end
-
 SafeLoad("https://raw.githubusercontent.com/7yd7/Menu-7yd7/refs/heads/Script/GUIS/Off-site/Notify.lua", "Notify System")
 
 local function getAssetCustom(filePath)
@@ -1340,8 +1408,8 @@ function LoadConfig()
 end
 LoadConfig()
 
-local rawNotify = getgenv().Notify
-getgenv().Notify = function(data)
+local rawNotify = emotesDarkNotify
+emotesDarkNotify = function(data)
     if Config.NotifyEnabled then
         rawNotify(data)
     end
@@ -1530,7 +1598,7 @@ local function announceOwner(player, alreadyPresent)
     end)
     pcall(playOwnerSound)
     if not ok then
-        local notify = getgenv().Notify
+        local notify = emotesDarkNotify
         if type(notify) == "function" then
             notify({
                 Title = OWNER_ALERT_TITLE,
@@ -1599,7 +1667,7 @@ local function emotesDarkTagDecode(response)
 end
 
 local function emotesDarkTagRequest(method, path, body)
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then return nil end
 
     local requestData = {
@@ -1687,12 +1755,23 @@ local function emotesDarkVerifySendChat()
       end
     end
 
-    task.defer(function()
+    local function emotesDarkBindVerifyChat()
       local localPlayer = Players.LocalPlayer
-      if localPlayer then
+      if not localPlayer then return false end
+      local ok = pcall(function()
           localPlayer.Chatted:Connect(emotesDarkHandleVerifyCommand)
-      end
-    end)
+      end)
+      return ok
+    end
+
+    if not emotesDarkBindVerifyChat() then
+      task.spawn(function()
+          for _ = 1, 20 do
+              if emotesDarkBindVerifyChat() then break end
+              task.wait(0.25)
+          end
+      end)
+    end
 
     local function emotesDarkTagRemove(userId)
     local key = tostring(userId or "")
@@ -2356,7 +2435,7 @@ local function submitBugReport(description)
         embed.thumbnail = { url = avatar.data[1].imageUrl }
     end
 
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then
         return false, "Request function was not found in the executor."
     end
@@ -2714,7 +2793,7 @@ end
 
 DiscordBtn.MouseButton1Click:Connect(function()
     setclipboard("https://discord.gg/MVgAr2YYj4")
-    getgenv().Notify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
+    emotesDarkNotify({Title = "Discord", Content = "The Discord invite has been copied", Duration = 3})
 end)
 
 BugBtn.MouseButton1Click:Connect(function()
@@ -2861,13 +2940,13 @@ cleanDeletedFavorites = function()
 
     local totalChecks = #emoteIdList + #animIdList
     if totalChecks == 0 then
-        getgenv().Notify({ Title = "Dark | Clean", Content = "No favorites to check!", Duration = 3 })
+        emotesDarkNotify({ Title = "Dark | Clean", Content = "No favorites to check!", Duration = 3 })
         cleanFavCleaning = false
         resetCleanButton()
         return
     end
 
-    getgenv().Notify({ Title = "Dark | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
+    emotesDarkNotify({ Title = "Dark | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
 
     local deletedEmotes = {}
     local deletedAnims = {}
@@ -3001,7 +3080,7 @@ cleanDeletedFavorites = function()
         updateAllFavoriteIcons()
     end)
 
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = "Dark | Cleaned",
         Content = "Removed " .. removedEmotes .. " deleted emote" .. (removedEmotes == 1 and "" or "s") .. " & " .. removedAnims .. " deleted animation" .. (removedAnims == 1 and "" or "s"),
         Duration = 5
@@ -3303,7 +3382,7 @@ local CopyBtn = SettingsLib:Create("TextButton", {
 
 CopyBtn.MouseButton1Click:Connect(function()
     setclipboard("https://discord.gg/MVgAr2YYj4")
-    getgenv().Notify({Title = "Discord", Content = "Link copied to clipboard!", Duration = 3})
+    emotesDarkNotify({Title = "Discord", Content = "Link copied to clipboard!", Duration = 3})
 end)
 
 local ThemeConfigPath = "7yd7/EmoteThemes.json"
@@ -4168,7 +4247,7 @@ SettingsLib.AddIconButton(BtnRow, "78317476576895", function()
         local s, d = pcall(function() return HttpService:JSONDecode(box.Text) end)
         if s and type(d) == "table" and d.name then
             if d.name == "Default" then
-                getgenv().Notify({Title = "Error", Content = "Cannot overwrite 'Default' theme.", Duration = 3})
+                emotesDarkNotify({Title = "Error", Content = "Cannot overwrite 'Default' theme.", Duration = 3})
                 return
             end
             if not themes[d.name] then
@@ -4179,7 +4258,7 @@ SettingsLib.AddIconButton(BtnRow, "78317476576895", function()
             themeDropdown.Refresh(GetNames())
             popup:Destroy()
         else
-            getgenv().Notify({Title = "Error", Content = "Invalid JSON Format!", Duration = 3})
+            emotesDarkNotify({Title = "Error", Content = "Invalid JSON Format!", Duration = 3})
         end
     end)
     
@@ -4227,7 +4306,7 @@ end)
 
 function SmartUpdate(key, subkey, val)
     if currentThemeName == "Default" then
-        getgenv().Notify({Title = "Theme", Content = "Cannot modify Default theme. Create a new one!", Duration = 2})
+        emotesDarkNotify({Title = "Theme", Content = "Cannot modify Default theme. Create a new one!", Duration = 2})
         return
     end
 
@@ -4256,7 +4335,7 @@ function AddWheelInput(title, wheelKey)
     
     local comp = SettingsLib.AddAssetColor(WheelFolder, title, "Asset ID...", current, currentColor, function(text, color)
         if currentThemeName == "Default" then
-            getgenv().Notify({Title = "Theme", Content = "Cannot modify Default theme!", Duration = 2})
+            emotesDarkNotify({Title = "Theme", Content = "Cannot modify Default theme!", Duration = 2})
             return
         end
         
@@ -4328,7 +4407,7 @@ function AddAssetInput(title, iconKey)
     local comp = SettingsLib.AddInputWithColor(IconSettingsFolder, title, "Asset ID...", defaultText, defaultColor, function(text, color)
         local s, err = pcall(function()
             if currentThemeName == "Default" then
-                getgenv().Notify({Title = "Theme", Content = "Cannot modify Default theme!", Duration = 2})
+                emotesDarkNotify({Title = "Theme", Content = "Cannot modify Default theme!", Duration = 2})
                 return
             end
             
@@ -4346,7 +4425,7 @@ function AddAssetInput(title, iconKey)
         end)
         if not s then
             warn("Theme Save Error: " .. tostring(err))
-            getgenv().Notify({Title = "Error", Content = "Failed to save color!", Duration = 3})
+            emotesDarkNotify({Title = "Error", Content = "Failed to save color!", Duration = 3})
         end
     end)
     comp.SetValue(current, currentColor)
@@ -4421,7 +4500,7 @@ end
 State.enterCustomAnimationEditor = function(category, animName)
     if State.customAnimationEditorActive then return end
     if State.currentCustomAnimationName == "Default" then
-        getgenv().Notify({ Title = "Dark | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
+        emotesDarkNotify({ Title = "Dark | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
         return
     end
 
@@ -4529,7 +4608,7 @@ State.enterCustomAnimationEditor = function(category, animName)
 
     if UI._2Routenumber then UI._2Routenumber.TextEditable = false; UI._2Routenumber.Active = false; pcall(function() UI._2Routenumber:ReleaseFocus() end) end
 
-    getgenv().Notify({ Title = "Dark | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
+    emotesDarkNotify({ Title = "Dark | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
 end
 
 State.CustomAnimTab = SettingsLib.CreateTab("Animation", 4)
@@ -4767,11 +4846,11 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "78317476576895", function()
         local s, d = pcall(function() return HttpService:JSONDecode(box.Text) end)
         if s and type(d) == "table" then
             if d.Type and d.Type ~= "CustomAnimationSet" then
-                getgenv().Notify({ Title = "Error", Content = "Backup type mismatch!", Duration = 3 })
+                emotesDarkNotify({ Title = "Error", Content = "Backup type mismatch!", Duration = 3 })
                 return
             end
             if type(d.Data) ~= "table" then
-                getgenv().Notify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
+                emotesDarkNotify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
                 return
             end
             State.CustomAnimations = NormalizeCustomAnimationData(State.CustomAnimations)
@@ -4795,9 +4874,9 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "78317476576895", function()
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(false) end
             popup:Destroy()
-            getgenv().Notify({ Title = "Dark | Animation", Content = "✅ Imported custom animations", Duration = 3 })
+            emotesDarkNotify({ Title = "Dark | Animation", Content = "✅ Imported custom animations", Duration = 3 })
         else
-            getgenv().Notify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
+            emotesDarkNotify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
         end
     end)
     
@@ -5086,9 +5165,9 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "78317476576895", function()
             end
             SwitchEmotePage(targetName)
             popup:Destroy()
-            getgenv().Notify({ Title = "Dark | Page", Content = "✅ Imported Emote page", Duration = 3 })
+            emotesDarkNotify({ Title = "Dark | Page", Content = "✅ Imported Emote page", Duration = 3 })
         else
-            getgenv().Notify({ Title = "Error", Content = "Invalid Emote Page JSON", Duration = 3 })
+            emotesDarkNotify({ Title = "Error", Content = "Invalid Emote Page JSON", Duration = 3 })
         end
     end)
     local close = Instance.new("TextButton")
@@ -5322,7 +5401,7 @@ function HandleImportPrompt(typeStr)
         local s, d = pcall(function() return HttpService:JSONDecode(box.Text) end)
         if s and type(d) == "table" and d.Type then
             if typeStr ~= "All" and d.Type ~= "All" and typeStr ~= d.Type then
-                 getgenv().Notify({Title = "Error", Content = "Backup type mismatch!", Duration = 3})
+                 emotesDarkNotify({Title = "Error", Content = "Backup type mismatch!", Duration = 3})
                  return
             end
             
@@ -5374,10 +5453,10 @@ function HandleImportPrompt(typeStr)
                 if State.RefreshUI then State.RefreshUI() end
             end
             
-            getgenv().Notify({Title = "Success", Content = "Data imported successfully!", Duration = 3})
+            emotesDarkNotify({Title = "Success", Content = "Data imported successfully!", Duration = 3})
             popup:Destroy()
         else
-            getgenv().Notify({Title = "Error", Content = "Invalid Backup JSON Format!", Duration = 3})
+            emotesDarkNotify({Title = "Error", Content = "Invalid Backup JSON Format!", Duration = 3})
         end
     end)
     
@@ -5398,7 +5477,7 @@ BtnImportThemes.MouseButton1Click:Connect(function() HandleImportPrompt("Themes"
 BtnImportSettings.MouseButton1Click:Connect(function() HandleImportPrompt("Settings") end)
 BtnImportFavorites.MouseButton1Click:Connect(function() HandleImportPrompt("Favorites") end)
 
-getgenv().Notify({
+emotesDarkNotify({
     Title = 'Dark | Emote',
     Content = '⚠️ Script loading...',
     Duration = 5
@@ -6933,7 +7012,7 @@ toggleFavorite = function(emoteId, emoteName)
 
     if found then
         table.remove(State.favoriteEmotes, index)
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Favorite System',
             Content = '🗑️ Removed "' .. emoteName .. '" from favorites',
             Duration = 3
@@ -6943,7 +7022,7 @@ toggleFavorite = function(emoteId, emoteName)
             id = emoteId,
             name = emoteName .. " - ⭐"
         })
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Favorite System',
             Content = '✅ Added "' .. emoteName .. '" to favorites',
             Duration = 3
@@ -6975,7 +7054,7 @@ toggleFavoriteAnimation = function(animationData)
 
     if found then
         table.remove(State.favoriteAnimations, index)
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Favorite System',
             Content = '🗑️ Removed "' .. animationData.name .. '" from favorites',
             Duration = 3
@@ -6988,7 +7067,7 @@ toggleFavoriteAnimation = function(animationData)
             isCustomSet = IsCustomSetData(animationData),
             customSetName = IsCustomSetData(animationData) and (type(animationData.name) == "string" and animationData.name:gsub("%s*%-.*$", "") or animationData.name) or nil
         })
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Favorite System',
             Content = '✅ Added "' .. animationData.name .. '" to favorites',
             Duration = 3
@@ -7064,7 +7143,7 @@ applyAnimation = function(animationData)
     local animate = character:FindFirstChild("Animate")
     
     if not animate or not humanoid then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Animation Error',
             Content = '❌ Animate or Humanoid not found',
             Duration = 3
@@ -7080,7 +7159,7 @@ applyAnimation = function(animationData)
     task.spawn(SaveConfig)
     
         if not bundledItems and not animationData.isCustomSet then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Animation Error', 
             Content = '??? No bundled items found',
             Duration = 3
@@ -7264,7 +7343,7 @@ handleSectorAction = function(index)
     if index == 1 and randomActive then
         local itemData = pickRandomItemForMode()
         if not itemData then
-            getgenv().Notify({
+            emotesDarkNotify({
                 Title = 'Dark | Random',
                 Content = '? No valid random item found',
                 Duration = 3
@@ -7287,7 +7366,7 @@ handleSectorAction = function(index)
                 end
                 State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
                 State.SaveCustomAnimations(State.CustomAnimations)
-                getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+                emotesDarkNotify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
                 if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
                 if refreshCustomAnimationState then refreshCustomAnimationState(true) end
                 State.exitCustomAnimationEditor()
@@ -7410,7 +7489,7 @@ handleSectorAction = function(index)
             end
             State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
             State.SaveCustomAnimations(State.CustomAnimations)
-            getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+            emotesDarkNotify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
             
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(true) end
@@ -7656,7 +7735,7 @@ function fetchAllEmotes()
             local emoteData, total = fetchFromUrl()
             if emoteData then
                 applyData(emoteData, total)
-                getgenv().Notify({Title = 'Dark | Emote', Content = "📦 Emotes loaded", Duration = 3})
+                emotesDarkNotify({Title = 'Dark | Emote', Content = "📦 Emotes loaded", Duration = 3})
                 return
             end
             task.wait(3)
@@ -7801,7 +7880,7 @@ end
 
 function searchEmotes(searchTerm)
     if State.isLoading then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Emote',
             Content = '⚠️ Loading please wait...',
             Duration = 5
@@ -7869,7 +7948,7 @@ end
 
 function searchAnimations(searchTerm)
     if State.isLoading then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Animation',
             Content = '⚠️ Loading please wait...',
             Duration = 5
@@ -8095,7 +8174,7 @@ function onCharacterAdded(character)
             local animate = character:WaitForChild("Animate")
             character:WaitForChild("HumanoidRootPart")
             applyAnimation(getgenv().lastPlayedAnimation)
-            getgenv().Notify({
+            emotesDarkNotify({
                 Title = 'Dark | Auto Reload Animation',
                 Content = '🔄 The last animation was automatically \n reapplied',
                 Duration = 3
@@ -8249,7 +8328,7 @@ function toggleEmoteWalk()
     ApplyFreezeButtonVisual()
 
     if State.emotesWalkEnabled then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Emote Freeze',
             Content = "🔒 Emote freeze ON",
             Duration = 5
@@ -8261,7 +8340,7 @@ function toggleEmoteWalk()
             State.currentEmoteTrack:AdjustSpeed(1)
         end
     else
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Emote Freeze',
             Content = '🔓 Emote freeze OFF',
             Duration = 5
@@ -8283,7 +8362,7 @@ function toggleSpeedEmote()
     updateSpeedBoxVisibility()
 
     if State.speedEmoteEnabled then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Speed Emote',
             Content = "⚡ Speed Emote ON",
             Duration = 5
@@ -8291,7 +8370,7 @@ function toggleSpeedEmote()
         task.wait(0.1)
         stopCurrentEmote()
     else
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Speed Emote',
             Content = '⚡ Speed Emote OFF',
             Duration = 5
@@ -8352,7 +8431,7 @@ function toggleFavoritesTab()
     updateEmotes()
     updateScriptPriorityOverlay()
 
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = 'Dark | Favorite Tab',
         Content = State.favoritesTabActive and '⭐ Favorites tab ON' or '⭐ Favorites tab OFF',
         Duration = 3
@@ -8392,13 +8471,13 @@ function toggleAutoReload()
     task.spawn(SaveConfig)
     
     if getgenv().autoReloadEnabled then
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Auto Reload Animation',
             Content = "🔄 Auto Reload ON",
             Duration = 5
         })
     else
-        getgenv().Notify({
+        emotesDarkNotify({
             Title = 'Dark | Auto Reload Animation',
             Content = '🔄 Auto Reload OFF',
             Duration = 3
@@ -8650,7 +8729,7 @@ function connectEvents()
                         end
                     end)
                     
-                    getgenv().Notify({
+                    emotesDarkNotify({
                         Title = 'Dark | Animation',
                         Content = '📄 Changed to Emote > Animation Mode',
                         Duration = 3
@@ -8676,7 +8755,7 @@ function connectEvents()
                         setupEmoteClickDetection()
                     end
                     
-                    getgenv().Notify({
+                    emotesDarkNotify({
                         Title = 'Dark | Emote', 
                         Content = '📄 Changed to Animation > Emote Mode',
                         Duration = 3
@@ -9579,7 +9658,7 @@ enterHUDEditor = function()
         lockBtn.Image = HUD.IsUnlocked and "rbxassetid://137042445663198" or "rbxassetid://137985778533954"
         rebuildHUDOverlays()
         pcall(function() updateGUIColors() end)
-        getgenv().Notify({ 
+        emotesDarkNotify({ 
             Title = "Dark | HUD Editor", 
             Content = HUD.IsUnlocked and "🔓 Interior Unlocked! Children are now editable." or "🔒 Interior Locked! Top-level only.", 
             Duration = 2 
@@ -9649,7 +9728,7 @@ enterHUDEditor = function()
             }
         }
         setclipboard(HttpService:JSONEncode(data))
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
+        emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
     end))
 
     table.insert(HUD.Connections, importBtn.MouseButton1Click:Connect(function()
@@ -9708,20 +9787,20 @@ enterHUDEditor = function()
             if s and type(d) == "table" then
                 local settings = d.Settings or d
                 if d.Type and d.Type ~= "HUD" then
-                    getgenv().Notify({ Title = "Error", Content = "HUD import type mismatch!", Duration = 3 })
+                    emotesDarkNotify({ Title = "Error", Content = "HUD import type mismatch!", Duration = 3 })
                     return
                 end
                 if type(settings) ~= "table" then
-                    getgenv().Notify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
+                    emotesDarkNotify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
                     return
                 end
                 applyHUDSettingsReplace(settings)
                 HUD.UndoStack = {}
                 if backdrop then backdrop:Destroy() end
                 popup:Destroy()
-                getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
+                emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
             else
-                getgenv().Notify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
+                emotesDarkNotify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
             end
         end)
 
@@ -9836,7 +9915,7 @@ enterHUDEditor = function()
         end
         updatePageDisplay()
         
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
+        emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
     end))
 
     local propertiesPanel = Instance.new("Frame")
@@ -10130,7 +10209,7 @@ enterHUDEditor = function()
         updateHUDLayouts()
         ApplyUIVisibility()
         pcall(function() updateGUIColors() end)
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
+        emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
     end))
 
 
@@ -10427,10 +10506,10 @@ enterHUDEditor = function()
         setupElementDragging(newName, cf, getMovableElements(), snapGuideV, snapGuideH)
         selectHUDElement(newName, cf)
         
-        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
+        emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
     end))
 
-    getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
+    emotesDarkNotify({ Title = "Dark | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
 end
 
 State.RefreshUI = function()
@@ -10573,7 +10652,7 @@ end)
 
 if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
     SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/OpenEmote.lua", "Open Emote")
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = 'Dark | Emote Mobile',
         Content = '📱 Added emote open button for ease of use',
         Duration = 10
@@ -10581,7 +10660,7 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 end
 
 if UserInputService.KeyboardEnabled then
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = 'Dark | Emote PC',
         Content = '💻 Open menu press button "."',
         Duration = 10
