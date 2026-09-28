@@ -16,7 +16,22 @@ local function getExperienceOwnerUserId()
     return nil
 end
 
+local function ownerControlSharedEnvironment()
+    local env = _G
+    if type(getgenv) == "function" then
+        local ok, result = pcall(getgenv)
+        if ok and type(result) == "table" then env = result end
+    end
+    return env
+end
+
 local function findToggleContainer()
+    local env = ownerControlSharedEnvironment()
+    local explicit = env and env.EmotesDarkOwnerControlContainer
+    if explicit and typeof(explicit) == "Instance" and explicit:IsA("GuiObject") and explicit.Parent then
+        return explicit
+    end
+
     for _ = 1, 40 do
         local roots = { CoreGui }
         if type(gethui) == "function" then
@@ -47,6 +62,7 @@ OwnerBtn.Position = UDim2.new(0, 10, 1, -100)
 OwnerBtn.Size = UDim2.fromOffset(42, 42)
 OwnerBtn.Image = "rbxassetid://125710311764143"
 OwnerBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+OwnerBtn.ZIndex = 5001
 OwnerBtn.AutoButtonColor = true
 local OwnerCorner = Instance.new("UICorner")
 OwnerCorner.CornerRadius = UDim.new(0, 10)
@@ -71,12 +87,7 @@ local function ownerControlTrim(value)
 end
 
 local function ownerControlEnvironment()
-    local env = _G
-    if type(getgenv) == "function" then
-        local ok, result = pcall(getgenv)
-        if ok and type(result) == "table" then env = result end
-    end
-    return env
+    return ownerControlSharedEnvironment()
 end
 
 local function ownerControlApiUrl()
@@ -524,5 +535,5 @@ end
 
 OwnerBtn.Image = OWNER_CONTROL_BUTTON_IMAGE
 OwnerBtn.Visible = true
-OwnerBtn.MouseButton1Click:Connect(ownerControlOpen)
+OwnerBtn.Activated:Connect(ownerControlOpen)
 ownerControlStartPolling()
