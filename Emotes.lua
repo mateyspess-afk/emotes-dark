@@ -1758,7 +1758,7 @@ local function emotesDarkTagAttach(player)
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
     tag.Size = UDim2.fromOffset(250, 58)
-    tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.25, 0)
+    tag.StudsOffset = Vector3.new(0, 3.25, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
@@ -1861,7 +1861,7 @@ local function emotesDarkTagAttach(player)
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
         darkNameRow.Size = UDim2.new(1, 0, 0, 34)
-        darkNameRow.Position = UDim2.fromOffset(17, 0)
+        darkNameRow.Position = UDim2.fromOffset(0, 0)
         darkNameRow.BackgroundTransparency = 1
         darkNameRow.Parent = darkTag
 
@@ -1870,15 +1870,15 @@ local function emotesDarkTagAttach(player)
         darkNameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         darkNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         darkNameLayout.Padding = UDim.new(0, 4)
-        darkNameLayout.Parent = darkNameRow
+        darkNameLayout.Parent = nil
 
         local darkNick = Instance.new("TextLabel")
         darkNick.Name = "DarkUserNick"
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
-        darkNick.Size = UDim2.fromOffset(0, 34)
+        darkNick.Size = UDim2.new(1, 0, 0, 34)
         darkNick.LayoutOrder = 1
-        darkNick.AutomaticSize = Enum.AutomaticSize.X
+        darkNick.AutomaticSize = Enum.AutomaticSize.None
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
         darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1910,6 +1910,13 @@ local function emotesDarkTagAttach(player)
         darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
+
+        task.spawn(function()
+            while darkTag.Parent do
+                darkIcon.Position = UDim2.new(0.5, math.floor(darkNick.TextBounds.X / 2) + 4, 0, 2)
+                task.wait()
+            end
+        end)
 
         local darkSubtitle = Instance.new("TextLabel")
         darkSubtitle.Name = "DarkUserSubtitle"
