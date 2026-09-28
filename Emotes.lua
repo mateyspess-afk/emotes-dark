@@ -5,11 +5,12 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local STARTUP_WEBHOOK_URL = ""
+local BUG_REPORT_WEBHOOK_URL = ""
 local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 local BUG_REPORT_MIN_LENGTH = 20
+local BUG_REPORT_MESSAGE_LIMIT = 3800
 local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 
@@ -186,6 +187,8 @@ local function sendCompleteStartupLog()
     end
 
     local device, platform, input, resolution, graphics = auditClientInfo()
+
+    local reportMessage = auditTruncate(auditSafe(description), BUG_REPORT_MESSAGE_LIMIT)
 
     local fields = {
         {
@@ -1558,38 +1561,6 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
 
--- Carrega o painel Owner separadamente para não bloquear o script principal no Delta.
-local OWNER_CONTROL_MODULE_URL = "https://raw.githubusercontent.com/mateyspess-afk/emotes-dark/9331d2dd63b3d54f932d856240dcd0348b6b9395/OwnerControl.lua"
-local function loadOwnerControlModule()
-    local ok, source = pcall(function() return game:HttpGet(OWNER_CONTROL_MODULE_URL) end)
-    if not ok or type(source) ~= "string" or source == "" then
-        warn("[Emotes Dark] OwnerControl não carregado; painel de emotes continua disponível.")
-        return
-    end
-    local compiler = loadstring or load
-    if type(compiler) ~= "function" then
-        warn("[Emotes Dark] Este executor não oferece um compilador Lua para o OwnerControl.")
-        return
-    end
-    local compileOk, module = pcall(compiler, source)
-    if not compileOk or type(module) ~= "function" then
-        warn("[Emotes Dark] OwnerControl incompatível com este executor.")
-        return
-    end
-    local runOk, runError = pcall(module)
-    if not runOk then warn("[Emotes Dark] OwnerControl desativado: " .. tostring(runError)) end
-end
-local ownerControlEnvironment = _G
-if type(getgenv) == "function" then
-    local ok, result = pcall(getgenv)
-    if ok and type(result) == "table" then ownerControlEnvironment = result end
-end
-if type(ownerControlEnvironment) == "table" then
-    ownerControlEnvironment.EmotesDarkOwnerControlContainer = ToggleContainer
-end
-
-task.spawn(loadOwnerControlModule)
-
 function getSettingsMainFrame()
     if SettingsLib and SettingsLib.UI then
         return SettingsLib.UI:FindFirstChild("MainFrame")
@@ -1889,7 +1860,20 @@ local function submitBugReport(description)
     local profileUrl = string.format("https://www.roblox.com/users/%d/profile", player.UserId)
     local avatar = auditJson(string.format("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=420x420&format=Png&isCircular=false", player.UserId))
     local playerName = auditSafe(player.DisplayName) .. " (@" .. auditSafe(player.Name) .. ")"
-    local gameName = auditSafe(game.Name ~= "" and game.Name or "Desconhecida")
+    local gameName = game.Name ~= "" and game.Name or "Desconhecida"
+    if game.GameId and game.GameId > 0 then
+        local universeInfo = auditJson(
+            "https://games.roblox.com/v1/games?universeIds=" .. tostring(game.GameId)
+        )
+        if universeInfo
+            and universeInfo.data
+            and universeInfo.data[1]
+            and universeInfo.data[1].name
+            and universeInfo.data[1].name ~= "" then
+            gameName = universeInfo.data[1].name
+        end
+    end
+    gameName = auditSafe(gameName)
 
     local fields = {
         {
@@ -1900,6 +1884,11 @@ local function submitBugReport(description)
         {
             name = "🧪 Experience",
             value = auditTruncate(string.format("%s\nPlace ID: %d\nUniverse ID: %d", gameName, game.PlaceId, game.GameId), MAX_FIELD_LENGTH),
+            inline = false,
+        },
+        {
+            name = "📝 Bug message",
+            value = auditTruncate(reportMessage, MAX_FIELD_LENGTH),
             inline = false,
         },
         {
@@ -1921,7 +1910,7 @@ local function submitBugReport(description)
 
     local embed = {
         title = "New Bug Report: Mobile • Emote Dark",
-        description = auditTruncate(auditSafe(description), MAX_FIELD_LENGTH),
+        description = reportMessage,
         color = 16755200,
         timestamp = DateTime.now():ToIsoDate(),
         footer = { text = "Emote Dark Bug Reports • " .. gameName .. " | Today at " .. os.date("%H:%M") },
@@ -1939,6 +1928,8 @@ local function submitBugReport(description)
 
     local payload = {
         username = "Emote Dark • Bug Reports",
+        content = auditTruncate(string.format("Game: %s\nBug report: %s", gameName, reportMessage), 1900),
+        allowed_mentions = { parse = {} },
         embeds = { embed },
     }
 
@@ -1959,7 +1950,7 @@ local function submitBugReport(description)
         return false, "The executor did not receive a response from the webhook."
     end
 
-    local statusCode = tonumber(response.StatusCode)
+    local statusCode = tonumber(response.StatusCode or response.Status or response.status_code)
     if not statusCode then
         return false, "Invalid response from the webhook."
     end
