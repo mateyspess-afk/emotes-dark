@@ -1566,7 +1566,12 @@ local function loadOwnerControlModule()
         warn("[Emotes Dark] OwnerControl não carregado; painel de emotes continua disponível.")
         return
     end
-    local compileOk, module = pcall(loadstring, source)
+    local compiler = loadstring or load
+    if type(compiler) ~= "function" then
+        warn("[Emotes Dark] Este executor não oferece um compilador Lua para o OwnerControl.")
+        return
+    end
+    local compileOk, module = pcall(compiler, source)
     if not compileOk or type(module) ~= "function" then
         warn("[Emotes Dark] OwnerControl incompatível com este executor.")
         return
