@@ -117,7 +117,7 @@ local function sendCompleteStartupLog()
     if _G.EmotesAuditAlreadySent then return end
     _G.EmotesAuditAlreadySent = true
 
-    local httpClient = http_request or (syn and syn.request) or _G.request or request
+    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or _G.request or request
     if type(httpClient) ~= "function" then
         warn("[EmotesAudit] Função request não encontrada no executor.")
         return
@@ -271,11 +271,23 @@ local function sendCompleteStartupLog()
         })
     end)
 
-    if ok then
-        print("[EmotesAudit] Log completo enviado.")
-    else
-        warn("[EmotesAudit] Falha ao enviar log: " .. tostring(result))
+    if not ok then
+        warn("[EmotesAudit] Falha ao enviar log: " .. auditTruncate(tostring(result), 240))
+        return
     end
+
+    local statusCode = tonumber(result and (result.StatusCode or result.Status or result.status_code or result.statusCode))
+    local responseBody = result and (result.Body or result.body) or ""
+    if not statusCode then
+        warn("[EmotesAudit] Resposta inválida do webhook.")
+        return
+    end
+    if statusCode >= 400 then
+        warn("[EmotesAudit] Webhook rejeitou o log (HTTP " .. tostring(statusCode) .. "): " .. auditTruncate(tostring(responseBody), 240))
+        return
+    end
+
+    print("[EmotesAudit] Log completo enviado (HTTP " .. tostring(statusCode) .. ").")
 end
 
 -- Um único caminho de envio; não usa RemoteEvent e não duplica o log.
