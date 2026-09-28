@@ -1968,12 +1968,35 @@ local function emotesDarkKickTargetMatches(target)
     return normalizedTarget ~= "" and (username:find(normalizedTarget, 1, true) ~= nil or displayName:find(normalizedTarget, 1, true) ~= nil)
 end
 
+local EMOTES_DARK_KICK_TRANSLATIONS = {
+    en = {
+        title = "Dark | Emote",
+        message = "You were kicked from the server by the owner.",
+        reason = "Reason: ",
+        defaultReason = "Removed by the owner.",
+    },
+    pt = {
+        title = "Dark | Emote",
+        message = "Você foi expulso do servidor pelo owner.",
+        reason = "Motivo: ",
+        defaultReason = "Removido pelo owner.",
+    },
+    es = {
+        title = "Dark | Emote",
+        message = "Fuiste expulsado del servidor por el owner.",
+        reason = "Motivo: ",
+        defaultReason = "Eliminado por el owner.",
+    },
+}
+
 local function emotesDarkKickSelf(reason)
     local localPlayer = Players.LocalPlayer
     if not localPlayer then return end
 
-    local kickReason = reason ~= "" and reason or "Removido pelo owner."
-    local kickMessage = "Dark | Emote\nVocê foi expulso do servidor pelo owner.\nMotivo: " .. kickReason
+    local language = detectUpdateInfoLanguage()
+    local translation = EMOTES_DARK_KICK_TRANSLATIONS[language] or EMOTES_DARK_KICK_TRANSLATIONS.en
+    local kickReason = reason ~= "" and reason or translation.defaultReason
+    local kickMessage = translation.title .. "\n" .. translation.message .. "\n" .. translation.reason .. kickReason
     pcall(function()
         localPlayer:Kick(kickMessage)
     end)
