@@ -17,14 +17,17 @@ local function getExperienceOwnerUserId()
 end
 
 local function findToggleContainer()
-    local roots = { CoreGui }
-    if type(gethui) == "function" then
-        local ok, hui = pcall(gethui)
-        if ok and hui and hui ~= CoreGui then table.insert(roots, hui) end
-    end
-    for _, root in ipairs(roots) do
-        local found = root:FindFirstChild("open/Close", true)
-        if found and found:IsA("GuiObject") then return found end
+    for _ = 1, 40 do
+        local roots = { CoreGui }
+        if type(gethui) == "function" then
+            local ok, hui = pcall(gethui)
+            if ok and hui and hui ~= CoreGui then table.insert(roots, hui) end
+        end
+        for _, root in ipairs(roots) do
+            local found = root:FindFirstChild("open/Close", true)
+            if found and found:IsA("GuiObject") then return found end
+        end
+        task.wait(0.25)
     end
     return nil
 end
