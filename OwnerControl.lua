@@ -150,10 +150,13 @@ local function ownerControlRequest(method, path, body)
     local ok, response = pcall(httpClient, requestData)
     if not ok or not response then return nil, "Falha ao comunicar com o owner bridge." end
     local statusCode = tonumber(response.StatusCode or response.Status or response.status)
+    local decoded = ownerControlDecode(response)
     if statusCode and (statusCode < 200 or statusCode >= 300) then
-        return nil, "Owner bridge respondeu HTTP " .. tostring(statusCode) .. "."
+        local detail = type(decoded) == "table" and (decoded.message or decoded.error) or nil
+        local suffix = detail and (" — " .. tostring(detail)) or ""
+        return nil, "Owner bridge respondeu HTTP " .. tostring(statusCode) .. suffix
     end
-    return ownerControlDecode(response), nil
+    return decoded or {}, nil
 end
 
 local function ownerControlSetStatus(text, color)
@@ -426,8 +429,14 @@ local function ownerControlApplyCommand(command)
             if character then character:PivotTo(CFrame.new(tonumber(position.x), tonumber(position.y), tonumber(position.z))) end
         end
     elseif action == "next_player" then
-        local notify = type(getgenv) == "function" and getgenv().Notify
-        if type(notify) == "function" then notify({ Title = "Próximo player", Content = "O bridge selecionou o próximo usuário disponível.", Duration = 4 }) end
+        local nextTarget = payload.nextTarget
+        if type(nextTarget) == "table" and ownerControlTargetInput then
+            ownerControlTargetInput.Text = tostring(nextTarget.userId or nextTarget.username or "")
+            ownerControlSetStatus("Próximo player selecionado: " .. tostring(nextTarget.displayName or nextTarget.username or nextTarget.userId or ""), Color3.fromRGB(135, 230, 165))
+        else
+            local notify = type(getgenv) == "function" and getgenv().Notify
+            if type(notify) == "function" then notify({ Title = "Próximo player", Content = "O bridge não encontrou um alvo disponível.", Duration = 4 }) end
+        end
     end
 end
 
@@ -505,7 +514,16 @@ local function ownerControlOpen()
     ownerControlMakeButton(card, "ATUALIZAR BRIDGE", UDim2.fromOffset(385, 266), UDim2.fromOffset(150, 32), function() ownerControlStartPolling(); ownerControlSetStatus("Bridge atualizado.", Color3.fromRGB(135, 230, 165)) end, Color3.fromRGB(55, 83, 76))
     ownerControlMakeButton(card, "FECHAR", UDim2.fromOffset(545, 266), UDim2.fromOffset(75, 32), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
 
-    ownerControlStatus = ownerControlMakeLabel(card, "Bridge: " .. (ownerControlApiUrl() ~= "" and "conectado/configurado" or "não configurado"), UDim2.fromOffset(20, 320), UDim2.new(1, -40, 0, 30), 12, Color3.fromRGB(185, 190, 205))
+    ownerControlStatus = ownerControlMakeLabel(card, "Bridge: " .. (ownerControlApiUrl() ~= "" and "verificando..." or "não configurado"), UDim2.fromOffset(20, 320), UDim2.new(1, -40, 0, 30), 12, Color3.fromRGB(185, 190, 205))
+    task.spawn(function()
+        if ownerControlApiUrl() == "" then return end
+        local health, healthError = ownerControlRequest("GET", "/health")
+        if healthError then
+            ownerControlSetStatus("Bridge offline: " .. healthError, Color3.fromRGB(255, 175, 125))
+        elseif health and health.ok then
+            ownerControlSetStatus("Bridge online • " .. tostring(health.clients or 0) .. " cliente(s)", Color3.fromRGB(135, 230, 165))
+        end
+    end)
     ownerControlMakeLabel(card, "Ações remotas são aceitas somente pelo bridge configurado. O servidor deve validar o UserId real do dono.", UDim2.fromOffset(20, 365), UDim2.new(1, -40, 0, 45), 11, Color3.fromRGB(150, 155, 170))
     ownerControlMakeLabel(card, "BAN: duração em minutos; 0 = permanente • KICK: motivo obrigatório • Jumpscare 2 usa áudio e 3 usa efeito intenso.", UDim2.fromOffset(20, 420), UDim2.new(1, -40, 0, 40), 11, Color3.fromRGB(150, 155, 170))
 
