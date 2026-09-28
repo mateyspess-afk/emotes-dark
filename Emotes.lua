@@ -1772,6 +1772,7 @@ local function emotesDarkTagAttach(player)
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
         nameRow.Size = UDim2.new(1, 0, 0, 34)
+        nameRow.Position = UDim2.fromOffset(-17, 0)
         nameRow.BackgroundTransparency = 1
         nameRow.Parent = creatorTag
 
@@ -1787,6 +1788,7 @@ local function emotesDarkTagAttach(player)
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
         nick.Size = UDim2.fromOffset(0, 34)
+        nick.LayoutOrder = 2
         nick.AutomaticSize = Enum.AutomaticSize.X
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
@@ -1816,8 +1818,8 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Name = "OwnerIcon"
         ownerIcon.BackgroundTransparency = 1
         ownerIcon.Size = UDim2.fromOffset(30, 30)
-        ownerIcon.LayoutOrder = 2
-        ownerIcon.Image = "rbxassetid://11322089611"
+        ownerIcon.LayoutOrder = 1
+        ownerIcon.Image = "rbxassetid://81489458260315"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
 
@@ -1852,6 +1854,7 @@ local function emotesDarkTagAttach(player)
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
         darkNameRow.Size = UDim2.new(1, 0, 0, 34)
+        darkNameRow.Position = UDim2.fromOffset(-17, 0)
         darkNameRow.BackgroundTransparency = 1
         darkNameRow.Parent = darkTag
 
@@ -1867,6 +1870,7 @@ local function emotesDarkTagAttach(player)
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
         darkNick.Size = UDim2.fromOffset(0, 34)
+        darkNick.LayoutOrder = 2
         darkNick.AutomaticSize = Enum.AutomaticSize.X
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
@@ -1895,8 +1899,8 @@ local function emotesDarkTagAttach(player)
         darkIcon.Name = "DarkIcon"
         darkIcon.BackgroundTransparency = 1
         darkIcon.Size = UDim2.fromOffset(30, 30)
-        darkIcon.LayoutOrder = 2
-        darkIcon.Image = "rbxassetid://81489458260315"
+        darkIcon.LayoutOrder = 1
+        darkIcon.Image = "rbxassetid://11322089611"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
 
