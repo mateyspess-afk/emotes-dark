@@ -5,8 +5,8 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local STARTUP_WEBHOOK_URL = ""
+local BUG_REPORT_WEBHOOK_URL = ""
 local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 local BUG_REPORT_MIN_LENGTH = 20
@@ -16,6 +16,65 @@ local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 
 local MAX_FIELD_LENGTH = 1024
 local MAX_BIO_LENGTH = 150
+
+local function emotesDarkExecutorEnv()
+    if type(getgenv) == "function" then
+        local ok, env = pcall(getgenv)
+        if ok and type(env) == "table" then return env end
+    end
+    return _G
+end
+
+local function emotesDarkReadField(object, key)
+    if object == nil then return nil end
+    local ok, value = pcall(function() return object[key] end)
+    return ok and value or nil
+end
+
+local function emotesDarkGetRequest()
+    local env = emotesDarkExecutorEnv()
+    local candidates = {
+        http_request,
+        emotesDarkReadField(syn, "request"),
+        emotesDarkReadField(http, "request"),
+        emotesDarkReadField(fluxus, "request"),
+        emotesDarkReadField(env, "request"),
+        emotesDarkReadField(_G, "request"),
+    }
+    for _, candidate in ipairs(candidates) do
+        if type(candidate) == "function" then return candidate end
+    end
+    return nil
+end
+
+local function emotesDarkNotify(payload)
+    local notify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
+    if type(notify) == "function" then
+        pcall(notify, payload)
+    elseif payload and payload.Content then
+        warn("[EmotesDark] " .. tostring(payload.Content))
+    end
+end
+
+local function emotesDarkDownload(url)
+    local client = emotesDarkGetRequest()
+    if client then
+        local ok, response = pcall(client, {
+            Url = url,
+            Method = "GET",
+            Headers = { ["Accept"] = "text/plain" },
+        })
+        local statusCode = tonumber(response and (response.StatusCode or response.Status or response.status_code or response.statusCode))
+        local responseBody = response and (response.Body or response.body)
+        if ok and type(responseBody) == "string" and responseBody ~= "" and (not statusCode or statusCode < 400) then
+            return responseBody
+        end
+    end
+
+    local ok, responseBody = pcall(function() return game:HttpGet(url) end)
+    if ok and type(responseBody) == "string" and responseBody ~= "" then return responseBody end
+    return nil
+end
 
 local function auditTruncate(value, limit)
     value = tostring(value or "")
@@ -32,7 +91,7 @@ end
 
 local function auditJson(url)
     local ok, body = pcall(function()
-        return game:HttpGet(url)
+        return emotesDarkDownload(url)
     end)
     if not ok or not body then return nil end
 
@@ -117,7 +176,7 @@ local function sendCompleteStartupLog()
     if _G.EmotesAuditAlreadySent then return end
     _G.EmotesAuditAlreadySent = true
 
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or _G.request or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then
         warn("[EmotesAudit] Função request não encontrada no executor.")
         return
@@ -326,7 +385,7 @@ end
 sendCompleteStartupLog()
 
 if _G.EmotesGUIRunning then
-    getgenv().Notify({
+    emotesDarkNotify({
         Title = 'Dark | Emote',
         Content = '⚠️ It works It actually works',
         Duration = 5
@@ -349,7 +408,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local request = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request
+local request = emotesDarkGetRequest()
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
 local OWNER_USER_IDS = {
@@ -1064,32 +1123,38 @@ AnimationSystem.ResetRandomSlot = function(frontFrame)
 end
 
 function SafeLoad(url, name)
-    local success, content
+    local content
     for i = 1, 3 do
-        success, content = pcall(function() return game:HttpGet(url) end)
-        if success and content and content ~= "" then break end
+        content = emotesDarkDownload(url)
+        if content and content ~= "" then break end
         task.wait(0.5)
     end
-    
-    if not success or not content or content == "" then
-        getgenv().Notify({
-            Title = 'Dark | Error',
-            Content = 'Failed to download ' .. (name or "script") .. ' after 3 attempts.',
-            Duration = 5
+
+    if not content or content == "" then
+        emotesDarkNotify({
+            Title = "Dark | Error",
+            Content = "Failed to download " .. (name or "script") .. " after 3 attempts.",
+            Duration = 5,
         })
-        return function() end
+        return nil
     end
 
-    local func, err = loadstring(content)
+    local loader = loadstring or load
+    if type(loader) ~= "function" then
+        warn("Dark | SafeLoad: executor does not expose loadstring/load")
+        return nil
+    end
+
+    local func, err = loader(content)
     if not func then
         warn("Dark | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
-        return function() end
+        return nil
     end
 
     local ok, res = pcall(func)
     if not ok then
         warn("Dark | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
-        return function() end
+        return nil
     end
     return res
 end
@@ -1340,12 +1405,13 @@ function LoadConfig()
 end
 LoadConfig()
 
-local rawNotify = getgenv().Notify
-getgenv().Notify = function(data)
+local rawNotify = emotesDarkNotify
+emotesDarkNotify = function(data)
     if Config.NotifyEnabled then
         rawNotify(data)
     end
 end
+getgenv().Notify = emotesDarkNotify
 
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
@@ -1597,7 +1663,7 @@ local function emotesDarkTagDecode(response)
 end
 
 local function emotesDarkTagRequest(method, path, body)
-    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request or request
+    local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then return nil end
 
     local requestData = {
@@ -1852,6 +1918,10 @@ task.spawn(function()
 end)
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
+if type(SettingsLib) ~= "table" or type(SettingsLib.CreateTab) ~= "function" then
+    emotesDarkNotify({ Title = "Dark | Error", Content = "Settings Library could not be loaded. Check the executor network permission.", Duration = 8 })
+    return
+end
 
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
