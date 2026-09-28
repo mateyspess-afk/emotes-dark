@@ -1582,12 +1582,13 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     end)
 end
 
+local UPDATE_INFO_UPDATED_AT = "September 28, 2026 at 4:55 PM"
 local UPDATE_INFO_ITEMS = {
-    { kind = "ADD", text = "Som de inicialização aleatório" },
-    { kind = "ADD", text = "Entrada suave da bolinha superior" },
-    { kind = "FIXED", text = "Travamentos após alguns minutos" },
-    { kind = "REMOVED", text = "Som de inicialização antigo" },
-    { kind = "ADD", text = "Janela de informações de atualizações" },
+    { kind = "ADD", text = "Random startup sound" },
+    { kind = "ADD", text = "Smooth top orb entrance" },
+    { kind = "FIXED", text = "Lag after a few minutes" },
+    { kind = "REMOVED", text = "Old startup sound" },
+    { kind = "ADD", text = "Update information window" },
 }
 
 local function showUpdateInfoWindow()
@@ -1683,7 +1684,7 @@ local function showUpdateInfoWindow()
     title.Position = UDim2.fromOffset(76, 17)
     title.Size = UDim2.new(1, -94, 0, 25)
     title.Font = Enum.Font.GothamMedium
-    title.Text = "Informações"
+    title.Text = "Update Information"
     title.TextColor3 = palette.text
     title.TextSize = 19
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -1696,7 +1697,7 @@ local function showUpdateInfoWindow()
     subtitle.Position = UDim2.fromOffset(76, 42)
     subtitle.Size = UDim2.new(1, -94, 0, 19)
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Atualizado em " .. os.date("%d/%m/%Y às %H:%M")
+    subtitle.Text = "Updated on " .. UPDATE_INFO_UPDATED_AT
     subtitle.TextColor3 = Color3.fromRGB(178, 196, 222)
     subtitle.TextSize = 12
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
