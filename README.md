@@ -58,3 +58,5 @@ As ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e senta
 O bridge precisa autenticar o dono no servidor e retornar o polling como { commands = { ... }, cursor = "..." }. Cada comando usa action, targetUserId ou targetUsername e payload. Para ban permanente, envie durationMinutes = 0; para kick, payload.reason é obrigatório.
 
 Um LocalScript não consegue, sozinho, expulsar, banir ou mover outro cliente. Por isso, sem um bridge autenticado, a janela continua visível para o owner, mas mostra que a API ainda não foi configurada.
+
+A implementação do painel foi separada em OwnerControl.lua e é carregada com proteção por pcall, para que uma incompatibilidade do Delta não impeça o script principal de iniciar.
