@@ -1758,7 +1758,7 @@ local function emotesDarkTagAttach(player)
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
     tag.Size = UDim2.fromOffset(250, 58)
-    tag.StudsOffset = Vector3.new(0, 3.25, 0)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.25, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
@@ -1870,7 +1870,7 @@ local function emotesDarkTagAttach(player)
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
         darkNick.Size = UDim2.fromOffset(0, 34)
-        darkNick.LayoutOrder = 2
+        darkNick.LayoutOrder = 1
         darkNick.AutomaticSize = Enum.AutomaticSize.X
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
@@ -1899,7 +1899,7 @@ local function emotesDarkTagAttach(player)
         darkIcon.Name = "DarkIcon"
         darkIcon.BackgroundTransparency = 1
         darkIcon.Size = UDim2.fromOffset(30, 30)
-        darkIcon.LayoutOrder = 1
+        darkIcon.LayoutOrder = 2
         darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
