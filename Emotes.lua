@@ -1552,7 +1552,7 @@ OwnerBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 OwnerBtn.BackgroundTransparency = 0.4
 OwnerBtn.Position = UDim2.new(0, 10, 1, -100)
 OwnerBtn.Size = UDim2.fromOffset(42, 42)
-OwnerBtn.Image = OWNER_CONTROL_BUTTON_IMAGE
+OwnerBtn.Image = "rbxassetid://125710311764143"
 OwnerBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
 OwnerBtn.AutoButtonColor = true
 
@@ -1796,6 +1796,13 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
         return
     end
 
+    local durationMinutes = tonumber(ownerControlTrim(ownerControlDurationInput and ownerControlDurationInput.Text or "")) or 0
+    if action == "ban" and durationMinutes < 0 then
+        ownerControlSetStatus("A duração do ban deve ser 0 (permanente) ou maior que 0 minutos.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+    durationMinutes = math.floor(durationMinutes)
+
     local message = ownerControlTrim(ownerControlMessageInput and ownerControlMessageInput.Text or "")
     if needsMessage and message == "" then
         ownerControlSetStatus("Digite uma mensagem antes de enviar.", Color3.fromRGB(255, 150, 150))
@@ -1805,7 +1812,7 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
     local payload = extra or {}
     payload.reason = reason
     payload.message = message
-    payload.durationMinutes = tonumber(ownerControlTrim(ownerControlDurationInput and ownerControlDurationInput.Text or "")) or 0
+    payload.durationMinutes = durationMinutes
 
     local command = ownerControlClientInfo()
     command.action = action
@@ -1966,7 +1973,7 @@ local function ownerControlOpen()
     cardStroke.Parent = card
 
     local title = ownerControlMakeLabel(card, "👑 OWNER CONTROL", UDim2.fromOffset(20, 14), UDim2.new(1, -80, 0, 30), 18, Color3.fromRGB(205, 165, 255))
-    ownerControlMakeLabel(card, "Somente usuários que executam o script aparecem no bridge.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
+    ownerControlMakeLabel(card, "Alvo precisa estar online e executar o script; TP/Goto precisam de posição. Kick/Ban exigem motivo.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
     ownerControlMakeButton(card, "×", UDim2.new(1, -52, 0, 14), UDim2.fromOffset(32, 28), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
 
     ownerControlTargetInput = ownerControlMakeInput(card, "Nome de usuário ou UserId do usuário", UDim2.fromOffset(20, 78), UDim2.new(0.62, -25, 0, 34))
