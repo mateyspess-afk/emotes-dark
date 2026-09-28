@@ -1563,6 +1563,8 @@ local emotesDarkTagUsers = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
+local emotesDarkVerifyCursor = 0
+    local emotesDarkVerifyLastCommandAt = 0
 
 do
     local ok, generated = pcall(function()
@@ -1627,7 +1629,72 @@ local function emotesDarkTagClientInfo()
     }
 end
 
-local function emotesDarkTagRemove(userId)
+local function emotesDarkVerifySendChat()
+      local localPlayer = Players.LocalPlayer
+      if not localPlayer then return end
+
+      local message = "Emotes Dark | " .. tostring(localPlayer.Name)
+      local sent = false
+
+      pcall(function()
+          local textChatService = game:GetService("TextChatService")
+          local channels = textChatService:FindFirstChild("TextChannels")
+          if not channels then return end
+
+          local channel = channels:FindFirstChild("RBXGeneral")
+          if not channel then
+              for _, child in ipairs(channels:GetChildren()) do
+                  if child:IsA("TextChannel") then
+                      channel = child
+                      break
+                  end
+              end
+          end
+
+          if channel then
+              channel:SendAsync(message)
+              sent = true
+          end
+      end)
+
+      if sent then return end
+
+      pcall(function()
+          local events = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+          local sayMessage = events and events:FindFirstChild("SayMessageRequest")
+          if sayMessage then
+              sayMessage:FireServer(message, "All")
+          end
+      end)
+    end
+
+    local function emotesDarkVerifyRequest()
+      local localPlayer = Players.LocalPlayer
+      if not localPlayer or not isKnownOwnerPlayer(localPlayer) then return end
+
+      local now = os.clock()
+      if now - emotesDarkVerifyLastCommandAt < 3 then return end
+      emotesDarkVerifyLastCommandAt = now
+
+      emotesDarkTagRequest("POST", "/clients/verify", emotesDarkTagClientInfo())
+    end
+
+    local function emotesDarkHandleVerifyCommand(message)
+      if type(message) ~= "string" then return end
+      local command = message:lower():gsub("^%s+", ""):gsub("%s+$", "")
+      if command == "/verify" then
+          emotesDarkVerifyRequest()
+      end
+    end
+
+    task.defer(function()
+      local localPlayer = Players.LocalPlayer
+      if localPlayer then
+          localPlayer.Chatted:Connect(emotesDarkHandleVerifyCommand)
+      end
+    end)
+
+    local function emotesDarkTagRemove(userId)
     local key = tostring(userId or "")
     local tag = emotesDarkTags[key]
     if tag then pcall(function() tag:Destroy() end) end
@@ -1847,7 +1914,28 @@ task.spawn(function()
         if response and type(response.clients) == "table" then
             emotesDarkTagSync(response.clients)
         end
-        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
+        local verifyQuery = string.format(
+              "/clients/verify/pending?gameId=%s&placeId=%s&jobId=%s&after=%d",
+              HttpService:UrlEncode(info.gameId),
+              HttpService:UrlEncode(info.placeId),
+              HttpService:UrlEncode(info.jobId),
+              emotesDarkVerifyCursor
+          )
+          local verifyResponse = emotesDarkTagRequest("GET", verifyQuery)
+          local localUserId = Players.LocalPlayer and Players.LocalPlayer.UserId
+          if verifyResponse and type(verifyResponse.requests) == "table" and localUserId then
+              for _, verifyRequest in ipairs(verifyResponse.requests) do
+                  local sequence = tonumber(verifyRequest.sequence)
+                  local userIds = verifyRequest.userIds
+                  if sequence and sequence > emotesDarkVerifyCursor then
+                      emotesDarkVerifyCursor = sequence
+                      if type(userIds) == "table" and table.find(userIds, localUserId) then
+                          task.spawn(emotesDarkVerifySendChat)
+                      end
+                  end
+              end
+          end
+            task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
     end
 end)
 
