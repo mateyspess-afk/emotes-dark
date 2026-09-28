@@ -1633,29 +1633,21 @@ local UPDATE_INFO_TRANSLATIONS = {
 }
 
 local function detectUpdateInfoLanguage()
-    local countryCode = ""
+    -- Usa somente dados locais: a API de país pode bloquear alguns executores.
     local localeId = ""
     local localizationService = game:GetService("LocalizationService")
-    local localPlayer = Players.LocalPlayer
-
-    if localPlayer then
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+    end)
+    if localeId == "" then
         pcall(function()
-            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(localPlayer) or ""):upper()
+            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
         end)
     end
-    pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or localizationService.SystemLocaleId or ""):lower()
-    end)
 
-    local portugueseCountries = { BR = true, PT = true, AO = true, MZ = true, CV = true, GW = true, ST = true }
-    local spanishCountries = {
-        ES = true, MX = true, AR = true, CL = true, CO = true, PE = true, VE = true,
-        UY = true, PY = true, BO = true, EC = true, CR = true, PA = true, GT = true,
-        HN = true, SV = true, NI = true, DO = true, CU = true, PR = true
-    }
-
-    if portugueseCountries[countryCode] or localeId:match("^pt") then return "pt" end
-    if spanishCountries[countryCode] or localeId:match("^es") then return "es" end
+    -- O locale traz o idioma e, quando disponível, a região: pt-br, es-mx, en-us etc.
+    if localeId:match("^pt") then return "pt" end
+    if localeId:match("^es") then return "es" end
     return "en"
 end
 
@@ -1907,7 +1899,7 @@ local function showUpdateInfoWindow()
     end)
 end
 
-task.defer(function()
+task.delay(0.25, function()
     pcall(showUpdateInfoWindow)
 end)
 
