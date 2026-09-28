@@ -266,37 +266,45 @@ function sendCompleteStartupLog()
       if jobId ~= "N/A (Studio)" then
           teleportCode = string.format([[local TeleportService = game:GetService("TeleportService")
     local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
+    local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
     local PlaceId = %d
     local JobId = %q
 
-    local function tryTeleport()
-      if not LocalPlayer then
-          warn("Teleport: LocalPlayer ainda não carregou.")
-          return false
-      end
+    while not game:IsLoaded() do task.wait() end
 
-      local ok, err = pcall(function()
-          TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-      end)
-
-      if not ok then
-          warn("Teleport para o servidor falhou: " .. tostring(err))
-          return false
-      end
-
-      return true
-    end
-
-    if not tryTeleport() then
-      task.wait(1)
+    local fallbackStarted = false
+    local failedConnection
+    local function fallbackToExperience(reason)
+      if fallbackStarted then return end
+      fallbackStarted = true
+      if failedConnection then pcall(function() failedConnection:Disconnect() end) end
+      warn("Teleport para o servidor falhou; tentando entrar no jogo: " .. tostring(reason or "erro desconhecido"))
       local fallbackOk, fallbackErr = pcall(function()
           TeleportService:Teleport(PlaceId, LocalPlayer)
       end)
       if not fallbackOk then
           warn("Fallback de teleport também falhou: " .. tostring(fallbackErr))
       end
-    end]], game.PlaceId, jobId)
+    end
+
+    pcall(function()
+      failedConnection = TeleportService.TeleportInitFailed:Connect(function(failedPlayer, result, errorMessage)
+          if failedPlayer == LocalPlayer then
+              task.defer(function() fallbackToExperience(errorMessage or result) end)
+          end
+      end)
+    end)
+
+    local started, startError = pcall(function()
+        TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+    end)
+    if not started then
+        fallbackToExperience(startError)
+    end
+
+    task.delay(12, function()
+      if failedConnection then pcall(function() failedConnection:Disconnect() end) end
+    end)]], game.PlaceId, jobId)
       end
 
         local device, platform, input, resolution, graphics = auditClientInfo()
