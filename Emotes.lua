@@ -1819,7 +1819,7 @@ local function emotesDarkTagAttach(player)
         ownerIcon.BackgroundTransparency = 1
         ownerIcon.Size = UDim2.fromOffset(30, 30)
         ownerIcon.LayoutOrder = 1
-        ownerIcon.Image = "rbxassetid://81489458260315"
+        ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
 
@@ -1900,7 +1900,7 @@ local function emotesDarkTagAttach(player)
         darkIcon.BackgroundTransparency = 1
         darkIcon.Size = UDim2.fromOffset(30, 30)
         darkIcon.LayoutOrder = 1
-        darkIcon.Image = "rbxassetid://11322089611"
+        darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
 
