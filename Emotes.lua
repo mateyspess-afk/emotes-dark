@@ -1545,6 +1545,21 @@ BugBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
 BugBtn.AutoButtonColor = true
 
 
+local OwnerBtn = Instance.new("ImageButton")
+OwnerBtn.Name = "OwnerControlButton"
+OwnerBtn.Parent = ToggleContainer
+OwnerBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+OwnerBtn.BackgroundTransparency = 0.4
+OwnerBtn.Position = UDim2.new(0, 10, 1, -100)
+OwnerBtn.Size = UDim2.fromOffset(42, 42)
+OwnerBtn.Image = OWNER_CONTROL_BUTTON_IMAGE
+OwnerBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+OwnerBtn.AutoButtonColor = true
+
+local OwnerCorner = Instance.new("UICorner")
+OwnerCorner.CornerRadius = UDim.new(0, 10)
+OwnerCorner.Parent = OwnerBtn
+
 local DiscordCorner = Instance.new("UICorner")
 DiscordCorner.CornerRadius = UDim.new(0, 10)
 DiscordCorner.Parent = DiscordBtn
@@ -2028,6 +2043,7 @@ function applySettingsToggleStyle()
         ToggleBtn.BackgroundColor3 = bgColor
         DiscordBtn.BackgroundColor3 = bgColor
         BugBtn.BackgroundColor3 = bgColor
+        OwnerBtn.BackgroundColor3 = bgColor
     end
 end
 
