@@ -76,10 +76,11 @@ O painel Owner precisa de uma API para registrar os clientes e entregar os coman
 
 3. Inicie com `npm start` e use a URL pública como base da API.
 
-No executor do owner, antes de rodar o script, configure:
+No executor de cada usuário que participa, antes de rodar o script, configure a URL do bridge. Somente o owner deve configurar também o token:
 
 ```lua
 getgenv().EMOTES_DARK_OWNER_API = "https://seu-bridge.exemplo"
+-- somente no executor do owner:
 getgenv().EMOTES_DARK_OWNER_TOKEN = "o-mesmo-token-do-servidor"
 ```
 
