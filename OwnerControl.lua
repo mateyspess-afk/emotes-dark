@@ -1,0 +1,503 @@
+-- Emotes Dark | OwnerControl.lua
+-- Módulo separado para manter o script principal compatível com executores com limite de tamanho.
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local request = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request
+local OWNER_USER_IDS = { [10956940752] = true }
+
+local function getExperienceOwnerUserId()
+    if game.CreatorType == Enum.CreatorType.User then return tonumber(game.CreatorId) end
+    if game.CreatorType == Enum.CreatorType.Group then
+        local ok, info = pcall(function() return game:GetService("GroupService"):GetGroupInfoAsync(game.CreatorId) end)
+        if ok and info and info.Owner then return tonumber(info.Owner.Id) end
+    end
+    return nil
+end
+
+local function findToggleContainer()
+    local roots = { CoreGui }
+    if type(gethui) == "function" then
+        local ok, hui = pcall(gethui)
+        if ok and hui and hui ~= CoreGui then table.insert(roots, hui) end
+    end
+    for _, root in ipairs(roots) do
+        local found = root:FindFirstChild("open/Close", true)
+        if found and found:IsA("GuiObject") then return found end
+    end
+    return nil
+end
+
+local ToggleContainer = findToggleContainer()
+if not ToggleContainer then
+    warn("[Emotes Dark] OwnerControl: container da engrenagem não encontrado.")
+    return
+end
+
+local OwnerBtn = Instance.new("ImageButton")
+OwnerBtn.Name = "OwnerControlButton"
+OwnerBtn.Parent = ToggleContainer
+OwnerBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+OwnerBtn.BackgroundTransparency = 0.4
+OwnerBtn.Position = UDim2.new(0, 10, 1, -100)
+OwnerBtn.Size = UDim2.fromOffset(42, 42)
+OwnerBtn.Image = "rbxassetid://125710311764143"
+OwnerBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+OwnerBtn.AutoButtonColor = true
+local OwnerCorner = Instance.new("UICorner")
+OwnerCorner.CornerRadius = UDim.new(0, 10)
+OwnerCorner.Parent = OwnerBtn
+
+local OWNER_CONTROL_API_ENV_NAME = "EMOTES_DARK_OWNER_API"
+local OWNER_CONTROL_BUTTON_IMAGE = "rbxassetid://125710311764143"
+local OWNER_CONTROL_POLL_SECONDS = 3
+local OwnerControlHttpService = game:GetService("HttpService")
+local ownerControlWindow = nil
+local ownerControlStatus = nil
+local ownerControlTargetInput = nil
+local ownerControlDurationInput = nil
+local ownerControlReasonInput = nil
+local ownerControlMessageInput = nil
+local ownerControlPollRunning = false
+local ownerControlCursor = ""
+
+local function ownerControlTrim(value)
+    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function ownerControlEnvironment()
+    local env = _G
+    if type(getgenv) == "function" then
+        local ok, result = pcall(getgenv)
+        if ok and type(result) == "table" then env = result end
+    end
+    return env
+end
+
+local function ownerControlApiUrl()
+    local env = ownerControlEnvironment()
+    local value = env and env[OWNER_CONTROL_API_ENV_NAME]
+    if type(value) ~= "string" or ownerControlTrim(value) == "" then return "" end
+    return ownerControlTrim(value):gsub("/+$", "")
+end
+
+local function ownerControlIsLocalOwner()
+    local localPlayer = Players.LocalPlayer
+    if not localPlayer then return false end
+    if OWNER_USER_IDS[localPlayer.UserId] then return true end
+    local experienceOwnerId = getExperienceOwnerUserId()
+    return experienceOwnerId ~= nil and localPlayer.UserId == experienceOwnerId
+end
+
+local function ownerControlDecode(response)
+    if not response then return nil end
+    local body = response.Body or response.body
+    if type(body) ~= "string" or body == "" then return nil end
+    local ok, decoded = pcall(function() return OwnerControlHttpService:JSONDecode(body) end)
+    return ok and decoded or nil
+end
+
+local function ownerControlRequest(method, path, body)
+    local api = ownerControlApiUrl()
+    if api == "" then return nil, "EMOTES_DARK_OWNER_API não configurada." end
+    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
+    if type(httpClient) ~= "function" then return nil, "O executor não disponibilizou request()." end
+
+    local requestData = {
+        Url = api .. path,
+        Method = method,
+        Headers = { ["Content-Type"] = "application/json" },
+    }
+    if body ~= nil then requestData.Body = OwnerControlHttpService:JSONEncode(body) end
+
+    local ok, response = pcall(httpClient, requestData)
+    if not ok or not response then return nil, "Falha ao comunicar com o owner bridge." end
+    local statusCode = tonumber(response.StatusCode or response.Status or response.status)
+    if statusCode and (statusCode < 200 or statusCode >= 300) then
+        return nil, "Owner bridge respondeu HTTP " .. tostring(statusCode) .. "."
+    end
+    return ownerControlDecode(response), nil
+end
+
+local function ownerControlSetStatus(text, color)
+    if ownerControlStatus and ownerControlStatus.Parent then
+        ownerControlStatus.Text = tostring(text or "")
+        ownerControlStatus.TextColor3 = color or Color3.fromRGB(185, 190, 205)
+    end
+end
+
+local function ownerControlGuiParent(gui)
+    local ok, parent = pcall(function()
+        if type(gethui) == "function" then return gethui() end
+        return CoreGui
+    end)
+    gui.Parent = (ok and parent) or CoreGui
+end
+
+local function ownerControlMakeLabel(parent, text, position, size, textSize, color)
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Position = position
+    label.Size = size
+    label.Font = Enum.Font.Gotham
+    label.Text = text
+    label.TextColor3 = color or Color3.fromRGB(235, 235, 245)
+    label.TextSize = textSize or 13
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Parent = parent
+    return label
+end
+
+local function ownerControlMakeInput(parent, placeholder, position, size)
+    local input = Instance.new("TextBox")
+    input.BackgroundColor3 = Color3.fromRGB(32, 34, 45)
+    input.BorderSizePixel = 0
+    input.Position = position
+    input.Size = size
+    input.Font = Enum.Font.Gotham
+    input.PlaceholderText = placeholder
+    input.PlaceholderColor3 = Color3.fromRGB(135, 140, 155)
+    input.Text = ""
+    input.TextColor3 = Color3.fromRGB(240, 240, 245)
+    input.TextSize = 13
+    input.ClearTextOnFocus = false
+    input.TextXAlignment = Enum.TextXAlignment.Left
+    input.Parent = parent
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 7)
+    corner.Parent = input
+    return input
+end
+
+local function ownerControlMakeButton(parent, text, position, size, callback, accent)
+    local button = Instance.new("TextButton")
+    button.BackgroundColor3 = accent or Color3.fromRGB(48, 51, 65)
+    button.BorderSizePixel = 0
+    button.Position = position
+    button.Size = size
+    button.Font = Enum.Font.GothamBold
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(245, 245, 250)
+    button.TextSize = 12
+    button.AutoButtonColor = true
+    button.Parent = parent
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 7)
+    corner.Parent = button
+    button.MouseButton1Click:Connect(callback)
+    return button
+end
+
+local function ownerControlDestroyWindow()
+    if ownerControlWindow then ownerControlWindow:Destroy() end
+    ownerControlWindow = nil
+    ownerControlStatus = nil
+    ownerControlTargetInput = nil
+    ownerControlDurationInput = nil
+    ownerControlReasonInput = nil
+    ownerControlMessageInput = nil
+end
+
+local function ownerControlShowDenied()
+    ownerControlDestroyWindow()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EmotesDarkOwnerDenied"
+    gui.ResetOnSpawn = false
+    ownerControlGuiParent(gui)
+    ownerControlWindow = gui
+
+    local card = Instance.new("Frame")
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.fromScale(0.5, 0.5)
+    card.Size = UDim2.fromOffset(410, 170)
+    card.BackgroundColor3 = Color3.fromRGB(24, 25, 33)
+    card.BorderSizePixel = 0
+    card.Parent = gui
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = card
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 92, 92)
+    stroke.Transparency = 0.25
+    stroke.Parent = card
+
+    ownerControlMakeLabel(card, "OWNER WINDOW", UDim2.fromOffset(20, 16), UDim2.new(1, -40, 0, 26), 16, Color3.fromRGB(255, 110, 110))
+    ownerControlMakeLabel(card, "🇧🇷 Você não pode usar esta janela; apenas os donos podem usar.\n🇺🇸 You cannot use this window; only the owners can use it.", UDim2.fromOffset(20, 53), UDim2.new(1, -40, 0, 58), 13, Color3.fromRGB(235, 235, 245))
+    ownerControlMakeButton(card, "FECHAR / CLOSE", UDim2.new(0.5, -70, 1, -43), UDim2.fromOffset(140, 30), ownerControlDestroyWindow, Color3.fromRGB(92, 48, 58))
+end
+
+local function ownerControlParseTarget()
+    local value = ownerControlTrim(ownerControlTargetInput and ownerControlTargetInput.Text or "")
+    if value == "" then return nil, nil end
+    local userId = tonumber(value)
+    if userId then return userId, nil end
+    return nil, value
+end
+
+local function ownerControlClientInfo()
+    local localPlayer = Players.LocalPlayer
+    return {
+        userId = localPlayer and localPlayer.UserId or 0,
+        username = localPlayer and localPlayer.Name or "",
+        displayName = localPlayer and localPlayer.DisplayName or "",
+        gameId = game.GameId,
+        placeId = game.PlaceId,
+        jobId = game.JobId,
+        isOwner = ownerControlIsLocalOwner(),
+    }
+end
+
+local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage, extra)
+    if not ownerControlIsLocalOwner() then
+        ownerControlShowDenied()
+        return
+    end
+
+    local targetUserId, targetUsername = ownerControlParseTarget()
+    if needsTarget and not targetUserId and not targetUsername then
+        ownerControlSetStatus("Informe o nome de usuário ou UserId do alvo.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+
+    local reason = ownerControlTrim(ownerControlReasonInput and ownerControlReasonInput.Text or "")
+    if needsReason and reason == "" then
+        ownerControlSetStatus("O motivo é obrigatório para kick e ban.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+
+    local durationMinutes = tonumber(ownerControlTrim(ownerControlDurationInput and ownerControlDurationInput.Text or "")) or 0
+    if action == "ban" and durationMinutes < 0 then
+        ownerControlSetStatus("A duração do ban deve ser 0 (permanente) ou maior que 0 minutos.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+    durationMinutes = math.floor(durationMinutes)
+
+    local message = ownerControlTrim(ownerControlMessageInput and ownerControlMessageInput.Text or "")
+    if needsMessage and message == "" then
+        ownerControlSetStatus("Digite uma mensagem antes de enviar.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+
+    local payload = extra or {}
+    payload.reason = reason
+    payload.message = message
+    payload.durationMinutes = durationMinutes
+
+    local command = ownerControlClientInfo()
+    command.action = action
+    command.targetUserId = targetUserId
+    command.targetUsername = targetUsername
+    command.payload = payload
+
+    local response, err = ownerControlRequest("POST", "/commands", command)
+    if err then
+        ownerControlSetStatus(err, Color3.fromRGB(255, 175, 125))
+        return
+    end
+    if response and response.ok == false then
+        ownerControlSetStatus(response.message or "O bridge recusou o comando.", Color3.fromRGB(255, 150, 150))
+        return
+    end
+    ownerControlSetStatus("Comando enviado: " .. action, Color3.fromRGB(135, 230, 165))
+end
+
+local function ownerControlCreateJumpscare(level, payload)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EmotesDarkJumpscare"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    ownerControlGuiParent(gui)
+
+    local overlay = Instance.new("Frame")
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.BackgroundColor3 = Color3.fromRGB(10, 0, 0)
+    overlay.BorderSizePixel = 0
+    overlay.Parent = gui
+
+    local flash = Instance.new("TextLabel")
+    flash.AnchorPoint = Vector2.new(0.5, 0.5)
+    flash.Position = UDim2.fromScale(0.5, 0.5)
+    flash.Size = UDim2.fromScale(0.8, 0.35)
+    flash.BackgroundTransparency = 1
+    flash.Font = Enum.Font.GothamBlack
+    flash.Text = level >= 3 and "DARK" or "!"
+    flash.TextColor3 = Color3.fromRGB(255, 35, 35)
+    flash.TextScaled = true
+    flash.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    flash.TextStrokeTransparency = 0
+    flash.Rotation = 0
+    flash.Parent = overlay
+
+    local sound
+    if level >= 2 then
+        sound = Instance.new("Sound")
+        sound.SoundId = (payload and payload.soundId) or "rbxasset://sounds/electronicpingshort.wav"
+        sound.Volume = level >= 3 and 10 or 7
+        sound.PlaybackSpeed = level >= 3 and 0.72 or 1.05
+        sound.Parent = SoundService
+        sound:Play()
+    end
+
+    local duration = level == 1 and 1.1 or (level == 2 and 1.8 or 3.0)
+    task.spawn(function()
+        local started = os.clock()
+        while gui.Parent and os.clock() - started < duration do
+            local intensity = level == 1 and 0.16 or (level == 2 and 0.3 or 0.55)
+            overlay.BackgroundColor3 = Color3.fromRGB(math.random(5, 90), 0, 0)
+            overlay.BackgroundTransparency = math.random() * intensity
+            flash.Rotation = level >= 3 and math.random(-18, 18) or math.random(-4, 4)
+            flash.Position = UDim2.fromScale(0.5 + (math.random(-8, 8) / 100), 0.5 + (math.random(-8, 8) / 100))
+            task.wait(level >= 3 and 0.055 or 0.12)
+        end
+        if sound then sound:Destroy() end
+        if gui then gui:Destroy() end
+    end)
+end
+
+local function ownerControlApplyCommand(command)
+    if type(command) ~= "table" then return end
+    local action = tostring(command.action or "")
+    local payload = type(command.payload) == "table" and command.payload or {}
+
+    if action == "message" or action == "global_message" then
+        local notify = type(getgenv) == "function" and getgenv().Notify
+        if type(notify) == "function" then
+            notify({ Title = action == "global_message" and "Mensagem global" or "Mensagem do owner", Content = tostring(payload.message or command.message or ""), Duration = tonumber(payload.duration) or 8 })
+        end
+    elseif action == "jumpscare1" or action == "jumpscare2" or action == "jumpscare3" then
+        ownerControlCreateJumpscare(tonumber(action:sub(-1)) or 1, payload)
+    elseif action == "kick" or action == "ban" then
+        local reason = ownerControlTrim(payload.reason or command.reason or "Ação do owner")
+        local banText = action == "ban" and "Ban aplicado: " or "Kick: "
+        local notify = type(getgenv) == "function" and getgenv().Notify
+        if type(notify) == "function" then notify({ Title = banText, Content = reason, Duration = 5 }) end
+        task.delay(0.35, function()
+            local localPlayer = Players.LocalPlayer
+            if localPlayer then localPlayer:Kick(reason) end
+        end)
+    elseif action == "sit" then
+        local character = Players.LocalPlayer and Players.LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.Sit = true end
+    elseif action == "goto" or action == "tp_pull" then
+        local position = payload.position or payload.targetPosition
+        if type(position) == "table" and tonumber(position.x) and tonumber(position.y) and tonumber(position.z) then
+            local character = Players.LocalPlayer and Players.LocalPlayer.Character
+            if character then character:PivotTo(CFrame.new(tonumber(position.x), tonumber(position.y), tonumber(position.z))) end
+        end
+    elseif action == "next_player" then
+        local notify = type(getgenv) == "function" and getgenv().Notify
+        if type(notify) == "function" then notify({ Title = "Próximo player", Content = "O bridge selecionou o próximo usuário disponível.", Duration = 4 }) end
+    end
+end
+
+local function ownerControlStartPolling()
+    if ownerControlPollRunning or ownerControlApiUrl() == "" then return end
+    ownerControlPollRunning = true
+    task.spawn(function()
+        local localPlayer = Players.LocalPlayer
+        if localPlayer then ownerControlRequest("POST", "/clients/register", ownerControlClientInfo()) end
+        while ownerControlPollRunning and Players.LocalPlayer do
+            local info = ownerControlClientInfo()
+            local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&cursor=%s", tostring(info.userId), tostring(info.gameId), tostring(info.placeId), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlCursor))
+            local response = ownerControlRequest("GET", query)
+            if response then
+                local commands = response.commands or response.data or {}
+                if type(commands) == "table" then
+                    for _, command in ipairs(commands) do ownerControlApplyCommand(command) end
+                end
+                if response.cursor ~= nil then ownerControlCursor = tostring(response.cursor) end
+            end
+            task.wait(OWNER_CONTROL_POLL_SECONDS)
+        end
+    end)
+end
+
+local function ownerControlOpen()
+    if not ownerControlIsLocalOwner() then
+        ownerControlShowDenied()
+        return
+    end
+    if ownerControlWindow then ownerControlDestroyWindow() return end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EmotesDarkOwnerControl"
+    gui.ResetOnSpawn = false
+    ownerControlGuiParent(gui)
+    ownerControlWindow = gui
+
+    local card = Instance.new("Frame")
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.fromScale(0.5, 0.5)
+    card.Size = UDim2.fromOffset(650, 540)
+    card.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+    card.BorderSizePixel = 0
+    card.Parent = gui
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 13)
+    cardCorner.Parent = card
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(165, 95, 255)
+    cardStroke.Transparency = 0.2
+    cardStroke.Parent = card
+
+    local title = ownerControlMakeLabel(card, "👑 OWNER CONTROL", UDim2.fromOffset(20, 14), UDim2.new(1, -80, 0, 30), 18, Color3.fromRGB(205, 165, 255))
+    ownerControlMakeLabel(card, "Alvo precisa estar online e executar o script; TP/Goto precisam de posição. Kick/Ban exigem motivo.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
+    ownerControlMakeButton(card, "×", UDim2.new(1, -52, 0, 14), UDim2.fromOffset(32, 28), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
+
+    ownerControlTargetInput = ownerControlMakeInput(card, "Nome de usuário ou UserId do usuário", UDim2.fromOffset(20, 78), UDim2.new(0.62, -25, 0, 34))
+    ownerControlDurationInput = ownerControlMakeInput(card, "Minutos: 0 = permanente", UDim2.new(0.62, 5, 0, 78), UDim2.new(0.38, -25, 0, 34))
+    ownerControlReasonInput = ownerControlMakeInput(card, "Motivo obrigatório para kick/ban", UDim2.fromOffset(20, 120), UDim2.new(0.62, -25, 0, 34))
+    ownerControlMessageInput = ownerControlMakeInput(card, "Mensagem para o usuário ou global", UDim2.new(0.62, 5, 0, 120), UDim2.new(0.38, -25, 0, 34))
+
+    ownerControlMakeButton(card, "BAN", UDim2.fromOffset(20, 174), UDim2.fromOffset(105, 32), function() ownerControlSubmit("ban", true, true, false) end, Color3.fromRGB(116, 47, 67))
+    ownerControlMakeButton(card, "KICK", UDim2.fromOffset(135, 174), UDim2.fromOffset(105, 32), function() ownerControlSubmit("kick", true, true, false) end, Color3.fromRGB(145, 76, 56))
+    ownerControlMakeButton(card, "JUMPSCARE 1", UDim2.fromOffset(250, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare1", true, false, false) end, Color3.fromRGB(65, 67, 95))
+    ownerControlMakeButton(card, "JUMPSCARE 2", UDim2.fromOffset(375, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare2", true, false, false) end, Color3.fromRGB(79, 60, 102))
+    ownerControlMakeButton(card, "JUMPSCARE 3", UDim2.fromOffset(500, 174), UDim2.fromOffset(125, 32), function() ownerControlSubmit("jumpscare3", true, false, false) end, Color3.fromRGB(112, 47, 91))
+
+    ownerControlMakeButton(card, "ENVIAR MENSAGEM", UDim2.fromOffset(20, 220), UDim2.fromOffset(160, 32), function() ownerControlSubmit("message", true, false, true) end, Color3.fromRGB(47, 94, 112))
+    ownerControlMakeButton(card, "MENSAGEM GLOBAL", UDim2.fromOffset(190, 220), UDim2.fromOffset(160, 32), function() ownerControlSubmit("global_message", false, false, true) end, Color3.fromRGB(43, 111, 93))
+    ownerControlMakeButton(card, "PRÓXIMO PLAYER", UDim2.fromOffset(360, 220), UDim2.fromOffset(145, 32), function() ownerControlSubmit("next_player", false, false, false) end, Color3.fromRGB(68, 80, 108))
+    ownerControlMakeButton(card, "SENTAR", UDim2.fromOffset(515, 220), UDim2.fromOffset(105, 32), function() ownerControlSubmit("sit", true, false, false) end, Color3.fromRGB(68, 87, 75))
+
+    ownerControlMakeButton(card, "TP PUXAR PARA MIM", UDim2.fromOffset(20, 266), UDim2.fromOffset(185, 32), function() ownerControlSubmit("tp_pull", true, false, false) end, Color3.fromRGB(74, 71, 120))
+    ownerControlMakeButton(card, "GOTO USUÁRIO", UDim2.fromOffset(215, 266), UDim2.fromOffset(160, 32), function() ownerControlSubmit("goto", true, false, false) end, Color3.fromRGB(75, 86, 120))
+    ownerControlMakeButton(card, "ATUALIZAR BRIDGE", UDim2.fromOffset(385, 266), UDim2.fromOffset(150, 32), function() ownerControlStartPolling(); ownerControlSetStatus("Bridge atualizado.", Color3.fromRGB(135, 230, 165)) end, Color3.fromRGB(55, 83, 76))
+    ownerControlMakeButton(card, "FECHAR", UDim2.fromOffset(545, 266), UDim2.fromOffset(75, 32), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
+
+    ownerControlStatus = ownerControlMakeLabel(card, "Bridge: " .. (ownerControlApiUrl() ~= "" and "conectado/configurado" or "não configurado"), UDim2.fromOffset(20, 320), UDim2.new(1, -40, 0, 30), 12, Color3.fromRGB(185, 190, 205))
+    ownerControlMakeLabel(card, "Ações remotas são aceitas somente pelo bridge configurado. O servidor deve validar o UserId real do dono.", UDim2.fromOffset(20, 365), UDim2.new(1, -40, 0, 45), 11, Color3.fromRGB(150, 155, 170))
+    ownerControlMakeLabel(card, "BAN: duração em minutos; 0 = permanente • KICK: motivo obrigatório • Jumpscare 2 usa áudio e 3 usa efeito intenso.", UDim2.fromOffset(20, 420), UDim2.new(1, -40, 0, 40), 11, Color3.fromRGB(150, 155, 170))
+
+    local dragging = false
+    local dragStart, startPosition, dragInput
+    title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPosition = card.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging or input ~= dragInput or not dragStart or not startPosition then return end
+        local delta = input.Position - dragStart
+        card.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+    end)
+end
+
+OwnerBtn.Image = OWNER_CONTROL_BUTTON_IMAGE
+OwnerBtn.Visible = true
+OwnerBtn.MouseButton1Click:Connect(ownerControlOpen)
+ownerControlStartPolling()
