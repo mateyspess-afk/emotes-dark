@@ -4,6 +4,7 @@ const { URL } = require("url");
 const PORT = Number(process.env.PORT || 3000);
 const CLIENT_TTL_MS = 45_000;
 const COMMAND_TTL_MS = 60 * 60 * 1_000;
+const BRIDGE_VERSION = "2026-09-28-session-broadcast-v2";
 const OWNER_USER_IDS = new Set(
   String(process.env.OWNER_USER_IDS || "10956940752")
     .split(",")
@@ -281,7 +282,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") return sendJson(res, 204, {});
 
   if (req.method === "GET" && url.pathname === "/health") {
-    return sendJson(res, 200, { ok: true, clients: clients.size, queuedCommands: commands.length });
+    return sendJson(res, 200, { ok: true, version: BRIDGE_VERSION, clients: clients.size, queuedCommands: commands.length });
   }
 
   if (req.method === "POST" && url.pathname === "/clients/register") {
@@ -290,13 +291,28 @@ const server = http.createServer(async (req, res) => {
       const client = clientFrom(body);
       if (!client) return sendJson(res, 422, { ok: false, message: "userId_required" });
       const key = clientKey(client);
+      // A nova execução substitui imediatamente a execução anterior do mesmo
+      // usuário no mesmo servidor, sem afetar o mesmo usuário em outros servidores.
+      for (const [oldKey, oldClient] of clients) {
+        if (
+          oldKey !== key &&
+          oldClient.userId === client.userId &&
+          oldClient.gameId === client.gameId &&
+          oldClient.placeId === client.placeId &&
+          oldClient.jobId === client.jobId
+        ) {
+          clients.delete(oldKey);
+        }
+      }
       const previous = clients.get(key);
       if (!previous) {
-        // Cada execução em cada servidor começa no fim da fila.
+        // Cada execução nova começa no fim da fila: nada antigo é reaplicado.
         client.sessionCursor = nextCommandId - 1;
+        client.sessionStartedAt = Date.now();
         client.deliveredIds = new Set();
       } else {
         client.sessionCursor = previous.sessionCursor || 0;
+        client.sessionStartedAt = previous.sessionStartedAt || Date.now();
         client.deliveredIds = previous.deliveredIds instanceof Set ? previous.deliveredIds : new Set();
       }
       client.clientKey = key;
@@ -315,6 +331,14 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       return sendJson(res, error.message === "payload_too_large" ? 413 : 400, { ok: false, message: error.message });
     }
+  }
+
+  if (req.method === "GET" && url.pathname === "/clients/active") {
+    const gameId = clean(url.searchParams.get("gameId"));
+    const placeId = clean(url.searchParams.get("placeId"));
+    const jobId = clean(url.searchParams.get("jobId"));
+    if (!gameId || !placeId) return sendJson(res, 422, { ok: false, message: "gameId_placeId_required" });
+    return sendJson(res, 200, { ok: true, version: BRIDGE_VERSION, clients: activeClientsFor(gameId, placeId, jobId) });
   }
 
   if (req.method === "GET" && url.pathname === "/commands/poll") {
@@ -343,6 +367,7 @@ const server = http.createServer(async (req, res) => {
 
     const available = commands.filter((command) =>
       command.id > sessionCursor &&
+      command.createdAt >= Number(client?.sessionStartedAt || 0) &&
       !(client?.deliveredIds instanceof Set && client.deliveredIds.has(command.id)) &&
       ((command.gameId === gameId && command.placeId === placeId) ||
         (command.action === "global_message" && command.gameId === "*" && command.placeId === "*")) &&
