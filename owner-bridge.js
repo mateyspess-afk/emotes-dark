@@ -147,6 +147,13 @@ function queueCommand(body, req) {
   }
 
   let payload = body.payload && typeof body.payload === "object" ? { ...body.payload } : {};
+  if (action === "next_player" && target) {
+    payload.nextTarget = {
+      userId: target.userId,
+      username: target.username,
+      displayName: target.displayName,
+    };
+  }
   if (action === "tp_pull") {
     const ownerPosition = owner?.position;
     if (!ownerPosition) return { status: 422, body: { ok: false, message: "owner_position_unavailable" } };
@@ -164,8 +171,8 @@ function queueCommand(body, req) {
     issuedBy: clean(body.userId),
     gameId,
     placeId,
-    targetUserId: action === "goto" ? clean(body.userId) : (target ? target.userId : "*"),
-    targetJobId: action === "goto" ? (owner?.jobId || "") : (target?.jobId || ""),
+    targetUserId: action === "goto" || action === "next_player" ? clean(body.userId) : (target ? target.userId : "*"),
+    targetJobId: action === "goto" || action === "next_player" ? (owner?.jobId || "") : (target?.jobId || ""),
     createdAt: Date.now(),
   };
   commands.push(command);
