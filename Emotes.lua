@@ -1392,19 +1392,25 @@ function ApplyUIVisibility()
 end
 
 function SaveConfig()
-    if not isfolder("7yd7") then makefolder("7yd7") end
-    writefile(ConfigPath, HttpService:JSONEncode(Config))
+    if type(isfolder) ~= "function" or type(makefolder) ~= "function" or type(writefile) ~= "function" then
+        return
+    end
+    pcall(function()
+        if not isfolder("7yd7") then makefolder("7yd7") end
+        writefile(ConfigPath, HttpService:JSONEncode(Config))
+    end)
 end
 
 function LoadConfig()
-    if isfile(ConfigPath) then
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(ConfigPath) then
         local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigPath)) end)
         if success and type(decoded) == "table" then
             for k, v in pairs(decoded) do Config[k] = v end
         end
     end
-    getgenv().autoReloadEnabled = Config.AutoReloadEnabled or false
-    getgenv().lastPlayedAnimation = Config.LastPlayedAnimationData
+    local env = emotesDarkExecutorEnv()
+    env.autoReloadEnabled = Config.AutoReloadEnabled or false
+    env.lastPlayedAnimation = Config.LastPlayedAnimationData
 end
 LoadConfig()
 
@@ -5480,7 +5486,7 @@ end
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
-getgenv().OwnedAuthenticEmotes = getgenv().OwnedAuthenticEmotes or {}
+emotesDarkExecutorEnv().OwnedAuthenticEmotes = emotesDarkExecutorEnv().OwnedAuthenticEmotes or {}
 function gatherAuthenticEmotes(char)
     if not char then return end
     local hum = char:WaitForChild("Humanoid", 5)
@@ -5503,7 +5509,7 @@ function gatherAuthenticEmotes(char)
         end
     end
     if #owned > 0 then
-        getgenv().OwnedAuthenticEmotes = owned
+        emotesDarkExecutorEnv().OwnedAuthenticEmotes = owned
     end
 end
 
@@ -5746,7 +5752,7 @@ function getCategoryStats()
     local randomCaptured = false
     local shouldShowRandom = shouldRandomSlotBeShown()
 
-    local authenticEmotes = (Config.AuthenticFirstPage and State.currentMode == "emote") and (getgenv().OwnedAuthenticEmotes or {}) or {}
+    local authenticEmotes = (Config.AuthenticFirstPage and State.currentMode == "emote") and (emotesDarkExecutorEnv().OwnedAuthenticEmotes or {}) or {}
     if #authenticEmotes > 0 then
         local pages = calcPagesForList(#authenticEmotes, false)
         table.insert(stats, { name = "Authentic", list = authenticEmotes, pages = pages, hasRandom = false })
@@ -7143,7 +7149,7 @@ applyAnimation = function(animationData)
     local bundleId = animationData.id
     local bundledItems = animationData.bundledItems
 
-    getgenv().lastPlayedAnimation = animationData
+    emotesDarkExecutorEnv().lastPlayedAnimation = animationData
     Config.LastPlayedAnimationData = animationData
     task.spawn(SaveConfig)
     
@@ -8154,7 +8160,7 @@ function onCharacterAdded(character)
     local humanoid = character:WaitForChild("Humanoid")
     local animator = humanoid:WaitForChild("Animator")
 
-    if getgenv().autoReloadEnabled and getgenv().lastPlayedAnimation then
+    if emotesDarkExecutorEnv().autoReloadEnabled and emotesDarkExecutorEnv().lastPlayedAnimation then
         task.spawn(function()
             local player = game.Players.LocalPlayer
             if not player:HasAppearanceLoaded() then
@@ -8162,14 +8168,14 @@ function onCharacterAdded(character)
             end
             local animate = character:WaitForChild("Animate")
             character:WaitForChild("HumanoidRootPart")
-            applyAnimation(getgenv().lastPlayedAnimation)
+            applyAnimation(emotesDarkExecutorEnv().lastPlayedAnimation)
             emotesDarkNotify({
                 Title = 'Dark | Auto Reload Animation',
                 Content = '🔄 The last animation was automatically \n reapplied',
                 Duration = 3
             })
             
-            local lastAnim = getgenv().lastPlayedAnimation
+            local lastAnim = emotesDarkExecutorEnv().lastPlayedAnimation
             local cacheKey = tostring(lastAnim.id)
             local changed = false
             for i = 1, 7 do
@@ -8455,11 +8461,11 @@ function setupAnimationClickDetection()
 end
 
 function toggleAutoReload()
-    getgenv().autoReloadEnabled = not getgenv().autoReloadEnabled
-    Config.AutoReloadEnabled = getgenv().autoReloadEnabled
+    emotesDarkExecutorEnv().autoReloadEnabled = not emotesDarkExecutorEnv().autoReloadEnabled
+    Config.AutoReloadEnabled = emotesDarkExecutorEnv().autoReloadEnabled
     task.spawn(SaveConfig)
     
-    if getgenv().autoReloadEnabled then
+    if emotesDarkExecutorEnv().autoReloadEnabled then
         emotesDarkNotify({
             Title = 'Dark | Auto Reload Animation',
             Content = "🔄 Auto Reload ON",
@@ -8526,7 +8532,7 @@ function connectEvents()
         if not (Config.AuthenticFirstPage and State.currentMode == "emote") then
             return false
         end
-        local authenticEmotes = getgenv().OwnedAuthenticEmotes or {}
+        local authenticEmotes = emotesDarkExecutorEnv().OwnedAuthenticEmotes or {}
         local authenticPagesCount = calcPagesForList(#authenticEmotes, false)
         return #authenticEmotes > 0 and State.currentPage <= authenticPagesCount
     end
