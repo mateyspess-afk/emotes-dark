@@ -1624,68 +1624,79 @@ local function emotesDarkTagAttach(player)
     tag.Adornee = head
     tag.AlwaysOnTop = true
     tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
-    tag.Size = isOwner and UDim2.fromOffset(176, 48) or UDim2.fromOffset(150, 30)
-    tag.StudsOffset = isOwner and Vector3.new(0, 3.55, 0) or Vector3.new(0, 3.15, 0)
+    tag.Size = isOwner and UDim2.fromOffset(210, 60) or UDim2.fromOffset(150, 30)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.75, 0) or Vector3.new(0, 3.15, 0)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
     if isOwner then
-        local card = Instance.new("Frame")
-        card.Name = "OwnerCard"
-        card.Size = UDim2.fromScale(1, 1)
-        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        card.BackgroundTransparency = 0.05
-        card.BorderSizePixel = 0
-        card.ClipsDescendants = true
-        card.Parent = tag
+          local card = Instance.new("Frame")
+          card.Name = "OwnerCard"
+          card.Size = UDim2.fromScale(1, 1)
+          card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+          card.BackgroundTransparency = 0
+          card.BorderSizePixel = 0
+          card.ClipsDescendants = true
+          card.Parent = tag
 
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = card
+          local corner = Instance.new("UICorner")
+          corner.CornerRadius = UDim.new(0, 10)
+          corner.Parent = card
 
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(42, 42, 42)
-        stroke.Thickness = 1.5
-        stroke.Transparency = 0.05
-        stroke.Parent = card
+          local stroke = Instance.new("UIStroke")
+          stroke.Color = Color3.fromRGB(255, 204, 74)
+          stroke.Thickness = 1.4
+          stroke.Transparency = 0.12
+          stroke.Parent = card
 
-        local crown = Instance.new("TextLabel")
-        crown.Name = "Crown"
-        crown.BackgroundTransparency = 1
-        crown.Position = UDim2.fromOffset(8, 5)
-        crown.Size = UDim2.fromOffset(24, 22)
-        crown.Font = Enum.Font.GothamBold
-        crown.Text = ""
-        crown.TextColor3 = Color3.fromRGB(35, 35, 35)
-        crown.TextSize = 16
-        crown.Parent = card
+          local accent = Instance.new("Frame")
+          accent.Name = "GoldAccent"
+          accent.BackgroundColor3 = Color3.fromRGB(255, 204, 74)
+          accent.BorderSizePixel = 0
+          accent.Position = UDim2.fromOffset(0, 0)
+          accent.Size = UDim2.new(1, 0, 0, 3)
+          accent.Parent = card
 
-        local title = Instance.new("TextLabel")
-        title.Name = "Title"
-        title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(35, 5)
-        title.Size = UDim2.new(1, -42, 0, 21)
-        title.Font = Enum.Font.GothamBlack
-        title.Text = "OWNER USER"
-        title.TextColor3 = Color3.fromRGB(225, 225, 225)
-        title.TextSize = 14
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        title.TextStrokeTransparency = 0.15
-        title.Parent = card
+          local crown = Instance.new("TextLabel")
+          crown.Name = "Crown"
+          crown.BackgroundTransparency = 1
+          crown.Position = UDim2.fromOffset(10, 13)
+          crown.Size = UDim2.fromOffset(27, 27)
+          crown.Font = Enum.Font.GothamBlack
+          crown.Text = "♛"
+          crown.TextColor3 = Color3.fromRGB(255, 204, 74)
+          crown.TextSize = 22
+          crown.TextXAlignment = Enum.TextXAlignment.Center
+          crown.TextYAlignment = Enum.TextYAlignment.Center
+          crown.Parent = card
 
-        local subtitle = Instance.new("TextLabel")
-        subtitle.Name = "Subtitle"
-        subtitle.BackgroundTransparency = 1
-        subtitle.Position = UDim2.fromOffset(10, 27)
-        subtitle.Size = UDim2.new(1, -20, 0, 17)
-        subtitle.Font = Enum.Font.GothamMedium
-        subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
-        subtitle.TextColor3 = Color3.fromRGB(130, 130, 130)
-        subtitle.TextSize = 11
-        subtitle.TextTruncate = Enum.TextTruncate.AtEnd
-        subtitle.Parent = card
-    else
+          local title = Instance.new("TextLabel")
+          title.Name = "Title"
+          title.BackgroundTransparency = 1
+          title.Position = UDim2.fromOffset(45, 9)
+          title.Size = UDim2.new(1, -55, 0, 22)
+          title.Font = Enum.Font.GothamBlack
+          title.Text = "OWNER USER"
+          title.TextColor3 = Color3.fromRGB(255, 255, 255)
+          title.TextSize = 15
+          title.TextXAlignment = Enum.TextXAlignment.Left
+          title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+          title.TextStrokeTransparency = 0.1
+          title.Parent = card
+
+          local subtitle = Instance.new("TextLabel")
+          subtitle.Name = "Subtitle"
+          subtitle.BackgroundTransparency = 1
+          subtitle.Position = UDim2.fromOffset(45, 32)
+          subtitle.Size = UDim2.new(1, -55, 0, 17)
+          subtitle.Font = Enum.Font.GothamMedium
+          subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
+          subtitle.TextColor3 = Color3.fromRGB(178, 178, 178)
+          subtitle.TextSize = 11
+          subtitle.TextXAlignment = Enum.TextXAlignment.Left
+          subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+          subtitle.Parent = card
+          else
         local card = Instance.new("Frame")
         card.Name = "DarkUserCard"
         card.Size = UDim2.fromScale(1, 1)
