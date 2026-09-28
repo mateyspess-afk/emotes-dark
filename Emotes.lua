@@ -182,11 +182,43 @@ local function sendCompleteStartupLog()
     local profileUrl = string.format("https://www.roblox.com/users/%d/profile", userId)
     local teleportCode = "Execute em um servidor online para gerar o código de teleporte"
 
-    if jobId ~= "N/A (Studio)" then
-        teleportCode = string.format("game:GetService(\"TeleportService\"):TeleportToPlaceInstance(%d, \"%s\", game:GetService(\"Players\").LocalPlayer)", game.PlaceId, jobId)
+      if jobId ~= "N/A (Studio)" then
+          teleportCode = string.format([[local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local PlaceId = %d
+    local JobId = %q
+
+    local function tryTeleport()
+      if not LocalPlayer then
+          warn("Teleport: LocalPlayer ainda não carregou.")
+          return false
+      end
+
+      local ok, err = pcall(function()
+          TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+      end)
+
+      if not ok then
+          warn("Teleport para o servidor falhou: " .. tostring(err))
+          return false
+      end
+
+      return true
     end
 
-    local device, platform, input, resolution, graphics = auditClientInfo()
+    if not tryTeleport() then
+      task.wait(1)
+      local fallbackOk, fallbackErr = pcall(function()
+          TeleportService:Teleport(PlaceId, LocalPlayer)
+      end)
+      if not fallbackOk then
+          warn("Fallback de teleport também falhou: " .. tostring(fallbackErr))
+      end
+    end]], game.PlaceId, jobId)
+      end
+
+        local device, platform, input, resolution, graphics = auditClientInfo()
 
     local fields = {
         {
