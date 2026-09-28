@@ -426,7 +426,12 @@ OWNER_USER_IDS = {
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
 
--- Sons do Dark Emote. Adicione outros rbxassetid://... nas listas se quiser trocar os efeitos.
+-- Sons do Dark Emote. O som de execução é escolhido uma vez por execução do script.
+local STARTUP_SOUND_IDS = {
+    "rbxassetid://126047015098640",
+    "rbxassetid://17556446241",
+    "rbxassetid://74464434454195",
+}
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
@@ -450,9 +455,11 @@ local function playDarkEmoteSound(kind)
     end
 
     sound.SoundId = pickSoundId(soundIds)
-    sound.Volume = kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5)
-    sound.PlaybackSpeed = kind == "emote" and (math.random(90, 112) / 100)
-        or (kind == "owner" and 0.82 or 1.12)
+    sound.Volume = kind == "startup" and 0.7 or (kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5))
+    sound.PlaybackSpeed = kind == "startup" and 1
+        or (kind == "emote" and (math.random(90, 112) / 100)
+        or (kind == "owner" and 0.82 or 1.12))
+    sound.Looped = false
     sound:Stop()
     sound:Play()
 end
@@ -464,6 +471,15 @@ end
 local function playOwnerSound()
     playDarkEmoteSound("owner")
 end
+
+local function playStartupSound()
+    playDarkEmoteSound("startup")
+end
+
+-- Uma execução do script toca exatamente um som de inicialização.
+task.defer(function()
+    pcall(playStartupSound)
+end)
 
 local boundClickButtons = setmetatable({}, { __mode = "k" })
 local boundClickRoots = setmetatable({}, { __mode = "k" })
@@ -1604,7 +1620,9 @@ local function announceOwner(player, alreadyPresent)
     local ok = pcall(function()
         showThemedOwnerAlert(displayName, player.Name, status, playerCount, maxPlayers)
     end)
-    pcall(playOwnerSound)
+    if not alreadyPresent then
+        pcall(playOwnerSound)
+    end
     if not ok then
         local notify = getgenv().Notify
         if type(notify) == "function" then
@@ -6956,6 +6974,30 @@ UICorner_5.Parent = UI.Changepage
     if ApplyFreezeButtonVisual then ApplyFreezeButtonVisual() end
     if applySavedPositions then applySavedPositions() end
     if updateHUDLayouts then updateHUDLayouts() end
+
+    -- Entrada suave dos controles superiores ao criar a interface.
+    local topEntranceInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local topEntranceTargets = {
+        { object = UI.Top, property = "BackgroundTransparency", value = 0.4 },
+        { object = UI.EmoteWalkButton, property = "BackgroundTransparency", value = 0.4 },
+        { object = UI.Favorite, property = "BackgroundTransparency", value = 0.4 },
+        { object = UI.FavoritesTab, property = "BackgroundTransparency", value = 0.4 },
+        { object = UI.SpeedEmote, property = "BackgroundTransparency", value = 0.4 },
+    }
+    for _, target in ipairs(topEntranceTargets) do
+        if target.object then
+            target.object.BackgroundTransparency = 1
+            TweenService:Create(target.object, topEntranceInfo, { [target.property] = target.value }):Play()
+            if target.object:IsA("ImageButton") then
+                target.object.ImageTransparency = 1
+                TweenService:Create(target.object, topEntranceInfo, { ImageTransparency = 0 }):Play()
+            end
+        end
+    end
+    if UI.Search then
+        UI.Search.TextTransparency = 1
+        TweenService:Create(UI.Search, topEntranceInfo, { TextTransparency = 0 }):Play()
+    end
     
     return true
 end
