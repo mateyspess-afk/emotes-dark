@@ -7,7 +7,7 @@
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
-local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60
+local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 local BUG_REPORT_MIN_LENGTH = 20
 local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
@@ -281,7 +281,7 @@ sendCompleteStartupLog()
 
 if _G.EmotesGUIRunning then
     getgenv().Notify({
-        Title = '7yd7 | Emote',
+        Title = 'Dark | Emote',
         Content = '⚠️ It works It actually works',
         Duration = 5
     })
@@ -1027,7 +1027,7 @@ function SafeLoad(url, name)
     
     if not success or not content or content == "" then
         getgenv().Notify({
-            Title = '7yd7 | Error',
+            Title = 'Dark | Error',
             Content = 'Failed to download ' .. (name or "script") .. ' after 3 attempts.',
             Duration = 5
         })
@@ -1036,13 +1036,13 @@ function SafeLoad(url, name)
 
     local func, err = loadstring(content)
     if not func then
-        warn("7yd7 | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
+        warn("Dark | SafeLoad: Failed to parse " .. (name or "script") .. ": " .. tostring(err))
         return function() end
     end
 
     local ok, res = pcall(func)
     if not ok then
-        warn("7yd7 | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
+        warn("Dark | SafeLoad: Error executing " .. (name or "script") .. ": " .. tostring(res))
         return function() end
     end
     return res
@@ -2128,7 +2128,7 @@ local function showBugReportWindow()
         if success then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
             status.Text = "Report enviado: " .. tostring(result)
-            notifyBugReport("Bug report", "Report enviado com sucesso")
+            notifyBugReport("Dark | Bug report", "Report enviado com sucesso")
             refreshCooldown()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
@@ -2295,13 +2295,13 @@ cleanDeletedFavorites = function()
 
     local totalChecks = #emoteIdList + #animIdList
     if totalChecks == 0 then
-        getgenv().Notify({ Title = "7yd7 | Clean", Content = "No favorites to check!", Duration = 3 })
+        getgenv().Notify({ Title = "Dark | Clean", Content = "No favorites to check!", Duration = 3 })
         cleanFavCleaning = false
         resetCleanButton()
         return
     end
 
-    getgenv().Notify({ Title = "7yd7 | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
+    getgenv().Notify({ Title = "Dark | Clean", Content = "Checking " .. totalChecks .. " favorites...", Duration = 3 })
 
     local deletedEmotes = {}
     local deletedAnims = {}
@@ -2436,7 +2436,7 @@ cleanDeletedFavorites = function()
     end)
 
     getgenv().Notify({
-        Title = "7yd7 | Cleaned",
+        Title = "Dark | Cleaned",
         Content = "Removed " .. removedEmotes .. " deleted emote" .. (removedEmotes == 1 and "" or "s") .. " & " .. removedAnims .. " deleted animation" .. (removedAnims == 1 and "" or "s"),
         Duration = 5
     })
@@ -3228,7 +3228,7 @@ end
 function ApplyTheme(themeData)
     if State.isApplyingTheme then return end
     if not themeData then
-        warn("7yd7 | ApplyTheme: themeData is nil. Falling back to Default.")
+        warn("Dark | ApplyTheme: themeData is nil. Falling back to Default.")
         themeData = themes and themes["Default"] or nil
         if not themeData then return end
     end
@@ -3351,7 +3351,7 @@ function ApplyTheme(themeData)
     State.isApplyingTheme = false
     
     if not ok then
-        warn("7yd7 | ApplyTheme error: " .. tostring(err))
+        warn("Dark | ApplyTheme error: " .. tostring(err))
     end
 end
 
@@ -3855,7 +3855,7 @@ end
 State.enterCustomAnimationEditor = function(category, animName)
     if State.customAnimationEditorActive then return end
     if State.currentCustomAnimationName == "Default" then
-        getgenv().Notify({ Title = "7yd7 | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
+        getgenv().Notify({ Title = "Dark | Error", Content = "Cannot edit Default Animation set. Create a new one!", Duration = 3 })
         return
     end
 
@@ -3963,7 +3963,7 @@ State.enterCustomAnimationEditor = function(category, animName)
 
     if UI._2Routenumber then UI._2Routenumber.TextEditable = false; UI._2Routenumber.Active = false; pcall(function() UI._2Routenumber:ReleaseFocus() end) end
 
-    getgenv().Notify({ Title = "7yd7 | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
+    getgenv().Notify({ Title = "Dark | Animation Editor", Content = "🖱️ Select an animation from the wheel to set for " .. animName, Duration = 5 })
 end
 
 State.CustomAnimTab = SettingsLib.CreateTab("Animation", 4)
@@ -4229,7 +4229,7 @@ SettingsLib.AddIconButton(CustomAnimMgtContainer, "78317476576895", function()
             if State.ApplyCustomAnimIconUI then State.ApplyCustomAnimIconUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(false) end
             popup:Destroy()
-            getgenv().Notify({ Title = "7yd7 | Animation", Content = "✅ Imported custom animations", Duration = 3 })
+            getgenv().Notify({ Title = "Dark | Animation", Content = "✅ Imported custom animations", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid JSON", Duration = 3 })
         end
@@ -4520,7 +4520,7 @@ SettingsLib.AddIconButton(EmotePageMgtContainer, "78317476576895", function()
             end
             SwitchEmotePage(targetName)
             popup:Destroy()
-            getgenv().Notify({ Title = "7yd7 | Page", Content = "✅ Imported Emote page", Duration = 3 })
+            getgenv().Notify({ Title = "Dark | Page", Content = "✅ Imported Emote page", Duration = 3 })
         else
             getgenv().Notify({ Title = "Error", Content = "Invalid Emote Page JSON", Duration = 3 })
         end
@@ -4773,7 +4773,7 @@ function HandleImportPrompt(typeStr)
                     State.isApplyingTheme = false
                     ApplyTheme(themeToApply)
                 else
-                    warn("7yd7 | Missing Default theme during import fallback")
+                    warn("Dark | Missing Default theme during import fallback")
                 end
             end
             if d.Settings and (typeStr == "All" or typeStr == "Settings") then
@@ -4833,7 +4833,7 @@ BtnImportSettings.MouseButton1Click:Connect(function() HandleImportPrompt("Setti
 BtnImportFavorites.MouseButton1Click:Connect(function() HandleImportPrompt("Favorites") end)
 
 getgenv().Notify({
-    Title = '7yd7 | Emote',
+    Title = 'Dark | Emote',
     Content = '⚠️ Script loading...',
     Duration = 5
 })
@@ -6368,7 +6368,7 @@ toggleFavorite = function(emoteId, emoteName)
     if found then
         table.remove(State.favoriteEmotes, index)
         getgenv().Notify({
-            Title = '7yd7 | Favorite System',
+            Title = 'Dark | Favorite System',
             Content = '🗑️ Removed "' .. emoteName .. '" from favorites',
             Duration = 3
         })
@@ -6378,7 +6378,7 @@ toggleFavorite = function(emoteId, emoteName)
             name = emoteName .. " - ⭐"
         })
         getgenv().Notify({
-            Title = '7yd7 | Favorite System',
+            Title = 'Dark | Favorite System',
             Content = '✅ Added "' .. emoteName .. '" to favorites',
             Duration = 3
         })
@@ -6410,7 +6410,7 @@ toggleFavoriteAnimation = function(animationData)
     if found then
         table.remove(State.favoriteAnimations, index)
         getgenv().Notify({
-            Title = '7yd7 | Favorite System',
+            Title = 'Dark | Favorite System',
             Content = '🗑️ Removed "' .. animationData.name .. '" from favorites',
             Duration = 3
         })
@@ -6423,7 +6423,7 @@ toggleFavoriteAnimation = function(animationData)
             customSetName = IsCustomSetData(animationData) and (type(animationData.name) == "string" and animationData.name:gsub("%s*%-.*$", "") or animationData.name) or nil
         })
         getgenv().Notify({
-            Title = '7yd7 | Favorite System',
+            Title = 'Dark | Favorite System',
             Content = '✅ Added "' .. animationData.name .. '" to favorites',
             Duration = 3
         })
@@ -6499,7 +6499,7 @@ applyAnimation = function(animationData)
     
     if not animate or not humanoid then
         getgenv().Notify({
-            Title = '7yd7 | Animation Error',
+            Title = 'Dark | Animation Error',
             Content = '❌ Animate or Humanoid not found',
             Duration = 3
         })
@@ -6515,7 +6515,7 @@ applyAnimation = function(animationData)
     
         if not bundledItems and not animationData.isCustomSet then
         getgenv().Notify({
-            Title = '7yd7 | Animation Error', 
+            Title = 'Dark | Animation Error', 
             Content = '??? No bundled items found',
             Duration = 3
         })
@@ -6699,7 +6699,7 @@ handleSectorAction = function(index)
         local itemData = pickRandomItemForMode()
         if not itemData then
             getgenv().Notify({
-                Title = '7yd7 | Random',
+                Title = 'Dark | Random',
                 Content = '? No valid random item found',
                 Duration = 3
             })
@@ -6721,7 +6721,7 @@ handleSectorAction = function(index)
                 end
                 State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
                 State.SaveCustomAnimations(State.CustomAnimations)
-                getgenv().Notify({ Title = "7yd7 | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+                getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
                 if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
                 if refreshCustomAnimationState then refreshCustomAnimationState(true) end
                 State.exitCustomAnimationEditor()
@@ -6844,7 +6844,7 @@ handleSectorAction = function(index)
             end
             State.CustomAnimations.Sets[State.currentCustomAnimationName][cat][name] = animIdToSave
             State.SaveCustomAnimations(State.CustomAnimations)
-            getgenv().Notify({ Title = "7yd7 | Saved", Content = "✅ Saved " .. name, Duration = 3 })
+            getgenv().Notify({ Title = "Dark | Saved", Content = "✅ Saved " .. name, Duration = 3 })
             
             if State.RefreshCustomAnimUI then State.RefreshCustomAnimUI() end
             if refreshCustomAnimationState then refreshCustomAnimationState(true) end
@@ -7090,7 +7090,7 @@ function fetchAllEmotes()
             local emoteData, total = fetchFromUrl()
             if emoteData then
                 applyData(emoteData, total)
-                getgenv().Notify({Title = '7yd7 | Emote', Content = "📦 Emotes loaded", Duration = 3})
+                getgenv().Notify({Title = 'Dark | Emote', Content = "📦 Emotes loaded", Duration = 3})
                 return
             end
             task.wait(3)
@@ -7236,7 +7236,7 @@ end
 function searchEmotes(searchTerm)
     if State.isLoading then
         getgenv().Notify({
-            Title = '7yd7 | Emote',
+            Title = 'Dark | Emote',
             Content = '⚠️ Loading please wait...',
             Duration = 5
         })
@@ -7304,7 +7304,7 @@ end
 function searchAnimations(searchTerm)
     if State.isLoading then
         getgenv().Notify({
-            Title = '7yd7 | Animation',
+            Title = 'Dark | Animation',
             Content = '⚠️ Loading please wait...',
             Duration = 5
         })
@@ -7530,7 +7530,7 @@ function onCharacterAdded(character)
             character:WaitForChild("HumanoidRootPart")
             applyAnimation(getgenv().lastPlayedAnimation)
             getgenv().Notify({
-                Title = '7yd7 | Auto Reload Animation',
+                Title = 'Dark | Auto Reload Animation',
                 Content = '🔄 The last animation was automatically \n reapplied',
                 Duration = 3
             })
@@ -7684,7 +7684,7 @@ function toggleEmoteWalk()
 
     if State.emotesWalkEnabled then
         getgenv().Notify({
-            Title = '7yd7 | Emote Freeze',
+            Title = 'Dark | Emote Freeze',
             Content = "🔒 Emote freeze ON",
             Duration = 5
         })
@@ -7696,7 +7696,7 @@ function toggleEmoteWalk()
         end
     else
         getgenv().Notify({
-            Title = '7yd7 | Emote Freeze',
+            Title = 'Dark | Emote Freeze',
             Content = '🔓 Emote freeze OFF',
             Duration = 5
         })
@@ -7718,7 +7718,7 @@ function toggleSpeedEmote()
 
     if State.speedEmoteEnabled then
         getgenv().Notify({
-            Title = '7yd7 | Speed Emote',
+            Title = 'Dark | Speed Emote',
             Content = "⚡ Speed Emote ON",
             Duration = 5
         })
@@ -7726,7 +7726,7 @@ function toggleSpeedEmote()
         stopCurrentEmote()
     else
         getgenv().Notify({
-            Title = '7yd7 | Speed Emote',
+            Title = 'Dark | Speed Emote',
             Content = '⚡ Speed Emote OFF',
             Duration = 5
         })
@@ -7787,7 +7787,7 @@ function toggleFavoritesTab()
     updateScriptPriorityOverlay()
 
     getgenv().Notify({
-        Title = '7yd7 | Favorite Tab',
+        Title = 'Dark | Favorite Tab',
         Content = State.favoritesTabActive and '⭐ Favorites tab ON' or '⭐ Favorites tab OFF',
         Duration = 3
     })
@@ -7827,13 +7827,13 @@ function toggleAutoReload()
     
     if getgenv().autoReloadEnabled then
         getgenv().Notify({
-            Title = '7yd7 | Auto Reload Animation',
+            Title = 'Dark | Auto Reload Animation',
             Content = "🔄 Auto Reload ON",
             Duration = 5
         })
     else
         getgenv().Notify({
-            Title = '7yd7 | Auto Reload Animation',
+            Title = 'Dark | Auto Reload Animation',
             Content = '🔄 Auto Reload OFF',
             Duration = 3
         })
@@ -8085,7 +8085,7 @@ function connectEvents()
                     end)
                     
                     getgenv().Notify({
-                        Title = '7yd7 | Animation',
+                        Title = 'Dark | Animation',
                         Content = '📄 Changed to Emote > Animation Mode',
                         Duration = 3
                     })
@@ -8111,7 +8111,7 @@ function connectEvents()
                     end
                     
                     getgenv().Notify({
-                        Title = '7yd7 | Emote', 
+                        Title = 'Dark | Emote', 
                         Content = '📄 Changed to Animation > Emote Mode',
                         Duration = 3
                     })
@@ -9014,7 +9014,7 @@ enterHUDEditor = function()
         rebuildHUDOverlays()
         pcall(function() updateGUIColors() end)
         getgenv().Notify({ 
-            Title = "7yd7 | HUD Editor", 
+            Title = "Dark | HUD Editor", 
             Content = HUD.IsUnlocked and "🔓 Interior Unlocked! Children are now editable." or "🔒 Interior Locked! Top-level only.", 
             Duration = 2 
         })
@@ -9083,7 +9083,7 @@ enterHUDEditor = function()
             }
         }
         setclipboard(HttpService:JSONEncode(data))
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
+        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings copied", Duration = 2 })
     end))
 
     table.insert(HUD.Connections, importBtn.MouseButton1Click:Connect(function()
@@ -9153,7 +9153,7 @@ enterHUDEditor = function()
                 HUD.UndoStack = {}
                 if backdrop then backdrop:Destroy() end
                 popup:Destroy()
-                getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
+                getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✅ HUD settings imported", Duration = 2 })
             else
                 getgenv().Notify({ Title = "Error", Content = "Invalid HUD JSON", Duration = 3 })
             end
@@ -9270,7 +9270,7 @@ enterHUDEditor = function()
         end
         updatePageDisplay()
         
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
+        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🔄 All designs and frames have been fully reset", Duration = 3 })
     end))
 
     local propertiesPanel = Instance.new("Frame")
@@ -9564,7 +9564,7 @@ enterHUDEditor = function()
         updateHUDLayouts()
         ApplyUIVisibility()
         pcall(function() updateGUIColors() end)
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
+        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "🗑️ Custom Frame deleted", Duration = 2 })
     end))
 
 
@@ -9861,10 +9861,10 @@ enterHUDEditor = function()
         setupElementDragging(newName, cf, getMovableElements(), snapGuideV, snapGuideH)
         selectHUDElement(newName, cf)
         
-        getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
+        getgenv().Notify({ Title = "Dark | HUD Editor", Content = "➕ Custom Frame added!", Duration = 2 })
     end))
 
-    getgenv().Notify({ Title = "7yd7 | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
+    getgenv().Notify({ Title = "Dark | HUD Editor", Content = "✏️ Drag elements to reposition", Duration = 5 })
 end
 
 State.RefreshUI = function()
@@ -10008,7 +10008,7 @@ end)
 if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
     SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/OpenEmote.lua", "Open Emote")
     getgenv().Notify({
-        Title = '7yd7 | Emote Mobile',
+        Title = 'Dark | Emote Mobile',
         Content = '📱 Added emote open button for ease of use',
         Duration = 10
     })
@@ -10016,7 +10016,7 @@ end
 
 if UserInputService.KeyboardEnabled then
     getgenv().Notify({
-        Title = '7yd7 | Emote PC',
+        Title = 'Dark | Emote PC',
         Content = '💻 Open menu press button "."',
         Duration = 10
     })
