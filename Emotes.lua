@@ -1582,14 +1582,82 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     end)
 end
 
-local UPDATE_INFO_UPDATED_AT = "September 28, 2026 at 4:55 PM"
 local UPDATE_INFO_ITEMS = {
-    { kind = "ADD", text = "Random startup sound" },
-    { kind = "ADD", text = "Smooth top orb entrance" },
-    { kind = "FIXED", text = "Lag after a few minutes" },
-    { kind = "REMOVED", text = "Old startup sound" },
-    { kind = "ADD", text = "Update information window" },
+    { kind = "ADD", key = "randomStartupSound" },
+    { kind = "ADD", key = "smoothTopOrb" },
+    { kind = "FIXED", key = "lagAfterMinutes" },
+    { kind = "REMOVED", key = "oldStartupSound" },
+    { kind = "ADD", key = "updateWindow" },
 }
+
+local UPDATE_INFO_TRANSLATIONS = {
+    en = {
+        title = "Update Information",
+        updated = "Updated on September 28, 2026 at 4:55 PM",
+        confirm = "Confirm",
+        prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
+        items = {
+            randomStartupSound = "Random startup sound",
+            smoothTopOrb = "Smooth top orb entrance",
+            lagAfterMinutes = "Lag after a few minutes",
+            oldStartupSound = "Old startup sound",
+            updateWindow = "Update information window",
+        },
+    },
+    pt = {
+        title = "Informações de atualizações",
+        updated = "Atualizado em 28 de setembro de 2026 às 16:55",
+        confirm = "Confirmar",
+        prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
+        items = {
+            randomStartupSound = "Som de inicialização aleatório",
+            smoothTopOrb = "Entrada suave da bolinha superior",
+            lagAfterMinutes = "Travamentos depois de alguns minutos",
+            oldStartupSound = "Som de inicialização antigo",
+            updateWindow = "Janela de informações de atualizações",
+        },
+    },
+    es = {
+        title = "Información de actualizaciones",
+        updated = "Actualizado el 28 de septiembre de 2026 a las 16:55",
+        confirm = "Confirmar",
+        prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
+        items = {
+            randomStartupSound = "Sonido de inicio aleatorio",
+            smoothTopOrb = "Entrada suave de la esfera superior",
+            lagAfterMinutes = "Retrasos después de unos minutos",
+            oldStartupSound = "Sonido de inicio antiguo",
+            updateWindow = "Ventana de información de actualizaciones",
+        },
+    },
+}
+
+local function detectUpdateInfoLanguage()
+    local countryCode = ""
+    local localeId = ""
+    local localizationService = game:GetService("LocalizationService")
+    local localPlayer = Players.LocalPlayer
+
+    if localPlayer then
+        pcall(function()
+            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(localPlayer) or ""):upper()
+        end)
+    end
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or localizationService.SystemLocaleId or ""):lower()
+    end)
+
+    local portugueseCountries = { BR = true, PT = true, AO = true, MZ = true, CV = true, GW = true, ST = true }
+    local spanishCountries = {
+        ES = true, MX = true, AR = true, CL = true, CO = true, PE = true, VE = true,
+        UY = true, PY = true, BO = true, EC = true, CR = true, PA = true, GT = true,
+        HN = true, SV = true, NI = true, DO = true, CU = true, PR = true
+    }
+
+    if portugueseCountries[countryCode] or localeId:match("^pt") then return "pt" end
+    if spanishCountries[countryCode] or localeId:match("^es") then return "es" end
+    return "en"
+end
 
 local function showUpdateInfoWindow()
     local sharedEnv = emotesDarkExecutorEnv()
@@ -1613,11 +1681,7 @@ local function showUpdateInfoWindow()
         FIXED = Color3.fromRGB(92, 205, 255),
         REMOVED = Color3.fromRGB(255, 100, 115),
     }
-    local statusPrefixes = {
-        ADD = "+ Add:",
-        FIXED = "✓ Fixed:",
-        REMOVED = "− Removed:",
-    }
+    local initialTranslation = UPDATE_INFO_TRANSLATIONS.en
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "EmotesDarkUpdateInfo"
@@ -1684,7 +1748,7 @@ local function showUpdateInfoWindow()
     title.Position = UDim2.fromOffset(76, 17)
     title.Size = UDim2.new(1, -94, 0, 25)
     title.Font = Enum.Font.GothamMedium
-    title.Text = "Update Information"
+    title.Text = initialTranslation.title
     title.TextColor3 = palette.text
     title.TextSize = 19
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -1697,7 +1761,7 @@ local function showUpdateInfoWindow()
     subtitle.Position = UDim2.fromOffset(76, 42)
     subtitle.Size = UDim2.new(1, -94, 0, 19)
     subtitle.Font = Enum.Font.Gotham
-    subtitle.Text = "Updated on " .. UPDATE_INFO_UPDATED_AT
+    subtitle.Text = initialTranslation.updated
     subtitle.TextColor3 = Color3.fromRGB(178, 196, 222)
     subtitle.TextSize = 12
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -1745,7 +1809,7 @@ local function showUpdateInfoWindow()
         label.Position = UDim2.fromOffset(13, 0)
         label.Size = UDim2.new(1, -23, 1, 0)
         label.Font = Enum.Font.Gotham
-        label.Text = statusPrefixes[item.kind] .. " " .. item.text
+        label.Text = initialTranslation.prefixes[item.kind] .. " " .. initialTranslation.items[item.key]
         label.TextColor3 = color
         label.TextSize = 13
         label.TextXAlignment = Enum.TextXAlignment.Left
@@ -1764,7 +1828,7 @@ local function showUpdateInfoWindow()
     confirm.BackgroundTransparency = 1
     confirm.BorderSizePixel = 0
     confirm.Font = Enum.Font.Gotham
-    confirm.Text = "Confirm"
+    confirm.Text = initialTranslation.confirm
     confirm.TextColor3 = palette.text
     confirm.TextSize = 15
     confirm.TextTransparency = 1
@@ -1826,6 +1890,21 @@ local function showUpdateInfoWindow()
     if sharedEnv then
         sharedEnv.EmotesDarkUpdateInfoInputConnection = inputConnection
     end
+
+    task.spawn(function()
+        local language = detectUpdateInfoLanguage()
+        local translation = UPDATE_INFO_TRANSLATIONS[language] or UPDATE_INFO_TRANSLATIONS.en
+        if not gui.Parent then return end
+        title.Text = translation.title
+        subtitle.Text = translation.updated
+        confirm.Text = translation.confirm
+        for index, item in ipairs(UPDATE_INFO_ITEMS) do
+            local row = rows[index]
+            if row and row.label then
+                row.label.Text = translation.prefixes[item.kind] .. " " .. translation.items[item.key]
+            end
+        end
+    end)
 end
 
 task.defer(function()
