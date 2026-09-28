@@ -1655,8 +1655,8 @@ local function emotesDarkTagAttach(player)
         crown.Position = UDim2.fromOffset(8, 5)
         crown.Size = UDim2.fromOffset(24, 22)
         crown.Font = Enum.Font.GothamBold
-        crown.Text = "★"
-        crown.TextColor3 = Color3.fromRGB(255, 255, 255)
+        crown.Text = ""
+        crown.TextColor3 = Color3.fromRGB(35, 35, 35)
         crown.TextSize = 16
         crown.Parent = card
 
@@ -1667,7 +1667,7 @@ local function emotesDarkTagAttach(player)
         title.Size = UDim2.new(1, -42, 0, 21)
         title.Font = Enum.Font.GothamBlack
         title.Text = "OWNER USER"
-        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextColor3 = Color3.fromRGB(225, 225, 225)
         title.TextSize = 14
         title.TextXAlignment = Enum.TextXAlignment.Left
         title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1681,7 +1681,7 @@ local function emotesDarkTagAttach(player)
         subtitle.Size = UDim2.new(1, -20, 0, 17)
         subtitle.Font = Enum.Font.GothamMedium
         subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
-        subtitle.TextColor3 = Color3.fromRGB(220, 220, 220)
+        subtitle.TextColor3 = Color3.fromRGB(130, 130, 130)
         subtitle.TextSize = 11
         subtitle.TextTruncate = Enum.TextTruncate.AtEnd
         subtitle.Parent = card
