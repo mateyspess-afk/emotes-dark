@@ -1662,15 +1662,14 @@ local function showUpdateInfoWindow()
     local oldGui = CoreGui:FindFirstChild("EmotesDarkUpdateInfo")
     if oldGui then oldGui:Destroy() end
 
-    local theme = State and State.EmoteTheme
     local palette = {
-        background = (theme and theme.Background) or Color3.fromRGB(7, 14, 29),
-        accent = (theme and theme.Accent) or Color3.fromRGB(54, 157, 255),
-        text = (theme and theme.ImageColor) or Color3.fromRGB(235, 242, 255),
+        background = Color3.fromRGB(0, 0, 0),
+        accent = Color3.fromRGB(38, 38, 38),
+        text = Color3.fromRGB(245, 245, 245),
     }
     local statusColors = {
         ADD = Color3.fromRGB(112, 255, 188),
-        FIXED = Color3.fromRGB(92, 205, 255),
+        FIXED = Color3.fromRGB(112, 255, 188),
         REMOVED = Color3.fromRGB(255, 100, 115),
     }
     local initialTranslation = UPDATE_INFO_TRANSLATIONS.en
@@ -1706,7 +1705,7 @@ local function showUpdateInfoWindow()
     sizeConstraint.Parent = modal
 
     local modalCorner = Instance.new("UICorner")
-    modalCorner.CornerRadius = UDim.new(0, 14)
+    modalCorner.CornerRadius = UDim.new(0, 0)
     modalCorner.Parent = modal
 
     local modalStroke = Instance.new("UIStroke")
@@ -1780,17 +1779,17 @@ local function showUpdateInfoWindow()
         row.Name = "Change_" .. tostring(index)
         row.LayoutOrder = index
         row.Size = UDim2.new(1, 0, 0, 35)
-        row.BackgroundColor3 = color
+        row.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         row.BackgroundTransparency = 1
         row.BorderSizePixel = 0
         row.Parent = list
 
         local rowCorner = Instance.new("UICorner")
-        rowCorner.CornerRadius = UDim.new(0, 8)
+        rowCorner.CornerRadius = UDim.new(0, 0)
         rowCorner.Parent = row
 
         local rowStroke = Instance.new("UIStroke")
-        rowStroke.Color = color
+        rowStroke.Color = Color3.fromRGB(38, 38, 38)
         rowStroke.Thickness = 1
         rowStroke.Transparency = 1
         rowStroke.Parent = row
@@ -1816,7 +1815,7 @@ local function showUpdateInfoWindow()
     confirm.AnchorPoint = Vector2.new(0.5, 0)
     confirm.Position = UDim2.new(0.5, 0, 1, -55)
     confirm.Size = UDim2.fromOffset(180, 42)
-    confirm.BackgroundColor3 = Color3.fromRGB(20, 55, 112)
+    confirm.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     confirm.BackgroundTransparency = 1
     confirm.BorderSizePixel = 0
     confirm.Font = Enum.Font.Gotham
@@ -1828,7 +1827,7 @@ local function showUpdateInfoWindow()
     confirm.Parent = modal
 
     local confirmCorner = Instance.new("UICorner")
-    confirmCorner.CornerRadius = UDim.new(0, 10)
+    confirmCorner.CornerRadius = UDim.new(0, 0)
     confirmCorner.Parent = confirm
 
     local confirmStroke = Instance.new("UIStroke")
