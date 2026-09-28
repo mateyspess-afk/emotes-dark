@@ -5,19 +5,19 @@
 ]]
 
 
-local STARTUP_WEBHOOK_URL = ""
-local BUG_REPORT_WEBHOOK_URL = ""
-local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
-local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
-local BUG_REPORT_MIN_LENGTH = 20
-local BUG_REPORT_MESSAGE_LIMIT = 3800
-local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
-local BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
+STARTUP_WEBHOOK_URL = ""
+BUG_REPORT_WEBHOOK_URL = ""
+BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
+BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
+BUG_REPORT_MIN_LENGTH = 20
+BUG_REPORT_MESSAGE_LIMIT = 3800
+BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
+BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 
-local MAX_FIELD_LENGTH = 1024
-local MAX_BIO_LENGTH = 150
+MAX_FIELD_LENGTH = 1024
+MAX_BIO_LENGTH = 150
 
-local function emotesDarkExecutorEnv()
+function emotesDarkExecutorEnv()
     if type(getgenv) == "function" then
         local ok, env = pcall(getgenv)
         if ok and type(env) == "table" then return env end
@@ -25,13 +25,13 @@ local function emotesDarkExecutorEnv()
     return _G
 end
 
-local function emotesDarkReadField(object, key)
+function emotesDarkReadField(object, key)
     if object == nil then return nil end
     local ok, value = pcall(function() return object[key] end)
     return ok and value or nil
 end
 
-local function emotesDarkGetRequest()
+function emotesDarkGetRequest()
     local env = emotesDarkExecutorEnv()
     local candidates = {
         http_request,
@@ -47,7 +47,7 @@ local function emotesDarkGetRequest()
     return nil
 end
 
-local function emotesDarkNotify(payload)
+function emotesDarkNotify(payload)
     local notify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
     if type(notify) == "function" then
         pcall(notify, payload)
@@ -56,20 +56,20 @@ local function emotesDarkNotify(payload)
     end
 end
 
-local function emotesDarkResponseBody(response)
+function emotesDarkResponseBody(response)
     if type(response) == "string" then return response end
     if type(response) ~= "table" then return nil end
     return response.Body or response.body or response.Data or response.data
 end
 
-local function emotesDarkUsableBody(body)
+function emotesDarkUsableBody(body)
     if type(body) ~= "string" or body == "" then return nil end
     local prefix = body:sub(1, 256):lower()
     if prefix:find("<!doctype") or prefix:find("<html") or prefix:find("<head") then return nil end
     return body
 end
 
-local function emotesDarkDownload(url)
+function emotesDarkDownload(url)
     if type(url) ~= "string" or url == "" then return nil end
 
     local client = emotesDarkGetRequest()
@@ -98,20 +98,20 @@ local function emotesDarkDownload(url)
     return nil
 end
 
-local function auditTruncate(value, limit)
+function auditTruncate(value, limit)
     value = tostring(value or "")
     if #value <= limit then return value end
     return value:sub(1, math.max(1, limit - 3)) .. "..."
 end
 
-local function auditSafe(value)
+function auditSafe(value)
     value = tostring(value or "")
     value = value:gsub("@everyone", "@ everyone")
     value = value:gsub("@here", "@ here")
     return value
 end
 
-local function auditJson(url)
+function auditJson(url)
     local ok, body = pcall(function()
         return emotesDarkDownload(url)
     end)
@@ -124,7 +124,7 @@ local function auditJson(url)
     return nil
 end
 
-local function auditAge(isoDate)
+function auditAge(isoDate)
     if not isoDate then return "Desconhecida", 0, 0, 0 end
 
     local year, month, day = isoDate:match("(%d+)-(%d+)-(%d+)")
@@ -139,7 +139,7 @@ local function auditAge(isoDate)
     return string.format("%02d/%02d/%04d", day, month, year), days, years, remaining
 end
 
-local function auditAgeText(days, years, remaining)
+function auditAgeText(days, years, remaining)
     if days <= 0 then return "Conta nova" end
     if years > 0 then
         return string.format("%d ano%s e %d dia%s", years, years ~= 1 and "s" or "", remaining, remaining ~= 1 and "s" or "")
@@ -148,7 +148,7 @@ local function auditAgeText(days, years, remaining)
 end
 
 
-local function auditClientInfo()
+function auditClientInfo()
     local UserInputServiceLocal = game:GetService("UserInputService")
     local device = "Mobile"
     local input = "Touch"
@@ -189,7 +189,7 @@ local function auditClientInfo()
     return device, platform, input, resolution, graphics
 end
 
-local function sendCompleteStartupLog()
+function sendCompleteStartupLog()
     if STARTUP_WEBHOOK_URL == "" then
         warn("[EmotesAudit] Configure STARTUP_WEBHOOK_URL numa cópia local do script.")
         return
@@ -433,7 +433,7 @@ local SoundService = game:GetService("SoundService")
 local request = emotesDarkGetRequest()
 
 -- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
-local OWNER_USER_IDS = {
+OWNER_USER_IDS = {
     [10956940752] = true,
 }
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
@@ -1435,6 +1435,7 @@ emotesDarkNotify = function(data)
 end
 getgenv().Notify = emotesDarkNotify
 
+do
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
 
@@ -1573,7 +1574,7 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     end)
 end
 
-local function getExperienceOwnerUserId()
+function getExperienceOwnerUserId()
     local creatorType = game.CreatorType
     if creatorType == Enum.CreatorType.User then
         return tonumber(game.CreatorId)
@@ -1938,6 +1939,8 @@ task.spawn(function()
         task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
     end
 end)
+
+end
 
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
 if type(SettingsLib) ~= "table" or type(SettingsLib.CreateTab) ~= "function" then
