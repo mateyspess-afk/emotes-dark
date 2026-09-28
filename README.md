@@ -49,7 +49,13 @@ Esta versão foi reestruturada a partir da ideia do script de referência indica
 
 O script agora inclui um botão com a textura 125710311764143 acima do botão de engrenagem. A janela só abre para o dono da experiência ou para um UserId listado em OWNER_USER_IDS; outros usuários recebem a mensagem em português e inglês.
 
-As ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. Configure EMOTES_DARK_OWNER_API no ambiente do executor para a URL base do bridge. O script usa:
+As ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. O script já usa automaticamente esta URL pública do bridge:
+
+```lua
+getgenv().EMOTES_DARK_OWNER_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
+```
+
+Se precisar trocar o bridge, sobrescreva `EMOTES_DARK_OWNER_API` antes de executar o script. O script usa:
 
 - POST /clients/register para registrar usuários que estão executando o script.
 - POST /commands para enviar comandos do owner.
