@@ -1598,6 +1598,7 @@ function syncBugReportVisibility()
 end
 
 local bugReportWindow = nil
+local bugReportOverlay = nil
 local bugReportCooldownExpires = 0
 local bugReportTimerToken = 0
 
@@ -1934,6 +1935,10 @@ local function closeBugReportWindow()
         bugReportWindow:Destroy()
         bugReportWindow = nil
     end
+    if bugReportOverlay then
+        bugReportOverlay:Destroy()
+        bugReportOverlay = nil
+    end
 end
 
 local function showBugReportWindow()
@@ -1947,10 +1952,11 @@ local function showBugReportWindow()
     overlay.Size = UDim2.fromScale(1, 1)
     overlay.ZIndex = 7000
     overlay.Active = false
-    bugReportWindow = overlay
+    overlay.Visible = false
+    bugReportOverlay = overlay
 
     local card = Instance.new("Frame")
-    card.Parent = overlay
+    card.Parent = SettingsLib.UI
     card.AnchorPoint = Vector2.new(0, 0.5)
     card.Position = UDim2.new(0.08, 0, 0.5, 0)
     card.Size = UDim2.fromOffset(270, 260)
@@ -1959,6 +1965,7 @@ local function showBugReportWindow()
     card.BorderSizePixel = 0
     card.Active = true
     card.ZIndex = 7001
+    bugReportWindow = card
 
     local cardCorner = Instance.new("UICorner")
     cardCorner.CornerRadius = UDim.new(0, 10)
