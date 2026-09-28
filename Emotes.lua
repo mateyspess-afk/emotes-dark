@@ -1946,17 +1946,18 @@ local function showBugReportWindow()
     overlay.BackgroundTransparency = 1
     overlay.Size = UDim2.fromScale(1, 1)
     overlay.ZIndex = 7000
-    overlay.Active = true
+    overlay.Active = false
     bugReportWindow = overlay
 
     local card = Instance.new("Frame")
     card.Parent = overlay
     card.AnchorPoint = Vector2.new(0, 0.5)
-    card.Position = UDim2.new(0.15, 0, 0.5, 0)
-    card.Size = UDim2.fromOffset(250, 245)
-    card.BackgroundColor3 = Color3.fromRGB(40, 41, 49)
-    card.BackgroundTransparency = 0.12
+    card.Position = UDim2.new(0.08, 0, 0.5, 0)
+    card.Size = UDim2.fromOffset(270, 260)
+    card.BackgroundColor3 = Color3.fromRGB(24, 25, 31)
+    card.BackgroundTransparency = 0
     card.BorderSizePixel = 0
+    card.Active = true
     card.ZIndex = 7001
 
     local cardCorner = Instance.new("UICorner")
@@ -2085,8 +2086,8 @@ local function showBugReportWindow()
         local currentHeight = card.AbsoluteSize.Y / math.max(cardScale.Scale, 0.01)
         if viewport.X <= 0 or viewport.Y <= 0 or currentWidth <= 0 or currentHeight <= 0 then return end
 
-        local desiredWidth = math.clamp(viewport.X * 0.23, 225, 265)
-        local desiredHeight = math.clamp(viewport.Y * 0.48, 220, 250)
+        local desiredWidth = math.clamp(viewport.X * 0.25, 245, 290)
+        local desiredHeight = math.clamp(viewport.Y * 0.50, 230, 265)
         cardScale.Scale = math.min(desiredWidth / currentWidth, desiredHeight / currentHeight)
     end
 
@@ -2097,7 +2098,7 @@ local function showBugReportWindow()
         if viewport.X <= 0 then return end
 
         local margin = math.max(16, viewport.X * 0.04)
-        local desiredX = viewport.X * 0.12
+        local desiredX = viewport.X * 0.08
         local maxX = math.max(margin, viewport.X - card.AbsoluteSize.X - margin)
         desiredX = math.min(math.max(desiredX, margin), maxX)
 
