@@ -1,0 +1,13 @@
+{
+  "name": "emotes-dark-owner-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP bridge para os controles do painel Owner do Emotes Dark.",
+  "main": "owner-bridge.js",
+  "scripts": {
+    "start": "node owner-bridge.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
