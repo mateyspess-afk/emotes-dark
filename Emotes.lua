@@ -1579,6 +1579,15 @@ local function loadOwnerControlModule()
     local runOk, runError = pcall(module)
     if not runOk then warn("[Emotes Dark] OwnerControl desativado: " .. tostring(runError)) end
 end
+local ownerControlEnvironment = _G
+if type(getgenv) == "function" then
+    local ok, result = pcall(getgenv)
+    if ok and type(result) == "table" then ownerControlEnvironment = result end
+end
+if type(ownerControlEnvironment) == "table" then
+    ownerControlEnvironment.EmotesDarkOwnerControlContainer = ToggleContainer
+end
+
 task.spawn(loadOwnerControlModule)
 
 function getSettingsMainFrame()
