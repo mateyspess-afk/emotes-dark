@@ -1516,6 +1516,183 @@ for _, player in ipairs(Players:GetPlayers()) do
     task.defer(announceOwner, player, true)
 end
 
+-- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
+local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
+local EMOTES_DARK_TAG_DEFAULT_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
+local EMOTES_DARK_TAG_POLL_SECONDS = 3
+local emotesDarkTagUsers = {}
+local emotesDarkTags = {}
+local emotesDarkTagRunning = true
+local emotesDarkTagSessionId = ""
+
+do
+    local ok, generated = pcall(function()
+        return HttpService:GenerateGUID(false)
+    end)
+    emotesDarkTagSessionId = ok and tostring(generated) or (tostring(os.clock()) .. ":" .. tostring({}))
+end
+
+local function emotesDarkTagEnvironment()
+    local env = _G
+    if type(getgenv) == "function" then
+        local ok, result = pcall(getgenv)
+        if ok and type(result) == "table" then env = result end
+    end
+    return env
+end
+
+local function emotesDarkTagApiUrl()
+    local env = emotesDarkTagEnvironment()
+    local configured = env and env[EMOTES_DARK_TAG_API_ENV_NAME]
+    if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
+        return configured:gsub("/+$", "")
+    end
+    return EMOTES_DARK_TAG_DEFAULT_API
+end
+
+local function emotesDarkTagDecode(response)
+    local body = response and (response.Body or response.body)
+    if type(body) ~= "string" or body == "" then return nil end
+    local ok, decoded = pcall(function() return HttpService:JSONDecode(body) end)
+    return ok and decoded or nil
+end
+
+local function emotesDarkTagRequest(method, path, body)
+    local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request or request
+    if type(httpClient) ~= "function" then return nil end
+
+    local requestData = {
+        Url = emotesDarkTagApiUrl() .. path,
+        Method = method,
+        Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
+    }
+    if body ~= nil then requestData.Body = HttpService:JSONEncode(body) end
+
+    local ok, response = pcall(httpClient, requestData)
+    if not ok or not response then return nil end
+    local statusCode = tonumber(response.StatusCode or response.Status or response.status_code or response.statusCode)
+    if statusCode and (statusCode < 200 or statusCode >= 300) then return nil end
+    return emotesDarkTagDecode(response) or {}
+end
+
+local function emotesDarkTagClientInfo()
+    local localPlayer = Players.LocalPlayer
+    return {
+        userId = localPlayer and localPlayer.UserId or 0,
+        username = localPlayer and localPlayer.Name or "",
+        displayName = localPlayer and localPlayer.DisplayName or "",
+        gameId = tostring(game.GameId or 0),
+        placeId = tostring(game.PlaceId or 0),
+        jobId = tostring(game.JobId or ""),
+        sessionId = emotesDarkTagSessionId,
+    }
+end
+
+local function emotesDarkTagRemove(userId)
+    local key = tostring(userId or "")
+    local tag = emotesDarkTags[key]
+    if tag then pcall(function() tag:Destroy() end) end
+    emotesDarkTags[key] = nil
+end
+
+local function emotesDarkTagAttach(player)
+    if not player then return end
+    local key = tostring(player.UserId)
+    if not emotesDarkTagUsers[key] then
+        emotesDarkTagRemove(key)
+        return
+    end
+
+    local character = player.Character
+    local head = character and (character:FindFirstChild("Head") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart"))
+    if not head then return end
+
+    local existing = emotesDarkTags[key]
+    if existing and existing.Parent == head then return end
+    emotesDarkTagRemove(key)
+
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "EmotesDarkScriptTag"
+    tag.Adornee = head
+    tag.AlwaysOnTop = true
+    tag.MaxDistance = 1000
+    tag.Size = UDim2.fromOffset(130, 28)
+    tag.StudsOffset = Vector3.new(0, 3.15, 0)
+    tag.Parent = head
+
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.fromScale(1, 1)
+    label.Font = Enum.Font.GothamBold
+    label.Text = "SCRIPT ATIVO"
+    label.TextColor3 = Color3.fromRGB(105, 255, 165)
+    label.TextSize = 13
+    label.TextStrokeColor3 = Color3.fromRGB(8, 20, 14)
+    label.TextStrokeTransparency = 0.25
+    label.Parent = tag
+    emotesDarkTags[key] = tag
+end
+
+local function emotesDarkTagSync(activeClients)
+    local nextUsers = {}
+    for _, client in ipairs(activeClients or {}) do
+        if type(client) == "table" and client.userId ~= nil then
+            nextUsers[tostring(client.userId)] = client
+        end
+    end
+    emotesDarkTagUsers = nextUsers
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local key = tostring(player.UserId)
+        if emotesDarkTagUsers[key] then
+            emotesDarkTagAttach(player)
+        else
+            emotesDarkTagRemove(key)
+        end
+    end
+    for key in pairs(emotesDarkTags) do
+        if not emotesDarkTagUsers[key] then emotesDarkTagRemove(key) end
+    end
+end
+
+local function emotesDarkTagWatchPlayer(player)
+    if not player then return end
+    player.CharacterAdded:Connect(function()
+        task.defer(function() emotesDarkTagAttach(player) end)
+    end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    emotesDarkTagWatchPlayer(player)
+    task.defer(function() emotesDarkTagAttach(player) end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    emotesDarkTagRemove(player.UserId)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    emotesDarkTagWatchPlayer(player)
+end
+
+task.spawn(function()
+    while emotesDarkTagRunning and Players.LocalPlayer do
+        local info = emotesDarkTagClientInfo()
+        emotesDarkTagRequest("POST", "/clients/register", info)
+        local query = string.format(
+            "/clients/active?gameId=%s&placeId=%s&jobId=%s",
+            HttpService:UrlEncode(info.gameId),
+            HttpService:UrlEncode(info.placeId),
+            HttpService:UrlEncode(info.jobId)
+        )
+        local response = emotesDarkTagRequest("GET", query)
+        if response and type(response.clients) == "table" then
+            emotesDarkTagSync(response.clients)
+        end
+        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
+    end
+end)
+
 local SettingsLib = SafeLoad("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Settings.lua", "Settings Library")
 
 local ToggleContainer = Instance.new("Frame")
