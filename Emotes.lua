@@ -1615,8 +1615,23 @@ end
 
 local function getBugReportWebhook()
     local env = getBugReportEnvironment()
-    local webhook = env and env[BUG_REPORT_WEBHOOK_ENV_NAME]
-    return type(webhook) == "string" and webhook or ""
+
+    -- Aceita tanto getgenv().EMOTES_DARK_BUG_WEBHOOK quanto a URL editada diretamente na constante.
+    local namedWebhook = env and env.EMOTES_DARK_BUG_WEBHOOK
+    if type(namedWebhook) == "string" and namedWebhook ~= "" then
+        return namedWebhook
+    end
+
+    local configuredWebhook = env and env[BUG_REPORT_WEBHOOK_ENV_NAME]
+    if type(configuredWebhook) == "string" and configuredWebhook ~= "" then
+        return configuredWebhook
+    end
+
+    if type(BUG_REPORT_WEBHOOK_ENV_NAME) == "string" and BUG_REPORT_WEBHOOK_ENV_NAME:match("^https://discord%.com/api/webhooks/") then
+        return BUG_REPORT_WEBHOOK_ENV_NAME
+    end
+
+    return ""
 end
 
 local function getBugReportCooldownApi()
