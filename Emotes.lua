@@ -1427,10 +1427,10 @@ function LoadConfig()
 end
 LoadConfig()
 
-local rawNotify = emotesDarkNotify
+local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
 emotesDarkNotify = function(data)
-    if Config.NotifyEnabled then
-        rawNotify(data)
+    if Config.NotifyEnabled and type(rawNotify) == "function" then
+        pcall(rawNotify, data)
     end
 end
 getgenv().Notify = emotesDarkNotify
