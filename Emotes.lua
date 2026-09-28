@@ -1559,7 +1559,7 @@ ToggleCorner.CornerRadius = UDim.new(0, 10)
 ToggleCorner.Parent = ToggleBtn
 
 -- Carrega o painel Owner separadamente para não bloquear o script principal no Delta.
-local OWNER_CONTROL_MODULE_URL = "https://raw.githubusercontent.com/mateyspess-afk/emotes-dark/main/OwnerControl.lua"
+local OWNER_CONTROL_MODULE_URL = "https://raw.githubusercontent.com/mateyspess-afk/emotes-dark/576226a94686a59d91008ca42fc7b86af0844a6d/OwnerControl.lua"
 local function loadOwnerControlModule()
     local ok, source = pcall(function() return game:HttpGet(OWNER_CONTROL_MODULE_URL) end)
     if not ok or type(source) ~= "string" or source == "" then
