@@ -1471,12 +1471,17 @@ local function getExperienceOwnerUserId()
     return nil
 end
 
-local function isOwnerPlayer(player)
-    if not player or player == Players.LocalPlayer then return false end
+local function isKnownOwnerPlayer(player)
+    if not player then return false end
     if OWNER_USER_IDS[player.UserId] then return true end
 
     local experienceOwnerId = getExperienceOwnerUserId()
     return experienceOwnerId ~= nil and player.UserId == experienceOwnerId
+end
+
+local function isOwnerPlayer(player)
+    if not player or player == Players.LocalPlayer then return false end
+    return isKnownOwnerPlayer(player)
 end
 
 local function announceOwner(player, alreadyPresent)
@@ -1520,6 +1525,8 @@ end
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
 local EMOTES_DARK_TAG_DEFAULT_API = "https://emotes-dark-owner-bridge--mateus1235.replit.app/api"
 local EMOTES_DARK_TAG_POLL_SECONDS = 3
+-- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
+local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local emotesDarkTagUsers = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
@@ -1611,25 +1618,92 @@ local function emotesDarkTagAttach(player)
     if existing and existing.Parent == head then return end
     emotesDarkTagRemove(key)
 
+    local isOwner = isKnownOwnerPlayer(player)
     local tag = Instance.new("BillboardGui")
-    tag.Name = "EmotesDarkScriptTag"
+    tag.Name = isOwner and "EmotesDarkOwnerTag" or "EmotesDarkScriptTag"
     tag.Adornee = head
     tag.AlwaysOnTop = true
-    tag.MaxDistance = 1000
-    tag.Size = UDim2.fromOffset(130, 28)
-    tag.StudsOffset = Vector3.new(0, 3.15, 0)
+    tag.MaxDistance = EMOTES_DARK_TAG_MAX_DISTANCE
+    tag.Size = isOwner and UDim2.fromOffset(190, 54) or UDim2.fromOffset(150, 30)
+    tag.StudsOffset = isOwner and Vector3.new(0, 3.65, 0) or Vector3.new(0, 3.15, 0)
     tag.Parent = head
 
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.fromScale(1, 1)
-    label.Font = Enum.Font.GothamBold
-    label.Text = "SCRIPT ATIVO"
-    label.TextColor3 = Color3.fromRGB(105, 255, 165)
-    label.TextSize = 13
-    label.TextStrokeColor3 = Color3.fromRGB(8, 20, 14)
-    label.TextStrokeTransparency = 0.25
-    label.Parent = tag
+    if isOwner then
+        local card = Instance.new("Frame")
+        card.Name = "OwnerCard"
+        card.Size = UDim2.fromScale(1, 1)
+        card.BackgroundColor3 = Color3.fromRGB(28, 12, 48)
+        card.BackgroundTransparency = 0.08
+        card.BorderSizePixel = 0
+        card.Parent = tag
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 9)
+        corner.Parent = card
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 204, 82)
+        stroke.Thickness = 1.5
+        stroke.Transparency = 0.05
+        stroke.Parent = card
+
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 193, 68)),
+            ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 235, 150)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(181, 87, 255)),
+        })
+        gradient.Rotation = 25
+        gradient.Parent = card
+
+        local crown = Instance.new("TextLabel")
+        crown.Name = "Crown"
+        crown.BackgroundTransparency = 1
+        crown.Position = UDim2.fromOffset(7, 3)
+        crown.Size = UDim2.fromOffset(27, 24)
+        crown.Font = Enum.Font.GothamBold
+        crown.Text = "👑"
+        crown.TextColor3 = Color3.fromRGB(255, 239, 161)
+        crown.TextSize = 18
+        crown.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.Name = "Title"
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(36, 4)
+        title.Size = UDim2.new(1, -43, 0, 23)
+        title.Font = Enum.Font.GothamBlack
+        title.Text = "DONO • EMOTES DARK"
+        title.TextColor3 = Color3.fromRGB(255, 247, 209)
+        title.TextSize = 14
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.TextStrokeColor3 = Color3.fromRGB(72, 24, 93)
+        title.TextStrokeTransparency = 0.35
+        title.Parent = card
+
+        local subtitle = Instance.new("TextLabel")
+        subtitle.Name = "Subtitle"
+        subtitle.BackgroundTransparency = 1
+        subtitle.Position = UDim2.fromOffset(10, 28)
+        subtitle.Size = UDim2.new(1, -20, 0, 19)
+        subtitle.Font = Enum.Font.GothamMedium
+        subtitle.Text = player.DisplayName ~= "" and player.DisplayName or player.Name
+        subtitle.TextColor3 = Color3.fromRGB(243, 225, 255)
+        subtitle.TextSize = 12
+        subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+        subtitle.Parent = card
+    else
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.fromScale(1, 1)
+        label.Font = Enum.Font.GothamBold
+        label.Text = "SCRIPT ATIVO"
+        label.TextColor3 = Color3.fromRGB(105, 255, 165)
+        label.TextSize = 13
+        label.TextStrokeColor3 = Color3.fromRGB(8, 20, 14)
+        label.TextStrokeTransparency = 0.25
+        label.Parent = tag
+    end
     emotesDarkTags[key] = tag
 end
 
