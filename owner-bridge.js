@@ -12,7 +12,6 @@ const OWNER_USER_IDS = new Set(
 );
 const OWNER_CONTROL_TOKEN = String(process.env.OWNER_CONTROL_TOKEN || "").trim();
 const ALLOWED_ACTIONS = new Set([
-  "ban",
   "kick",
   "jumpscare1",
   "jumpscare2",
