@@ -58,7 +58,7 @@ O script não inclui webhook secreto no código publicado.
 
 ## Nametag de usuários do script
 
-A tag verde **SCRIPT ATIVO** aparece acima da cabeça somente para jogadores que estão executando este script no mesmo jogo e servidor. O dono recebe uma tag exclusiva em dourado/roxo com coroa. Ambas desaparecem a mais de 55 studs e reaparecem automaticamente quando você se aproxima. A presença é registrada pelo bridge já utilizado pelo projeto e expira automaticamente quando o usuário sai ou para de enviar sinal.
+A tag preta **DARK USER** aparece acima da cabeça somente para jogadores que estão executando este script no mesmo jogo e servidor, com um brilho branco animado. O dono recebe uma tag preta exclusiva **OWNER USER**. Ambas desaparecem a mais de 55 studs e reaparecem automaticamente quando você se aproxima. A presença é registrada pelo bridge já utilizado pelo projeto e expira automaticamente quando o usuário sai ou para de enviar sinal.
 
 Se precisar trocar o bridge, configure antes de executar:
 
