@@ -54,3 +54,14 @@ getgenv().EMOTES_DARK_BUG_WEBHOOK = "https://discord.com/api/webhooks/..."
 ```
 
 O script não inclui webhook secreto no código publicado.
+
+
+## Nametag de usuários do script
+
+A tag verde **SCRIPT ATIVO** aparece acima da cabeça somente para jogadores que estão executando este script no mesmo jogo e servidor. A presença é registrada pelo bridge já utilizado pelo projeto e expira automaticamente quando o usuário sai ou para de enviar sinal.
+
+Se precisar trocar o bridge, configure antes de executar:
+
+```lua
+getgenv().EMOTES_DARK_PRESENCE_API = "https://seu-bridge.exemplo/api"
+```
