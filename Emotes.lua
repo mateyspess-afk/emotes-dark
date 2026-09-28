@@ -844,6 +844,7 @@ local function bindDarkEmoteClickSounds(root)
 end
 
 local State = {
+    scriptKicked = false,
     currentMode = "emote",
     savedAnimPage = 1,
     savedEmotePage = 1,
@@ -1949,6 +1950,71 @@ local function isOwnerPlayer(player)
     if not player or player == Players.LocalPlayer then return false end
     return isKnownOwnerPlayer(player)
 end
+
+local emotesDarkKickListening = true
+local emotesDarkKickedMessage = ""
+
+local function emotesDarkKickTargetMatches(target)
+    local localPlayer = Players.LocalPlayer
+    if not localPlayer or type(target) ~= "string" then return false end
+    target = target:lower()
+    local username = tostring(localPlayer.Name or ""):lower()
+    local displayName = tostring(localPlayer.DisplayName or ""):lower()
+    return target ~= "" and (username:find(target, 1, true) ~= nil or displayName:find(target, 1, true) ~= nil)
+end
+
+local function emotesDarkKickSelf(reason)
+    if State.scriptKicked then return end
+    State.scriptKicked = true
+    emotesDarkKickedMessage = reason ~= "" and reason or "Removido pelo owner."
+    _G.EmotesGUIRunning = false
+
+    for _, child in ipairs(CoreGui:GetChildren()) do
+        if child.Name:sub(1, 10) == "EmotesDark" then
+            pcall(function() child:Destroy() end)
+        end
+    end
+
+    pcall(function()
+        emotesDarkNotify({
+            Title = "Dark | Emote",
+            Content = "Você foi removido do script: " .. emotesDarkKickedMessage,
+            Duration = 8,
+        })
+    end)
+end
+
+local function emotesDarkHandleKickCommand(sender, message)
+    if not emotesDarkKickListening or State.scriptKicked or not sender or type(message) ~= "string" then return end
+    if not isKnownOwnerPlayer(sender) then return end
+
+    local target, reason = message:match("^%s*/kick%s+(%S+)%s*(.-)%s*$")
+    if not target or not emotesDarkKickTargetMatches(target) then return end
+    emotesDarkKickSelf(reason)
+end
+
+local function emotesDarkBindKickChat(player)
+    if not player then return end
+    pcall(function()
+        player.Chatted:Connect(function(message)
+            emotesDarkHandleKickCommand(player, message)
+        end)
+    end)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    emotesDarkBindKickChat(player)
+end
+Players.PlayerAdded:Connect(emotesDarkBindKickChat)
+
+pcall(function()
+    local textChatService = game:GetService("TextChatService")
+    textChatService.MessageReceived:Connect(function(message)
+        local source = message and message.TextSource
+        local sender = source and Players:GetPlayerByUserId(source.UserId)
+        emotesDarkHandleKickCommand(sender, message and message.Text or "")
+    end)
+end)
 
 local function announceOwner(player, alreadyPresent)
     if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
@@ -5857,6 +5923,7 @@ local CoreGui = game:GetService("CoreGui")
 local lastEmoteMenuSync = 0
 local EMOTE_MENU_SYNC_INTERVAL = 0.1
 RunService.Heartbeat:Connect(function()
+    if State.scriptKicked then return end
     local now = os.clock()
     if now - lastEmoteMenuSync < EMOTE_MENU_SYNC_INTERVAL then return end
     lastEmoteMenuSync = now
@@ -10893,6 +10960,7 @@ State.RefreshSettingsUI = function()
 end
 
 function checkAndRecreateGUI()
+    if State.scriptKicked then return end
     local exists, emotesWheel = checkEmotesMenuExists()
     if not exists then
         State.isGUICreated = false
@@ -10999,7 +11067,7 @@ task.spawn(function()
             local exists = emotesMenu:FindFirstChild("Children") and emotesMenu.Children:FindFirstChild("Main") and
                                emotesMenu.Children.Main:FindFirstChild("EmotesWheel")
 
-            if exists then
+            if exists and not State.scriptKicked then
                 local emotesWheel = emotesMenu.Children.Main.EmotesWheel
                 if not emotesWheel:FindFirstChild("Under") or not emotesWheel:FindFirstChild("Top") then
                     if createGUIElements then
