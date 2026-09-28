@@ -1755,23 +1755,12 @@ local function emotesDarkVerifySendChat()
       end
     end
 
-    local function emotesDarkBindVerifyChat()
+    task.defer(function()
       local localPlayer = Players.LocalPlayer
-      if not localPlayer then return false end
-      local ok = pcall(function()
+      if localPlayer then
           localPlayer.Chatted:Connect(emotesDarkHandleVerifyCommand)
-      end)
-      return ok
-    end
-
-    if not emotesDarkBindVerifyChat() then
-      task.spawn(function()
-          for _ = 1, 20 do
-              if emotesDarkBindVerifyChat() then break end
-              task.wait(0.25)
-          end
-      end)
-    end
+      end
+    end)
 
     local function emotesDarkTagRemove(userId)
     local key = tostring(userId or "")
