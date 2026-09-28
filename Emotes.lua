@@ -1835,7 +1835,6 @@ local function emotesDarkTagAttach(player)
             end
         end)
     else
-        local card = Instance.ne    else
         local darkTag = Instance.new("Frame")
         darkTag.Name = "DarkUserTag"
         darkTag.Size = UDim2.fromScale(1, 1)
