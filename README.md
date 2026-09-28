@@ -43,4 +43,18 @@ O script tenta usar `Humanoid:PlayEmoteAndGetAnimTrackById` primeiro e usa `Anim
 
 ## Créditos e referência
 
-Esta versão foi reestruturada a partir da ideia do script de referência indicado pelo autor do repositório. O código foi reescrito em uma arquitetura menor, sem copiar o arquivo monolítico original.\n\n## Owner control\n\nO script agora inclui um botão com a textura 125710311764143 acima do botão de engrenagem. A janela só abre para o dono da experiência ou para um UserId listado em OWNER_USER_IDS; outros usuários recebem a mensagem em português e inglês.\n\nAs ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. Configure EMOTES_DARK_OWNER_API no ambiente do executor para a URL base do bridge. O script usa:\n\n- POST /clients/register para registrar usuários que estão executando o script.\n- POST /commands para enviar comandos do owner.\n- GET /commands/poll?userId=&gameId=&placeId=&jobId=&cursor= para entregar comandos ao cliente alvo.\n\nO bridge precisa autenticar o dono no servidor e retornar o polling como { commands = { ... }, cursor = "..." }. Cada comando usa action, targetUserId ou targetUsername e payload. Para ban permanente, envie durationMinutes = 0; para kick, payload.reason é obrigatório.\n\nUm LocalScript não consegue, sozinho, expulsar, banir ou mover outro cliente. Por isso, sem um bridge autenticado, a janela continua visível para o owner, mas mostra que a API ainda não foi configurada.
+Esta versão foi reestruturada a partir da ideia do script de referência indicado pelo autor do repositório. O código foi reescrito em uma arquitetura menor, sem copiar o arquivo monolítico original.
+
+## Owner control
+
+O script agora inclui um botão com a textura 125710311764143 acima do botão de engrenagem. A janela só abre para o dono da experiência ou para um UserId listado em OWNER_USER_IDS; outros usuários recebem a mensagem em português e inglês.
+
+As ações de ban, kick, jumpscare, mensagens, próximo player, TP, Goto e sentar usam um bridge HTTP opcional. Configure EMOTES_DARK_OWNER_API no ambiente do executor para a URL base do bridge. O script usa:
+
+- POST /clients/register para registrar usuários que estão executando o script.
+- POST /commands para enviar comandos do owner.
+- GET /commands/poll?userId=&gameId=&placeId=&jobId=&cursor= para entregar comandos ao cliente alvo.
+
+O bridge precisa autenticar o dono no servidor e retornar o polling como { commands = { ... }, cursor = "..." }. Cada comando usa action, targetUserId ou targetUsername e payload. Para ban permanente, envie durationMinutes = 0; para kick, payload.reason é obrigatório.
+
+Um LocalScript não consegue, sozinho, expulsar, banir ou mover outro cliente. Por isso, sem um bridge autenticado, a janela continua visível para o owner, mas mostra que a API ainda não foi configurada.
