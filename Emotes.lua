@@ -1962,6 +1962,10 @@ local function showBugReportWindow()
     cardCorner.CornerRadius = UDim.new(0, 10)
     cardCorner.Parent = card
 
+    local cardScale = Instance.new("UIScale")
+    cardScale.Scale = 1
+    cardScale.Parent = card
+
     local title = Instance.new("TextLabel")
     title.Parent = card
     title.BackgroundTransparency = 1
@@ -2070,6 +2074,24 @@ local function showBugReportWindow()
     local sendCorner = Instance.new("UICorner")
     sendCorner.CornerRadius = UDim.new(0, 7)
     sendCorner.Parent = send
+
+    local function fitBugReportCard()
+        if not overlay.Parent then return end
+
+        local viewport = overlay.AbsoluteSize
+        local currentWidth = card.AbsoluteSize.X / math.max(cardScale.Scale, 0.01)
+        local currentHeight = card.AbsoluteSize.Y / math.max(cardScale.Scale, 0.01)
+        if viewport.X <= 0 or viewport.Y <= 0 or currentWidth <= 0 or currentHeight <= 0 then return end
+
+        local desiredWidth = math.clamp(viewport.X * 0.26, 240, 300)
+        local desiredHeight = math.clamp(viewport.Y * 0.52, 230, 280)
+        cardScale.Scale = math.min(desiredWidth / currentWidth, desiredHeight / currentHeight)
+    end
+
+    overlay:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        task.defer(fitBugReportCard)
+    end)
+    task.defer(fitBugReportCard)
 
     local token = bugReportTimerToken + 1
     bugReportTimerToken = token
