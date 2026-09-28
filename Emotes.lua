@@ -1969,32 +1969,14 @@ local function emotesDarkKickTargetMatches(target)
 end
 
 local function emotesDarkKickSelf(reason)
-    if State.scriptKicked then return end
-    State.scriptKicked = true
-    local kickReason = reason ~= "" and reason or "Removido pelo owner."
-    _G.EmotesGUIRunning = false
-
     local localPlayer = Players.LocalPlayer
-    local kickMessage = "Dark | Emote\nVocê foi expulso do servidor pelo owner.\nMotivo: " .. kickReason
-    local kicked = pcall(function()
-        if localPlayer then localPlayer:Kick(kickMessage) end
-    end)
+    if not localPlayer then return end
 
-    if not kicked then
-        emotesDarkKickedMessage = kickReason
-        for _, child in ipairs(CoreGui:GetChildren()) do
-            if child.Name:sub(1, 10) == "EmotesDark" then
-                pcall(function() child:Destroy() end)
-            end
-        end
-        pcall(function()
-            emotesDarkNotify({
-                Title = "Dark | Emote",
-                Content = "Você foi removido do script: " .. kickReason,
-                Duration = 8,
-            })
-        end)
-    end
+    local kickReason = reason ~= "" and reason or "Removido pelo owner."
+    local kickMessage = "Dark | Emote\nVocê foi expulso do servidor pelo owner.\nMotivo: " .. kickReason
+    pcall(function()
+        localPlayer:Kick(kickMessage)
+    end)
 end
 
 local function emotesDarkHandleKickCommand(sender, message)
