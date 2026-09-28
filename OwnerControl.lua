@@ -50,6 +50,7 @@ OwnerCorner.CornerRadius = UDim.new(0, 10)
 OwnerCorner.Parent = OwnerBtn
 
 local OWNER_CONTROL_API_ENV_NAME = "EMOTES_DARK_OWNER_API"
+local OWNER_CONTROL_TOKEN_ENV_NAME = "EMOTES_DARK_OWNER_TOKEN"
 local OWNER_CONTROL_BUTTON_IMAGE = "rbxassetid://125710311764143"
 local OWNER_CONTROL_POLL_SECONDS = 3
 local OwnerControlHttpService = game:GetService("HttpService")
@@ -82,12 +83,26 @@ local function ownerControlApiUrl()
     return ownerControlTrim(value):gsub("/+$", "")
 end
 
+local function ownerControlToken()
+    local env = ownerControlEnvironment()
+    local value = env and env[OWNER_CONTROL_TOKEN_ENV_NAME]
+    return type(value) == "string" and ownerControlTrim(value) or ""
+end
+
 local function ownerControlIsLocalOwner()
     local localPlayer = Players.LocalPlayer
     if not localPlayer then return false end
     if OWNER_USER_IDS[localPlayer.UserId] then return true end
     local experienceOwnerId = getExperienceOwnerUserId()
     return experienceOwnerId ~= nil and localPlayer.UserId == experienceOwnerId
+end
+
+local function ownerControlCurrentPosition()
+    local character = Players.LocalPlayer and Players.LocalPlayer.Character
+    local root = character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    if not root then return nil end
+    local position = root.Position
+    return { x = position.X, y = position.Y, z = position.Z }
 end
 
 local function ownerControlDecode(response)
@@ -104,10 +119,17 @@ local function ownerControlRequest(method, path, body)
     local httpClient = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or request
     if type(httpClient) ~= "function" then return nil, "O executor não disponibilizou request()." end
 
+    local headers = {
+        ["Content-Type"] = "application/json",
+        ["Accept"] = "application/json",
+    }
+    local token = ownerControlToken()
+    if token ~= "" then headers["X-Owner-Token"] = token end
+
     local requestData = {
         Url = api .. path,
         Method = method,
-        Headers = { ["Content-Type"] = "application/json" },
+        Headers = headers,
     }
     if body ~= nil then requestData.Body = OwnerControlHttpService:JSONEncode(body) end
 
@@ -246,6 +268,7 @@ local function ownerControlClientInfo()
         gameId = game.GameId,
         placeId = game.PlaceId,
         jobId = game.JobId,
+        position = ownerControlCurrentPosition(),
         isOwner = ownerControlIsLocalOwner(),
     }
 end
@@ -398,10 +421,9 @@ local function ownerControlStartPolling()
     if ownerControlPollRunning or ownerControlApiUrl() == "" then return end
     ownerControlPollRunning = true
     task.spawn(function()
-        local localPlayer = Players.LocalPlayer
-        if localPlayer then ownerControlRequest("POST", "/clients/register", ownerControlClientInfo()) end
         while ownerControlPollRunning and Players.LocalPlayer do
             local info = ownerControlClientInfo()
+            ownerControlRequest("POST", "/clients/register", info)
             local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&cursor=%s", tostring(info.userId), tostring(info.gameId), tostring(info.placeId), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlCursor))
             local response = ownerControlRequest("GET", query)
             if response then
@@ -411,7 +433,7 @@ local function ownerControlStartPolling()
                 end
                 if response.cursor ~= nil then ownerControlCursor = tostring(response.cursor) end
             end
-            task.wait(OWNER_CONTROL_POLL_SECONDS)
+                task.wait(OWNER_CONTROL_POLL_SECONDS)
         end
     end)
 end
