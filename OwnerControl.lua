@@ -682,15 +682,21 @@ local function ownerControlStartPolling()
         while ownerControlPollRunning and Players.LocalPlayer do
             local info = ownerControlClientInfo()
             ownerControlRequest("POST", "/clients/register", info)
-            local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&sessionId=%s&cursor=%s", tostring(info.userId), tostring(info.gameId), tostring(info.placeId), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlSessionId), OwnerControlHttpService:UrlEncode(ownerControlCursor))
+            local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&sessionId=%s&cursor=%s", OwnerControlHttpService:UrlEncode(tostring(info.userId)), OwnerControlHttpService:UrlEncode(tostring(info.gameId)), OwnerControlHttpService:UrlEncode(tostring(info.placeId)), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlSessionId), OwnerControlHttpService:UrlEncode(ownerControlCursor))
             local response = ownerControlRequest("GET", query)
             if response then
                 local commands = response.commands or response.data or {}
                 if type(commands) == "table" then
                     for _, command in ipairs(commands) do ownerControlApplyCommand(command) end
                 end
-                if type(response.activeClients) == "table" then
-                    ownerControlSyncScriptTags(response.activeClients)
+                local activeClients = response.activeClients
+                if type(activeClients) ~= "table" then
+                    local activeQuery = string.format("/clients/active?gameId=%s&placeId=%s&jobId=%s", OwnerControlHttpService:UrlEncode(tostring(info.gameId)), OwnerControlHttpService:UrlEncode(tostring(info.placeId)), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")))
+                    local activeResponse = ownerControlRequest("GET", activeQuery)
+                    activeClients = activeResponse and activeResponse.clients
+                end
+                if type(activeClients) == "table" then
+                    ownerControlSyncScriptTags(activeClients)
                 end
                 if response.cursor ~= nil then ownerControlCursor = tostring(response.cursor) end
             end
