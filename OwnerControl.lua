@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
 local request = http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request) or (getgenv and getgenv().request) or _G.request
 local OWNER_USER_IDS = { [10956940752] = true }
 
@@ -79,6 +80,8 @@ local ownerControlStatus = nil
 local ownerControlTargetInput = nil
 local ownerControlReasonInput = nil
 local ownerControlMessageInput = nil
+local ownerControlNotificationGui = nil
+local ownerControlActiveJumpscare = nil
 local ownerControlPollRunning = false
 local ownerControlCursor = ""
 
@@ -232,6 +235,47 @@ local function ownerControlMakeButton(parent, text, position, size, callback, ac
     return button
 end
 
+local function ownerControlShowNotification(title, content, duration, accent)
+    if ownerControlNotificationGui then
+        ownerControlNotificationGui:Destroy()
+        ownerControlNotificationGui = nil
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EmotesDarkOwnerNotification"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = true
+    gui.DisplayOrder = 10000
+    ownerControlGuiParent(gui)
+    ownerControlNotificationGui = gui
+
+    local card = Instance.new("Frame")
+    card.AnchorPoint = Vector2.new(1, 0)
+    card.Position = UDim2.new(1, -18, 0, 18)
+    card.Size = UDim2.fromOffset(360, 86)
+    card.BackgroundColor3 = Color3.fromRGB(20, 21, 29)
+    card.BorderSizePixel = 0
+    card.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = card
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = accent or Color3.fromRGB(165, 95, 255)
+    stroke.Transparency = 0.1
+    stroke.Thickness = 2
+    stroke.Parent = card
+
+    ownerControlMakeLabel(card, tostring(title or "Owner"), UDim2.fromOffset(16, 9), UDim2.new(1, -32, 0, 22), 14, accent or Color3.fromRGB(215, 175, 255))
+    ownerControlMakeLabel(card, tostring(content or ""), UDim2.fromOffset(16, 34), UDim2.new(1, -32, 0, 38), 12, Color3.fromRGB(238, 239, 245))
+
+    local lifetime = math.max(1, tonumber(duration) or 5)
+    task.delay(lifetime, function()
+        if gui and gui.Parent then gui:Destroy() end
+        if ownerControlNotificationGui == gui then ownerControlNotificationGui = nil end
+    end)
+end
+
 local function ownerControlDestroyWindow()
     if ownerControlWindow then ownerControlWindow:Destroy() end
     ownerControlWindow = nil
@@ -359,56 +403,158 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
     ownerControlSetStatus("Comando enviado: " .. action .. targetSuffix, Color3.fromRGB(135, 230, 165))
 end
 
+local function ownerControlStopJumpscare()
+    local state = ownerControlActiveJumpscare
+    if not state or state.cleaned then return end
+    state.cleaned = true
+    state.stopped = true
+    if state.gui then pcall(function() state.gui:Destroy() end) end
+    for _, sound in ipairs(state.sounds or {}) do pcall(function() sound:Stop(); sound:Destroy() end) end
+    for _, effect in ipairs(state.effects or {}) do pcall(function() effect:Destroy() end) end
+    if state.camera and state.oldFieldOfView then pcall(function() state.camera.FieldOfView = state.oldFieldOfView end) end
+    if ownerControlActiveJumpscare == state then ownerControlActiveJumpscare = nil end
+end
+
 local function ownerControlCreateJumpscare(level, payload)
+    ownerControlStopJumpscare()
+    level = math.clamp(tonumber(level) or 1, 1, 3)
+    payload = type(payload) == "table" and payload or {}
+
+    local state = { sounds = {}, effects = {}, stopped = false, cleaned = false }
     local gui = Instance.new("ScreenGui")
     gui.Name = "EmotesDarkJumpscare"
     gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false
+    gui.ResetOnSpawn = true
+    gui.DisplayOrder = 10001
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     ownerControlGuiParent(gui)
+    state.gui = gui
+    ownerControlActiveJumpscare = state
 
     local overlay = Instance.new("Frame")
     overlay.Size = UDim2.fromScale(1, 1)
-    overlay.BackgroundColor3 = Color3.fromRGB(10, 0, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(48, 0, 0)
+    overlay.BackgroundTransparency = 0.08
     overlay.BorderSizePixel = 0
+    overlay.ZIndex = 100
     overlay.Parent = gui
 
-    local flash = Instance.new("TextLabel")
-    flash.AnchorPoint = Vector2.new(0.5, 0.5)
-    flash.Position = UDim2.fromScale(0.5, 0.5)
-    flash.Size = UDim2.fromScale(0.8, 0.35)
-    flash.BackgroundTransparency = 1
-    flash.Font = Enum.Font.GothamBlack
-    flash.Text = level >= 3 and "DARK" or "!"
-    flash.TextColor3 = Color3.fromRGB(255, 35, 35)
-    flash.TextScaled = true
-    flash.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    flash.TextStrokeTransparency = 0
-    flash.Rotation = 0
-    flash.Parent = overlay
+    local topBar = Instance.new("Frame")
+    topBar.Size = UDim2.new(1, 0, 0, 42)
+    topBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    topBar.BackgroundTransparency = 0.05
+    topBar.BorderSizePixel = 0
+    topBar.ZIndex = 110
+    topBar.Parent = gui
+    local bottomBar = topBar:Clone()
+    bottomBar.Position = UDim2.new(0, 0, 1, -42)
+    bottomBar.Parent = gui
 
-    local sound
-    if level >= 2 then
-        sound = Instance.new("Sound")
-        sound.SoundId = (payload and payload.soundId) or "rbxasset://sounds/electronicpingshort.wav"
-        sound.Volume = level >= 3 and 10 or 7
-        sound.PlaybackSpeed = level >= 3 and 0.72 or 1.05
-        sound.Parent = SoundService
-        sound:Play()
+    local flash = Instance.new("Frame")
+    flash.Size = UDim2.fromScale(1, 1)
+    flash.BackgroundColor3 = Color3.fromRGB(255, 12, 12)
+    flash.BackgroundTransparency = 0.85
+    flash.BorderSizePixel = 0
+    flash.ZIndex = 120
+    flash.Parent = gui
+
+    local headline = Instance.new("TextLabel")
+    headline.AnchorPoint = Vector2.new(0.5, 0.5)
+    headline.Position = UDim2.fromScale(0.5, 0.49)
+    headline.Size = UDim2.fromScale(0.9, 0.25)
+    headline.BackgroundTransparency = 1
+    headline.Font = Enum.Font.GothamBlack
+    headline.Text = level == 1 and "!" or (level == 2 and "VOCÊ FOI MARCADO" or "DARK")
+    headline.TextColor3 = Color3.fromRGB(255, 30, 30)
+    headline.TextScaled = true
+    headline.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    headline.TextStrokeTransparency = 0
+    headline.ZIndex = 130
+    headline.Parent = gui
+
+    local subline = Instance.new("TextLabel")
+    subline.AnchorPoint = Vector2.new(0.5, 0.5)
+    subline.Position = UDim2.fromScale(0.5, 0.67)
+    subline.Size = UDim2.fromScale(0.8, 0.08)
+    subline.BackgroundTransparency = 1
+    subline.Font = Enum.Font.GothamBold
+    subline.Text = level >= 3 and "OWNER CONTROL // NÃO OLHE PARA TRÁS" or "OWNER CONTROL"
+    subline.TextColor3 = Color3.fromRGB(245, 220, 220)
+    subline.TextScaled = true
+    subline.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    subline.TextStrokeTransparency = 0.25
+    subline.ZIndex = 130
+    subline.Parent = gui
+
+    local bars = {}
+    for _ = 1, (level == 3 and 18 or 10) do
+        local bar = Instance.new("Frame")
+        bar.BackgroundColor3 = math.random() > 0.35 and Color3.fromRGB(255, 20, 20) or Color3.fromRGB(235, 235, 235)
+        bar.BorderSizePixel = 0
+        bar.ZIndex = 125
+        bar.Parent = gui
+        table.insert(bars, bar)
     end
 
-    local duration = level == 1 and 1.1 or (level == 2 and 1.8 or 3.0)
+    local blur = Instance.new("BlurEffect")
+    blur.Name = "EmotesDarkOwnerJumpscareBlur"
+    blur.Size = level == 1 and 8 or (level == 2 and 18 or 30)
+    blur.Parent = Lighting
+    table.insert(state.effects, blur)
+    local color = Instance.new("ColorCorrectionEffect")
+    color.Name = "EmotesDarkOwnerJumpscareColor"
+    color.TintColor = Color3.fromRGB(255, 80, 80)
+    color.Contrast = level == 3 and 0.65 or 0.35
+    color.Saturation = -0.2
+    color.Parent = Lighting
+    table.insert(state.effects, color)
+
+    local camera = workspace.CurrentCamera
+    if camera then
+        state.camera = camera
+        state.oldFieldOfView = camera.FieldOfView
+        camera.FieldOfView = math.min(120, state.oldFieldOfView + (level == 3 and 25 or 14))
+    end
+
+    local soundId = type(payload.soundId) == "string" and payload.soundId ~= "" and payload.soundId or "rbxasset://sounds/electronicpingshort.wav"
+    local function addSound(delayTime, playbackSpeed, volume)
+        task.delay(delayTime, function()
+            if state.stopped or not gui.Parent then return end
+            local sound = Instance.new("Sound")
+            sound.Name = "EmotesDarkOwnerJumpscareSound"
+            sound.SoundId = soundId
+            sound.Volume = volume
+            sound.PlaybackSpeed = playbackSpeed
+            sound.Parent = SoundService
+            table.insert(state.sounds, sound)
+            sound:Play()
+        end)
+    end
+    addSound(0, level == 3 and 0.58 or 0.9, level == 3 and 10 or 7)
+    if level >= 2 then addSound(0.16, level == 3 and 1.35 or 1.12, level == 3 and 7 or 5) end
+
+    local duration = level == 1 and 1.7 or (level == 2 and 2.6 or 4.2)
     task.spawn(function()
         local started = os.clock()
-        while gui.Parent and os.clock() - started < duration do
-            local intensity = level == 1 and 0.16 or (level == 2 and 0.3 or 0.55)
-            overlay.BackgroundColor3 = Color3.fromRGB(math.random(5, 90), 0, 0)
+        while not state.stopped and gui.Parent and os.clock() - started < duration do
+            local shake = level == 3 and 20 or (level == 2 and 12 or 7)
+            local intensity = level == 3 and 0.38 or (level == 2 and 0.27 or 0.18)
+            overlay.BackgroundColor3 = Color3.fromRGB(math.random(15, 110), 0, 0)
             overlay.BackgroundTransparency = math.random() * intensity
-            flash.Rotation = level >= 3 and math.random(-18, 18) or math.random(-4, 4)
-            flash.Position = UDim2.fromScale(0.5 + (math.random(-8, 8) / 100), 0.5 + (math.random(-8, 8) / 100))
-            task.wait(level >= 3 and 0.055 or 0.12)
+            flash.BackgroundTransparency = math.random() * (level == 3 and 0.8 or 0.92)
+            headline.Rotation = math.random(-shake, shake)
+            headline.Position = UDim2.fromScale(0.5 + math.random(-shake, shake) / 300, 0.49 + math.random(-shake, shake) / 500)
+            headline.TextTransparency = math.random() > 0.78 and 0.7 or 0
+            subline.Position = UDim2.fromScale(0.5 + math.random(-shake, shake) / 500, 0.67)
+            for _, bar in ipairs(bars) do
+                bar.Visible = math.random() > 0.25
+                bar.Position = UDim2.fromScale(math.random(-10, 90) / 100, math.random(8, 92) / 100)
+                bar.Size = UDim2.fromOffset(math.random(30, 260), math.random(2, level == 3 and 14 or 8))
+                bar.BackgroundTransparency = math.random() * 0.35
+            end
+            task.wait(level == 3 and 0.045 or 0.075)
         end
-        if sound then sound:Destroy() end
-        if gui then gui:Destroy() end
+        ownerControlStopJumpscare()
     end)
 end
 
@@ -418,16 +564,17 @@ local function ownerControlApplyCommand(command)
     local payload = type(command.payload) == "table" and command.payload or {}
 
     if action == "message" or action == "global_message" then
-        local notify = type(getgenv) == "function" and getgenv().Notify
-        if type(notify) == "function" then
-            notify({ Title = action == "global_message" and "Mensagem global" or "Mensagem do owner", Content = tostring(payload.message or command.message or ""), Duration = tonumber(payload.duration) or 8 })
-        end
+        ownerControlShowNotification(
+            action == "global_message" and "Mensagem global" or "Mensagem do owner",
+            tostring(payload.message or command.message or ""),
+            tonumber(payload.duration) or 8,
+            action == "global_message" and Color3.fromRGB(70, 210, 150) or Color3.fromRGB(80, 170, 220)
+        )
     elseif action == "jumpscare1" or action == "jumpscare2" or action == "jumpscare3" then
         ownerControlCreateJumpscare(tonumber(action:sub(-1)) or 1, payload)
     elseif action == "kick" then
         local reason = ownerControlTrim(payload.reason or command.reason or "Ação do owner")
-        local notify = type(getgenv) == "function" and getgenv().Notify
-        if type(notify) == "function" then notify({ Title = "Kick: ", Content = reason, Duration = 5 }) end
+        ownerControlShowNotification("Kick", reason, 5, Color3.fromRGB(255, 90, 90))
         task.delay(0.35, function()
             local localPlayer = Players.LocalPlayer
             if localPlayer then localPlayer:Kick(reason) end
@@ -448,8 +595,7 @@ local function ownerControlApplyCommand(command)
             ownerControlTargetInput.Text = tostring(nextTarget.userId or nextTarget.username or "")
             ownerControlSetStatus("Próximo player selecionado: " .. tostring(nextTarget.displayName or nextTarget.username or nextTarget.userId or ""), Color3.fromRGB(135, 230, 165))
         else
-            local notify = type(getgenv) == "function" and getgenv().Notify
-            if type(notify) == "function" then notify({ Title = "Próximo player", Content = "O bridge não encontrou um alvo disponível.", Duration = 4 }) end
+            ownerControlShowNotification("Próximo player", "O bridge não encontrou um alvo disponível.", 4, Color3.fromRGB(255, 175, 95))
         end
     end
 end
