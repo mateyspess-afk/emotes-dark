@@ -77,7 +77,6 @@ local OwnerControlHttpService = game:GetService("HttpService")
 local ownerControlWindow = nil
 local ownerControlStatus = nil
 local ownerControlTargetInput = nil
-local ownerControlDurationInput = nil
 local ownerControlReasonInput = nil
 local ownerControlMessageInput = nil
 local ownerControlPollRunning = false
@@ -238,7 +237,6 @@ local function ownerControlDestroyWindow()
     ownerControlWindow = nil
     ownerControlStatus = nil
     ownerControlTargetInput = nil
-    ownerControlDurationInput = nil
     ownerControlReasonInput = nil
     ownerControlMessageInput = nil
 end
@@ -307,16 +305,10 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
 
     local reason = ownerControlTrim(ownerControlReasonInput and ownerControlReasonInput.Text or "")
     if needsReason and reason == "" then
-        ownerControlSetStatus("O motivo é obrigatório para kick e ban.", Color3.fromRGB(255, 150, 150))
+        ownerControlSetStatus("O motivo é obrigatório para kick.", Color3.fromRGB(255, 150, 150))
         return
     end
 
-    local durationMinutes = tonumber(ownerControlTrim(ownerControlDurationInput and ownerControlDurationInput.Text or "")) or 0
-    if action == "ban" and durationMinutes < 0 then
-        ownerControlSetStatus("A duração do ban deve ser 0 (permanente) ou maior que 0 minutos.", Color3.fromRGB(255, 150, 150))
-        return
-    end
-    durationMinutes = math.floor(durationMinutes)
 
     local message = ownerControlTrim(ownerControlMessageInput and ownerControlMessageInput.Text or "")
     if needsMessage and message == "" then
@@ -327,7 +319,6 @@ local function ownerControlSubmit(action, needsTarget, needsReason, needsMessage
     local payload = extra or {}
     payload.reason = reason
     payload.message = message
-    payload.durationMinutes = durationMinutes
 
     local command = ownerControlClientInfo()
     command.action = action
@@ -412,11 +403,10 @@ local function ownerControlApplyCommand(command)
         end
     elseif action == "jumpscare1" or action == "jumpscare2" or action == "jumpscare3" then
         ownerControlCreateJumpscare(tonumber(action:sub(-1)) or 1, payload)
-    elseif action == "kick" or action == "ban" then
+    elseif action == "kick" then
         local reason = ownerControlTrim(payload.reason or command.reason or "Ação do owner")
-        local banText = action == "ban" and "Ban aplicado: " or "Kick: "
         local notify = type(getgenv) == "function" and getgenv().Notify
-        if type(notify) == "function" then notify({ Title = banText, Content = reason, Duration = 5 }) end
+        if type(notify) == "function" then notify({ Title = "Kick: ", Content = reason, Duration = 5 }) end
         task.delay(0.35, function()
             local localPlayer = Players.LocalPlayer
             if localPlayer then localPlayer:Kick(reason) end
@@ -493,19 +483,17 @@ local function ownerControlOpen()
     cardStroke.Parent = card
 
     local title = ownerControlMakeLabel(card, "👑 OWNER CONTROL", UDim2.fromOffset(20, 14), UDim2.new(1, -80, 0, 30), 18, Color3.fromRGB(205, 165, 255))
-    ownerControlMakeLabel(card, "Alvo precisa estar online e executar o script; TP/Goto precisam de posição. Kick/Ban exigem motivo.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
+    ownerControlMakeLabel(card, "Alvo precisa estar online e executar o script; TP/Goto precisam de posição. Kick exige motivo.", UDim2.fromOffset(20, 43), UDim2.new(1, -40, 0, 22), 11, Color3.fromRGB(160, 165, 180))
     ownerControlMakeButton(card, "×", UDim2.new(1, -52, 0, 14), UDim2.fromOffset(32, 28), ownerControlDestroyWindow, Color3.fromRGB(70, 40, 53))
 
-    ownerControlTargetInput = ownerControlMakeInput(card, "Nome de usuário ou UserId do usuário", UDim2.fromOffset(20, 78), UDim2.new(0.62, -25, 0, 34))
-    ownerControlDurationInput = ownerControlMakeInput(card, "Minutos: 0 = permanente", UDim2.new(0.62, 5, 0, 78), UDim2.new(0.38, -25, 0, 34))
-    ownerControlReasonInput = ownerControlMakeInput(card, "Motivo obrigatório para kick/ban", UDim2.fromOffset(20, 120), UDim2.new(0.62, -25, 0, 34))
+    ownerControlTargetInput = ownerControlMakeInput(card, "Nome de usuário ou UserId do usuário", UDim2.fromOffset(20, 78), UDim2.new(1, -40, 0, 34))
+    ownerControlReasonInput = ownerControlMakeInput(card, "Motivo obrigatório para kick", UDim2.fromOffset(20, 120), UDim2.new(0.62, -25, 0, 34))
     ownerControlMessageInput = ownerControlMakeInput(card, "Mensagem para o usuário ou global", UDim2.new(0.62, 5, 0, 120), UDim2.new(0.38, -25, 0, 34))
 
-    ownerControlMakeButton(card, "BAN", UDim2.fromOffset(20, 174), UDim2.fromOffset(105, 32), function() ownerControlSubmit("ban", true, true, false) end, Color3.fromRGB(116, 47, 67))
-    ownerControlMakeButton(card, "KICK", UDim2.fromOffset(135, 174), UDim2.fromOffset(105, 32), function() ownerControlSubmit("kick", true, true, false) end, Color3.fromRGB(145, 76, 56))
-    ownerControlMakeButton(card, "JUMPSCARE 1", UDim2.fromOffset(250, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare1", true, false, false) end, Color3.fromRGB(65, 67, 95))
-    ownerControlMakeButton(card, "JUMPSCARE 2", UDim2.fromOffset(375, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare2", true, false, false) end, Color3.fromRGB(79, 60, 102))
-    ownerControlMakeButton(card, "JUMPSCARE 3", UDim2.fromOffset(500, 174), UDim2.fromOffset(125, 32), function() ownerControlSubmit("jumpscare3", true, false, false) end, Color3.fromRGB(112, 47, 91))
+    ownerControlMakeButton(card, "KICK", UDim2.fromOffset(20, 174), UDim2.fromOffset(105, 32), function() ownerControlSubmit("kick", true, true, false) end, Color3.fromRGB(145, 76, 56))
+    ownerControlMakeButton(card, "JUMPSCARE 1", UDim2.fromOffset(135, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare1", true, false, false) end, Color3.fromRGB(65, 67, 95))
+    ownerControlMakeButton(card, "JUMPSCARE 2", UDim2.fromOffset(260, 174), UDim2.fromOffset(115, 32), function() ownerControlSubmit("jumpscare2", true, false, false) end, Color3.fromRGB(79, 60, 102))
+    ownerControlMakeButton(card, "JUMPSCARE 3", UDim2.fromOffset(385, 174), UDim2.fromOffset(125, 32), function() ownerControlSubmit("jumpscare3", true, false, false) end, Color3.fromRGB(112, 47, 91))
 
     ownerControlMakeButton(card, "ENVIAR MENSAGEM", UDim2.fromOffset(20, 220), UDim2.fromOffset(160, 32), function() ownerControlSubmit("message", true, false, true) end, Color3.fromRGB(47, 94, 112))
     ownerControlMakeButton(card, "MENSAGEM GLOBAL", UDim2.fromOffset(190, 220), UDim2.fromOffset(160, 32), function() ownerControlSubmit("global_message", false, false, true) end, Color3.fromRGB(43, 111, 93))
@@ -528,7 +516,7 @@ local function ownerControlOpen()
         end
     end)
     ownerControlMakeLabel(card, "Ações remotas são aceitas somente pelo bridge configurado. O servidor deve validar o UserId real do dono.", UDim2.fromOffset(20, 365), UDim2.new(1, -40, 0, 45), 11, Color3.fromRGB(150, 155, 170))
-    ownerControlMakeLabel(card, "BAN: duração em minutos; 0 = permanente • KICK: motivo obrigatório • Jumpscare 2 usa áudio e 3 usa efeito intenso.", UDim2.fromOffset(20, 420), UDim2.new(1, -40, 0, 40), 11, Color3.fromRGB(150, 155, 170))
+    ownerControlMakeLabel(card, "KICK: motivo obrigatório • Jumpscare 2 usa áudio e 3 usa efeito intenso.", UDim2.fromOffset(20, 420), UDim2.new(1, -40, 0, 40), 11, Color3.fromRGB(150, 155, 170))
 
     local dragging = false
     local dragStart, startPosition, dragInput
