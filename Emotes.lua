@@ -441,7 +441,8 @@ local function pickSoundId(soundIds)
 end
 
 local function playDarkEmoteSound(kind)
-    local soundIds = kind == "click" and CLICK_SOUND_IDS
+    local soundIds = kind == "startup" and STARTUP_SOUND_IDS
+        or kind == "click" and CLICK_SOUND_IDS
         or kind == "emote" and EMOTE_SOUND_IDS
         or OWNER_SOUND_IDS
     if not soundIds or #soundIds == 0 then return end
@@ -460,6 +461,10 @@ local function playDarkEmoteSound(kind)
         or (kind == "emote" and (math.random(90, 112) / 100)
         or (kind == "owner" and 0.82 or 1.12))
     sound.Looped = false
+    sound.TimePosition = 0
+    pcall(function()
+        ContentProvider:PreloadAsync({ sound })
+    end)
     sound:Stop()
     sound:Play()
 end
@@ -6976,7 +6981,7 @@ UICorner_5.Parent = UI.Changepage
     if updateHUDLayouts then updateHUDLayouts() end
 
     -- Entrada suave dos controles superiores ao criar a interface.
-    local topEntranceInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local topEntranceInfo = TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local topEntranceTargets = {
         { object = UI.Top, property = "BackgroundTransparency", value = 0.4 },
         { object = UI.EmoteWalkButton, property = "BackgroundTransparency", value = 0.4 },
