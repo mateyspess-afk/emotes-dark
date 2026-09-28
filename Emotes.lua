@@ -6,7 +6,7 @@
 
 
 local STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
-local BUG_REPORT_WEBHOOK_ENV_NAME = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
+local BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 local BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60
 local BUG_REPORT_MIN_LENGTH = 20
 local BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
@@ -1877,7 +1877,7 @@ local function submitBugReport(description)
     }
 
     local embed = {
-        title = "🐞 New Bug Report • Mobile • Emote Dark",
+        title = "New Bug Report: Mobile • Emote Dark",
         description = auditTruncate(auditSafe(description), MAX_FIELD_LENGTH),
         color = 16755200,
         timestamp = DateTime.now():ToIsoDate(),
@@ -1912,8 +1912,15 @@ local function submitBugReport(description)
         return false, "Falha ao enviar o report."
     end
 
-    local statusCode = response and tonumber(response.StatusCode)
-    if statusCode and statusCode >= 400 then
+    if not response then
+        return false, "O executor não recebeu resposta do webhook."
+    end
+
+    local statusCode = tonumber(response.StatusCode)
+    if not statusCode then
+        return false, "Resposta inválida do webhook."
+    end
+    if statusCode >= 400 then
         return false, "O webhook recusou o report (HTTP " .. tostring(statusCode) .. ")."
     end
 
@@ -1944,9 +1951,9 @@ local function showBugReportWindow()
 
     local card = Instance.new("Frame")
     card.Parent = overlay
-    card.AnchorPoint = Vector2.new(0.5, 0.5)
-    card.Position = UDim2.fromScale(0.5, 0.5)
-    card.Size = UDim2.new(0.86, 0, 0, 280)
+    card.AnchorPoint = Vector2.new(0, 0.5)
+    card.Position = UDim2.new(0.15, 0, 0.5, 0)
+    card.Size = UDim2.fromOffset(260, 255)
     card.BackgroundColor3 = Color3.fromRGB(27, 28, 34)
     card.BorderSizePixel = 0
     card.ZIndex = 7001
@@ -2007,7 +2014,7 @@ local function showBugReportWindow()
     textBox.Parent = card
     textBox.BackgroundColor3 = Color3.fromRGB(37, 38, 45)
     textBox.Position = UDim2.new(0, 18, 0, 80)
-    textBox.Size = UDim2.new(1, -36, 0, 94)
+    textBox.Size = UDim2.new(1, -36, 0, 84)
     textBox.ClearTextOnFocus = false
     textBox.Font = Enum.Font.Gotham
     textBox.MultiLine = true
@@ -2039,8 +2046,8 @@ local function showBugReportWindow()
     local status = Instance.new("TextLabel")
     status.Parent = card
     status.BackgroundTransparency = 1
-    status.Position = UDim2.new(0, 18, 0, 180)
-    status.Size = UDim2.new(1, -36, 0, 28)
+    status.Position = UDim2.new(0, 18, 0, 168)
+    status.Size = UDim2.new(1, -36, 0, 26)
     status.Font = Enum.Font.Gotham
     status.Text = ""
     status.TextColor3 = Color3.fromRGB(255, 150, 150)
@@ -2052,7 +2059,7 @@ local function showBugReportWindow()
     local send = Instance.new("TextButton")
     send.Parent = card
     send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
-    send.Position = UDim2.new(1, -122, 1, -48)
+    send.Position = UDim2.new(1, -122, 1, -44)
     send.Size = UDim2.fromOffset(104, 32)
     send.Font = Enum.Font.GothamBold
     send.Text = "SEND REPORT"
