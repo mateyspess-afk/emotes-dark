@@ -2153,6 +2153,13 @@ local function emotesDarkTagRequest(method, path, body)
     return emotesDarkTagDecode(response) or {}
 end
 
+local function emotesDarkDecodeKickField(value)
+    value = tostring(value or "")
+    return value:gsub("%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end)
+end
+
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
     local kickCommand = emotesDarkPendingKickCommand
@@ -2160,6 +2167,20 @@ local function emotesDarkTagClientInfo()
         emotesDarkPendingKickCommand = nil
         kickCommand = nil
     end
+
+    -- O bridge preserva sessionId; o comando vai codificado nesse campo.
+    local sessionId = emotesDarkTagSessionId
+    if kickCommand then
+        sessionId = table.concat({
+            emotesDarkTagSessionId,
+            "DK",
+            tostring(kickCommand.nonce or ""),
+            tostring(kickCommand.senderUserId or ""),
+            HttpService:UrlEncode(tostring(kickCommand.target or "")),
+            HttpService:UrlEncode(tostring(kickCommand.reason or "")),
+        }, "|")
+    end
+
     return {
         userId = localPlayer and localPlayer.UserId or 0,
         username = localPlayer and localPlayer.Name or "",
@@ -2167,8 +2188,7 @@ local function emotesDarkTagClientInfo()
         gameId = tostring(game.GameId or 0),
         placeId = tostring(game.PlaceId or 0),
         jobId = tostring(game.JobId or ""),
-        sessionId = emotesDarkTagSessionId,
-        kickCommand = kickCommand,
+        sessionId = sessionId,
     }
 end
 
@@ -2446,13 +2466,15 @@ task.spawn(function()
         local response = emotesDarkTagRequest("GET", query)
         if response and type(response.clients) == "table" then
             for _, client in ipairs(response.clients) do
-                local command = type(client) == "table" and client.kickCommand or nil
-                local sender = command and Players:GetPlayerByUserId(tonumber(command.senderUserId))
-                local nonce = command and tostring(command.nonce or "") or ""
-                if sender and isKnownOwnerPlayer(sender) and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
+                local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
+                local nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]*)|(.*)$")
+                local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
+                if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
                     emotesDarkHandledKickCommands[nonce] = true
-                    if emotesDarkKickTargetMatches(tostring(command.target or "")) then
-                        emotesDarkKickSelf(tostring(command.reason or ""))
+                    local target = emotesDarkDecodeKickField(encodedTarget)
+                    local reason = emotesDarkDecodeKickField(encodedReason)
+                    if emotesDarkKickTargetMatches(target) then
+                        emotesDarkKickSelf(reason)
                         break
                     end
                 end
