@@ -75,6 +75,11 @@ local OWNER_CONTROL_DEFAULT_API = "https://emotes-dark-owner-bridge--mateus1235.
 local OWNER_CONTROL_BUTTON_IMAGE = "rbxassetid://125710311764143"
 local OWNER_CONTROL_POLL_SECONDS = 3
 local OwnerControlHttpService = game:GetService("HttpService")
+local ownerControlSessionId = ""
+do
+    local ok, generated = pcall(function() return OwnerControlHttpService:GenerateGUID(false) end)
+    ownerControlSessionId = ok and tostring(generated) or (tostring(os.clock()) .. ":" .. tostring({}))
+end
 local ownerControlWindow = nil
 local ownerControlStatus = nil
 local ownerControlTargetInput = nil
@@ -337,6 +342,7 @@ local function ownerControlClientInfo()
         gameId = game.GameId,
         placeId = game.PlaceId,
         jobId = game.JobId,
+        sessionId = ownerControlSessionId,
         position = ownerControlCurrentPosition(),
         isOwner = ownerControlIsLocalOwner(),
     }
@@ -607,7 +613,7 @@ local function ownerControlStartPolling()
         while ownerControlPollRunning and Players.LocalPlayer do
             local info = ownerControlClientInfo()
             ownerControlRequest("POST", "/clients/register", info)
-            local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&cursor=%s", tostring(info.userId), tostring(info.gameId), tostring(info.placeId), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlCursor))
+            local query = string.format("/commands/poll?userId=%s&gameId=%s&placeId=%s&jobId=%s&sessionId=%s&cursor=%s", tostring(info.userId), tostring(info.gameId), tostring(info.placeId), OwnerControlHttpService:UrlEncode(tostring(info.jobId or "")), OwnerControlHttpService:UrlEncode(ownerControlSessionId), OwnerControlHttpService:UrlEncode(ownerControlCursor))
             local response = ownerControlRequest("GET", query)
             if response then
                 local commands = response.commands or response.data or {}
