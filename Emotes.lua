@@ -1772,7 +1772,7 @@ local function emotesDarkTagAttach(player)
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
         nameRow.Size = UDim2.new(1, 0, 0, 34)
-        nameRow.Position = UDim2.fromOffset(17, 0)
+        nameRow.Position = UDim2.fromOffset(0, 0)
         nameRow.BackgroundTransparency = 1
         nameRow.Parent = creatorTag
 
@@ -1781,15 +1781,15 @@ local function emotesDarkTagAttach(player)
         nameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         nameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         nameLayout.Padding = UDim.new(0, 4)
-        nameLayout.Parent = nameRow
+        nameLayout.Parent = nil
 
         local nick = Instance.new("TextLabel")
         nick.Name = "CreatorNick"
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
-        nick.Size = UDim2.fromOffset(0, 34)
+        nick.Size = UDim2.new(1, 0, 0, 34)
         nick.LayoutOrder = 1
-        nick.AutomaticSize = Enum.AutomaticSize.X
+        nick.AutomaticSize = Enum.AutomaticSize.None
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
         nick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1822,6 +1822,13 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
+
+        task.spawn(function()
+            while creatorTag.Parent do
+                ownerIcon.Position = UDim2.new(0.5, math.floor(nick.TextBounds.X / 2) + 4, 0, 2)
+                task.wait()
+            end
+        end)
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "CreatorSubtitle"
