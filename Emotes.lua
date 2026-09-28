@@ -1953,8 +1953,9 @@ local function showBugReportWindow()
     card.Parent = overlay
     card.AnchorPoint = Vector2.new(0, 0.5)
     card.Position = UDim2.new(0.15, 0, 0.5, 0)
-    card.Size = UDim2.fromOffset(260, 255)
-    card.BackgroundColor3 = Color3.fromRGB(27, 28, 34)
+    card.Size = UDim2.fromOffset(250, 245)
+    card.BackgroundColor3 = Color3.fromRGB(40, 41, 49)
+    card.BackgroundTransparency = 0.12
     card.BorderSizePixel = 0
     card.ZIndex = 7001
 
@@ -2083,8 +2084,8 @@ local function showBugReportWindow()
         local currentHeight = card.AbsoluteSize.Y / math.max(cardScale.Scale, 0.01)
         if viewport.X <= 0 or viewport.Y <= 0 or currentWidth <= 0 or currentHeight <= 0 then return end
 
-        local desiredWidth = math.clamp(viewport.X * 0.26, 240, 300)
-        local desiredHeight = math.clamp(viewport.Y * 0.52, 230, 280)
+        local desiredWidth = math.clamp(viewport.X * 0.23, 225, 265)
+        local desiredHeight = math.clamp(viewport.Y * 0.48, 220, 250)
         cardScale.Scale = math.min(desiredWidth / currentWidth, desiredHeight / currentHeight)
     end
 
