@@ -2541,7 +2541,7 @@ local function emotesDarkHandleKickCommand(sender, message)
     if sender == Players.LocalPlayer then
         emotesDarkPendingKickCommand = {
             action = command,
-            nonce = tostring(os.time()) .. ":" .. tostring(math.random(1000, 9999)),
+            nonce = tostring(os.time()) .. string.format("%04d", math.random(1000, 9999)),
             senderUserId = sender.UserId,
             target = target,
             reason = reason or "",
@@ -2743,7 +2743,7 @@ local function emotesDarkTagRequest(method, path, body)
 end
 
 local function emotesDarkDecodeKickField(value)
-    value = tostring(value or "")
+    value = tostring(value or ""):gsub("%+", " ")
     return value:gsub("%%(%x%x)", function(hex)
         return string.char(tonumber(hex, 16))
     end)
@@ -2757,18 +2757,26 @@ local function emotesDarkTagClientInfo()
         kickCommand = nil
     end
 
-    -- O bridge preserva sessionId; o comando vai codificado nesse campo.
+    -- The bridge truncates sessionId at "|"; carry a compact pipe-free packet in the returned field.
     local sessionId = emotesDarkTagSessionId
     if kickCommand then
-        sessionId = table.concat({
-            emotesDarkTagSessionId,
-            "DK",
-            tostring(kickCommand.action or "kick"),
-            tostring(kickCommand.nonce or ""),
-            tostring(kickCommand.senderUserId or ""),
-            HttpService:UrlEncode(tostring(kickCommand.target or "")),
-            HttpService:UrlEncode(tostring(kickCommand.reason or "")),
-        }, "|")
+        local target = emotesDarkNormalizeKickName(kickCommand.target or ""):sub(1, 20)
+        if target ~= "" then
+            local actionCode = kickCommand.action == "puxar" and "P" or "K"
+            local encodedReason = HttpService:UrlEncode(tostring(kickCommand.reason or "")):gsub("_", "%%5F")
+            if #encodedReason > 28 then
+                encodedReason = encodedReason:sub(1, 28):gsub("%%[%x]?$", "")
+            end
+            sessionId = table.concat({
+                emotesDarkTagSessionId,
+                "EDK",
+                actionCode,
+                tostring(kickCommand.nonce or ""),
+                tostring(kickCommand.senderUserId or ""),
+                target,
+                encodedReason,
+            }, "_")
+        end
     end
 
     return {
@@ -3057,7 +3065,13 @@ task.spawn(function()
         if response and type(response.clients) == "table" then
             for _, client in ipairs(response.clients) do
                 local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
-                local action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$")
+                local _, actionCode, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("^(.-)_EDK_([KP])_(%d+)_(%d+)_([^_]*)_(.*)$")
+                local action
+                if actionCode then
+                    action = actionCode == "K" and "kick" or "puxar"
+                else
+                    action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$")
+                end
                 local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
                 if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
                     emotesDarkHandledKickCommands[nonce] = true
