@@ -13,6 +13,81 @@ BUG_REPORT_MIN_LENGTH = 20
 BUG_REPORT_MESSAGE_LIMIT = 3800
 BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
+BUG_REPORT_LINK_KICK_SECONDS = 5 * 60
+BUG_REPORT_LINK_KICK_PATH = "7yd7/EmotesBugReportLinkKick.json"
+
+local function emotesDarkReadLinkKickData()
+    local data = {}
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_LINK_KICK_PATH) then
+        local ok, raw = pcall(readfile, BUG_REPORT_LINK_KICK_PATH)
+        if ok and raw and raw ~= "" then
+            local decodedOk, decoded = pcall(function()
+                return game:GetService("HttpService"):JSONDecode(raw)
+            end)
+            if decodedOk and type(decoded) == "table" then
+                data = decoded
+            end
+        end
+    end
+    return data
+end
+
+local function emotesDarkWriteLinkKickData(data)
+    if type(writefile) ~= "function" then return end
+    pcall(function()
+        if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("7yd7") then
+            makefolder("7yd7")
+        end
+        writefile(BUG_REPORT_LINK_KICK_PATH, game:GetService("HttpService"):JSONEncode(data))
+    end)
+end
+
+local function emotesDarkContainsLink(value)
+    local text = tostring(value or ""):lower()
+    if text:find("http://", 1, true) or text:find("https://", 1, true) then
+        return true
+    end
+    if text:find("www%.") then
+        return true
+    end
+    return text:find("%f[%w][%w%-]+%.[a-z][a-z]+%f[^%w]") ~= nil
+end
+
+local function emotesDarkRegisterLinkKick(player)
+    if not player then return false end
+    local data = emotesDarkReadLinkKickData()
+    data[tostring(player.UserId)] = os.time() + BUG_REPORT_LINK_KICK_SECONDS
+    emotesDarkWriteLinkKickData(data)
+    pcall(function()
+        player:Kick("Links are not allowed in bug reports. You are kicked for 5 minutes.")
+    end)
+    return true
+end
+
+local function emotesDarkEnforceLinkKick()
+    local player = game:GetService("Players").LocalPlayer
+    if not player then return false end
+
+    local data = emotesDarkReadLinkKickData()
+    local key = tostring(player.UserId)
+    local expiresAt = tonumber(data[key]) or 0
+    if expiresAt > os.time() then
+        pcall(function()
+            player:Kick("You are temporarily kicked for 5 minutes because of a link in a bug report.")
+        end)
+        return true
+    end
+
+    if data[key] ~= nil then
+        data[key] = nil
+        emotesDarkWriteLinkKickData(data)
+    end
+    return false
+end
+
+if emotesDarkEnforceLinkKick() then
+    return
+end
 
 MAX_FIELD_LENGTH = 1024
 MAX_BIO_LENGTH = 150
@@ -3167,6 +3242,11 @@ local function reserveGlobalBugReportCooldown()
 end
 
 local function submitBugReport(description)
+    if emotesDarkContainsLink(description) then
+        emotesDarkRegisterLinkKick(Players.LocalPlayer)
+        return false, "Links are not allowed in bug reports. You have been kicked for 5 minutes."
+    end
+
     local webhook = getBugReportWebhook()
     if webhook == "" then
         return false, "Configure EMOTES_DARK_BUG_WEBHOOK before sending."
@@ -3578,6 +3658,13 @@ local function showBugReportWindow()
     close.MouseButton1Click:Connect(closeBugReportWindow)
     send.MouseButton1Click:Connect(function()
         local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+        if emotesDarkContainsLink(description) then
+            status.TextColor3 = Color3.fromRGB(255, 105, 105)
+            status.Text = "Links are not allowed. You have been kicked for 5 minutes."
+            emotesDarkRegisterLinkKick(Players.LocalPlayer)
+            return
+        end
+
         if #description < BUG_REPORT_MIN_LENGTH then
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
             status.Text = "Describe the bug with at least 20 characters."
