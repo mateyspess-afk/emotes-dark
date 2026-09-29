@@ -793,6 +793,8 @@ local emotesDarkUpdateConfirmed = false
 local UPDATE_INFO_ITEMS = {
     { kind = "ADD", key = "startupSounds" },
     { kind = "FIXED", key = "partialUsernames" },
+    { kind = "ADD", key = "bugReportAntiLink" },
+    { kind = "ADD", key = "bugReportLinkKick" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -804,6 +806,8 @@ local UPDATE_INFO_TRANSLATIONS = {
         items = {
             startupSounds = "New random startup sounds",
             partialUsernames = "Partial username matching",
+            bugReportAntiLink = "Anti-link protection in bug reports",
+            bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
         },
     },
     pt = {
@@ -814,6 +818,8 @@ local UPDATE_INFO_TRANSLATIONS = {
         items = {
             startupSounds = "Novos sons aleatórios de inicialização",
             partialUsernames = "Busca por nome parcial",
+            bugReportAntiLink = "Proteção contra links nos reports de bug",
+            bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
         },
     },
     es = {
@@ -824,6 +830,8 @@ local UPDATE_INFO_TRANSLATIONS = {
         items = {
             startupSounds = "Nuevos sonidos aleatorios de inicio",
             partialUsernames = "Búsqueda por nombre parcial",
+            bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
+            bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
         },
     },
 }
