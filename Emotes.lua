@@ -930,7 +930,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
             ownerKickExemption = "Experience owner is exempt from anti-link kicks",
             bugReportLocalization = "Automatic bug report and kick translations",
-            bugReportCountryLanguage = "Translations selected from the player's country",
+            bugReportCountryLanguage = "Real country detection for automatic translations",
         },
     },
     pt = {
@@ -945,7 +945,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
             ownerKickExemption = "O dono da experiência nunca recebe kick por links",
             bugReportLocalization = "Tradução automática do report bug e do kick",
-            bugReportCountryLanguage = "Tradução escolhida pelo país do jogador",
+            bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
         },
     },
     es = {
@@ -960,7 +960,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
             ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
             bugReportLocalization = "Traducción automática del reporte y del kick",
-            bugReportCountryLanguage = "Traducción elegida según el país del jugador",
+            bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
         },
     },
 }
