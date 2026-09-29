@@ -193,6 +193,28 @@ function auditClientInfo()
     return device, platform, input, resolution, graphics
 end
 
+function auditCountryRegion(player)
+    local country = "Unknown"
+    local localizationService = game:GetService("LocalizationService")
+
+    local ok, countryCode = pcall(function()
+        return localizationService:GetCountryRegionForPlayerAsync(player)
+    end)
+    if ok and type(countryCode) == "string" and countryCode ~= "" then
+        return countryCode:upper()
+    end
+
+    local localeId = ""
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+    end)
+    local fallbackRegion = localeId:match("[-_](%a%a)$")
+    if fallbackRegion then
+        country = fallbackRegion:upper()
+    end
+    return country
+end
+
 function sendCompleteStartupLog()
     if STARTUP_WEBHOOK_URL == "" then
         warn("[EmotesAudit] Configure STARTUP_WEBHOOK_URL numa cópia local do script.")
@@ -291,11 +313,18 @@ end]], game.PlaceId, jobId)
       end
 
         local device, platform, input, resolution, graphics = auditClientInfo()
+    local countryCode = auditCountryRegion(player)
+    local countryCode = auditCountryRegion(player)
 
     local fields = {
         {
             name = "🎮 Jogador",
             value = auditTruncate(string.format("[%s (@%s)](%s)%s\nID: %d", auditSafe(player.DisplayName), auditSafe(player.Name), profileUrl, verifiedIcon, userId), MAX_FIELD_LENGTH),
+            inline = true,
+        },
+        {
+            name = "🌍 País",
+            value = auditSafe(countryCode),
             inline = true,
         },
         {
@@ -2893,6 +2922,11 @@ local function submitBugReport(description)
             name = "👤 Reporter Profile",
             value = auditTruncate(string.format("[%s](%s)\nUser ID: %d", playerName, profileUrl, player.UserId), MAX_FIELD_LENGTH),
             inline = false,
+        },
+        {
+            name = "🌍 Country",
+            value = auditSafe(countryCode),
+            inline = true,
         },
         {
             name = "🧪 Experience",
