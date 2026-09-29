@@ -66,6 +66,59 @@ local function emotesDarkWriteLinkKickData(data)
     end)
 end
 
+local function emotesDarkDetectLanguage()
+    local localeId = ""
+    local localizationService = game:GetService("LocalizationService")
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+    end)
+    if localeId == "" then
+        pcall(function()
+            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
+        end)
+    end
+    if localeId:match("^pt") then return "pt" end
+    if localeId:match("^es") then return "es" end
+    return "en"
+end
+
+local BUG_REPORT_TRANSLATIONS = {
+    en = {
+        title = "REPORT A BUG", hint = "Explain what happened and how to reproduce it. Minimum: 20 characters.",
+        placeholder = "E.g.: opening emote X freezes the animation and the button stops responding...", send = "SEND REPORT",
+        links = "Links are not allowed in bug reports.", kicked = "Links are not allowed in bug reports. You are kicked for 5 minutes.",
+        activeKick = "You are temporarily kicked for 5 minutes because of a link in a bug report.", minLength = "Describe the bug with at least 20 characters.",
+        cooldown = "Cooldown active: %s", wait = "Wait %s.", sending = "Sending report...", sent = "Report sent: %s", sentNotify = "Report sent successfully",
+        ownerLinks = "Links are not allowed.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK before sending.", player = "Local player not found.",
+        globalConfig = "Global cooldown server is not configured.", globalUnavailable = "Global cooldown server is unavailable.", globalRejected = "Global cooldown server rejected the report.", globalInvalid = "Could not validate the global cooldown.",
+    },
+    pt = {
+        title = "REPORTAR BUG", hint = "Explique o que aconteceu e como reproduzir. Mínimo: 20 caracteres.",
+        placeholder = "Ex.: abrir o emote X congela a animação e o botão para de responder...", send = "ENVIAR REPORT",
+        links = "Links não são permitidos nos reports de bug.", kicked = "Links não são permitidos. Você levou kick por 5 minutos.",
+        activeKick = "Você está temporariamente expulso por 5 minutos por enviar um link no report.", minLength = "Descreva o bug com pelo menos 20 caracteres.",
+        cooldown = "Cooldown ativo: %s", wait = "Aguarde %s.", sending = "Enviando report...", sent = "Report enviado: %s", sentNotify = "Report enviado com sucesso",
+        ownerLinks = "Links não são permitidos.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "Jogador local não encontrado.",
+        globalConfig = "O servidor de cooldown global não está configurado.", globalUnavailable = "O servidor de cooldown global está indisponível.", globalRejected = "O servidor de cooldown global rejeitou o report.", globalInvalid = "Não foi possível validar o cooldown global.",
+    },
+    es = {
+        title = "REPORTAR BUG", hint = "Explica qué ocurrió y cómo reproducirlo. Mínimo: 20 caracteres.",
+        placeholder = "Ej.: abrir el emote X congela la animación y el botón deja de responder...", send = "ENVIAR REPORTE",
+        links = "No se permiten enlaces en los reportes de bugs.", kicked = "No se permiten enlaces. Recibiste un kick de 5 minutos.",
+        activeKick = "Estás expulsado temporalmente durante 5 minutos por enviar un enlace en el reporte.", minLength = "Describe el bug con al menos 20 caracteres.",
+        cooldown = "Cooldown activo: %s", wait = "Espera %s.", sending = "Enviando reporte...", sent = "Reporte enviado: %s", sentNotify = "Reporte enviado correctamente",
+        ownerLinks = "No se permiten enlaces.", webhook = "Configura EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "No se encontró al jugador local.",
+        globalConfig = "El servidor de cooldown global no está configurado.", globalUnavailable = "El servidor de cooldown global no está disponible.", globalRejected = "El servidor de cooldown global rechazó el reporte.", globalInvalid = "No se pudo validar el cooldown global.",
+    },
+}
+
+local function emotesDarkBugText(key, ...)
+    local translations = BUG_REPORT_TRANSLATIONS[emotesDarkDetectLanguage()] or BUG_REPORT_TRANSLATIONS.en
+    local value = translations[key] or BUG_REPORT_TRANSLATIONS.en[key] or key
+    if select("#", ...) > 0 then return string.format(value, ...) end
+    return value
+end
+
 local function emotesDarkContainsLink(value)
     local text = tostring(value or ""):lower()
     if text:find("http://", 1, true) or text:find("https://", 1, true) then
@@ -83,7 +136,7 @@ local function emotesDarkRegisterLinkKick(player)
     data[tostring(player.UserId)] = os.time() + BUG_REPORT_LINK_KICK_SECONDS
     emotesDarkWriteLinkKickData(data)
     pcall(function()
-        player:Kick("Links are not allowed in bug reports. You are kicked for 5 minutes.")
+        player:Kick(emotesDarkBugText("kicked"))
     end)
     return true
 end
@@ -105,7 +158,7 @@ local function emotesDarkEnforceLinkKick()
     local expiresAt = tonumber(data[key]) or 0
     if expiresAt > os.time() then
         pcall(function()
-            player:Kick("You are temporarily kicked for 5 minutes because of a link in a bug report.")
+            player:Kick(emotesDarkBugText("activeKick"))
         end)
         return true
     end
@@ -828,6 +881,7 @@ local UPDATE_INFO_ITEMS = {
     { kind = "ADD", key = "bugReportAntiLink" },
     { kind = "ADD", key = "bugReportLinkKick" },
     { kind = "FIXED", key = "ownerKickExemption" },
+    { kind = "ADD", key = "bugReportLocalization" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -842,6 +896,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportAntiLink = "Anti-link protection in bug reports",
             bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
             ownerKickExemption = "Experience owner is exempt from anti-link kicks",
+            bugReportLocalization = "Automatic bug report and kick translations",
         },
     },
     pt = {
@@ -855,6 +910,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportAntiLink = "Proteção contra links nos reports de bug",
             bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
             ownerKickExemption = "O dono da experiência nunca recebe kick por links",
+            bugReportLocalization = "Tradução automática do report bug e do kick",
         },
     },
     es = {
@@ -868,27 +924,13 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
             bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
             ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
+            bugReportLocalization = "Traducción automática del reporte y del kick",
         },
     },
 }
 
 local function detectUpdateInfoLanguage()
-    -- Usa somente dados locais: a API de país pode bloquear alguns executores.
-    local localeId = ""
-    local localizationService = game:GetService("LocalizationService")
-    pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
-    end)
-    if localeId == "" then
-        pcall(function()
-            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-        end)
-    end
-
-    -- O locale traz o idioma e, quando disponível, a região: pt-br, es-mx, en-us etc.
-    if localeId:match("^pt") then return "pt" end
-    if localeId:match("^es") then return "es" end
-    return "en"
+    return emotesDarkDetectLanguage()
 end
 
 local function showUpdateInfoWindow()
@@ -3245,7 +3287,7 @@ local function reserveGlobalBugReportCooldown()
     local player = Players.LocalPlayer
     local httpClient = getBugReportHttpClient()
     if not player or type(httpClient) ~= "function" then
-        return false, "Global cooldown server is not configured."
+        return false, emotesDarkBugText("globalConfig")
     end
 
     local ok, response = pcall(function()
@@ -3257,7 +3299,7 @@ local function reserveGlobalBugReportCooldown()
         })
     end)
     if not ok then
-        return false, "Global cooldown server is unavailable."
+        return false, emotesDarkBugText("globalUnavailable")
     end
 
     local decoded = decodeBugReportApiResponse(response)
@@ -3266,14 +3308,14 @@ local function reserveGlobalBugReportCooldown()
         local remaining = type(decoded) == "table" and tonumber(decoded.remainingSeconds) or 0
         bugReportCooldownExpires = os.time() + math.max(0, remaining)
         bugReportGlobalStatusCheckedAt = os.time()
-        return false, "Global cooldown: " .. formatBugCooldown(remaining)
+        return false, emotesDarkBugText("cooldown", formatBugCooldown(remaining))
     end
 
     if statusCode and statusCode >= 400 then
-        return false, "Global cooldown server rejected the report."
+        return false, emotesDarkBugText("globalRejected")
     end
     if type(decoded) ~= "table" or decoded.allowed ~= true then
-        return false, "Could not validate the global cooldown."
+        return false, emotesDarkBugText("globalInvalid")
     end
 
     local remaining = tonumber(decoded.remainingSeconds) or BUG_REPORT_COOLDOWN_SECONDS
@@ -3288,23 +3330,23 @@ local function submitBugReport(description)
         local ownerExempt = emotesDarkIsLinkKickExempt(player)
         emotesDarkRegisterLinkKick(player)
         if ownerExempt then
-            return false, "Links are not allowed in bug reports."
+            return false, emotesDarkBugText("ownerLinks")
         end
-        return false, "Links are not allowed in bug reports. You have been kicked for 5 minutes."
+        return false, emotesDarkBugText("kicked")
     end
 
     local webhook = getBugReportWebhook()
     if webhook == "" then
-        return false, "Configure EMOTES_DARK_BUG_WEBHOOK before sending."
+        return false, emotesDarkBugText("webhook")
     end
 
     local player = Players.LocalPlayer
-    if not player then return false, "Local player not found." end
+    if not player then return false, emotesDarkBugText("player") end
 
     local now = os.time()
     local cooldown = getBugReportCooldown()
     if cooldown > now then
-        return false, "Wait " .. formatBugCooldown(cooldown - now) .. "."
+        return false, emotesDarkBugText("wait", formatBugCooldown(cooldown - now))
     end
 
     local globalAllowed, globalMessage = reserveGlobalBugReportCooldown()
@@ -3483,7 +3525,7 @@ local function showBugReportWindow()
     title.Position = UDim2.new(0, 18, 0, 12)
     title.Size = UDim2.new(1, -132, 0, 24)
     title.Font = Enum.Font.GothamBold
-    title.Text = "REPORT A BUG"
+    title.Text = emotesDarkBugText("title")
     title.TextColor3 = Color3.fromRGB(242, 242, 247)
     title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -3519,7 +3561,7 @@ local function showBugReportWindow()
     hint.Position = UDim2.new(0, 18, 0, 45)
     hint.Size = UDim2.new(1, -36, 0, 30)
     hint.Font = Enum.Font.Gotham
-    hint.Text = "Explain what happened and how to reproduce it. Minimum: 20 characters."
+    hint.Text = emotesDarkBugText("hint")
     hint.TextColor3 = Color3.fromRGB(170, 171, 181)
     hint.TextSize = 10
     hint.TextWrapped = true
@@ -3534,7 +3576,7 @@ local function showBugReportWindow()
     textBox.ClearTextOnFocus = false
     textBox.Font = Enum.Font.Gotham
     textBox.MultiLine = true
-    textBox.PlaceholderText = "E.g.: opening emote X freezes the animation and the button stops responding..."
+    textBox.PlaceholderText = emotesDarkBugText("placeholder")
     textBox.PlaceholderColor3 = Color3.fromRGB(120, 121, 130)
     textBox.Text = ""
     textBox.TextColor3 = Color3.fromRGB(240, 240, 245)
@@ -3578,7 +3620,7 @@ local function showBugReportWindow()
     send.Position = UDim2.new(1, -122, 1, -44)
     send.Size = UDim2.fromOffset(104, 32)
     send.Font = Enum.Font.GothamBold
-    send.Text = "SEND REPORT"
+    send.Text = emotesDarkBugText("send")
     send.TextColor3 = Color3.fromRGB(30, 30, 35)
     send.TextSize = 10
     send.ZIndex = 7002
@@ -3707,33 +3749,33 @@ local function showBugReportWindow()
         if emotesDarkContainsLink(description) then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
             local ownerExempt = emotesDarkIsLinkKickExempt(Players.LocalPlayer)
-            status.Text = ownerExempt and "Links are not allowed." or "Links are not allowed. You have been kicked for 5 minutes."
+            status.Text = ownerExempt and emotesDarkBugText("ownerLinks") or emotesDarkBugText("kicked")
             emotesDarkRegisterLinkKick(Players.LocalPlayer)
             return
         end
 
         if #description < BUG_REPORT_MIN_LENGTH then
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = "Describe the bug with at least 20 characters."
+            status.Text = emotesDarkBugText("minLength")
             return
         end
 
         local remaining = getBugReportCooldown() - os.time()
         if remaining > 0 then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
-            status.Text = "Cooldown active: " .. formatBugCooldown(remaining)
+            status.Text = emotesDarkBugText("cooldown", formatBugCooldown(remaining))
             refreshCooldown()
             return
         end
 
         send.Active = false
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
-        status.Text = "Sending report..."
+        status.Text = emotesDarkBugText("sending")
         local success, result = submitBugReport(description)
         if success then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
-            status.Text = "Report sent: " .. tostring(result)
-            notifyBugReport("Dark | Bug report", "Report sent successfully")
+            status.Text = emotesDarkBugText("sent", tostring(result))
+            notifyBugReport("Dark | Bug report", emotesDarkBugText("sentNotify"))
             refreshCooldown()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
