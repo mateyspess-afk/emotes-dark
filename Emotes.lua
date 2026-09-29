@@ -397,9 +397,6 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-    { kind = "ADD", key = "ownerKickCommand" },
-    { kind = "ADD", key = "ownerPullCommand" },
-    { kind = "ADD", key = "fastCommandRelay" },
     { kind = "ADD", key = "startupSounds" },
     { kind = "FIXED", key = "partialUsernames" },
 }
@@ -407,39 +404,30 @@ local UPDATE_INFO_ITEMS = {
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 28, 2026 • New owner commands",
+        updated = "Updated on September 28, 2026 at 10:02 PM",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            ownerKickCommand = "Command: /kick username reason",
-            ownerPullCommand = "Command: /puxar username",
-            fastCommandRelay = "Fast command delivery",
             startupSounds = "New random startup sounds",
             partialUsernames = "Partial username matching",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 28 de setembro de 2026 • Novos comandos do owner",
+        updated = "Atualizado em 28 de setembro de 2026 às 22:02",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            ownerKickCommand = "Comando: /kick nome motivo",
-            ownerPullCommand = "Comando: /puxar nome",
-            fastCommandRelay = "Envio rápido de comandos",
             startupSounds = "Novos sons aleatórios de inicialização",
             partialUsernames = "Busca por nome parcial",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 28 de septiembre de 2026 • Nuevos comandos del owner",
+        updated = "Actualizado el 28 de septiembre de 2026 a las 22:02",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            ownerKickCommand = "Comando: /kick nombre motivo",
-            ownerPullCommand = "Comando: /puxar nombre",
-            fastCommandRelay = "Envío rápido de comandos",
             startupSounds = "Nuevos sonidos aleatorios de inicio",
             partialUsernames = "Búsqueda por nombre parcial",
         },
