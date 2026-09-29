@@ -407,12 +407,12 @@ local UPDATE_INFO_ITEMS = {
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 28, 2026",
+        updated = "Updated on September 28, 2026 • New owner commands",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            ownerKickCommand = "Owner /kick command",
-            ownerPullCommand = "Owner /puxar command",
+            ownerKickCommand = "Command: /kick username reason",
+            ownerPullCommand = "Command: /puxar username",
             fastCommandRelay = "Fast command delivery",
             startupSounds = "New random startup sounds",
             partialUsernames = "Partial username matching",
@@ -420,12 +420,12 @@ local UPDATE_INFO_TRANSLATIONS = {
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 28 de setembro de 2026",
+        updated = "Atualizado em 28 de setembro de 2026 • Novos comandos do owner",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            ownerKickCommand = "Comando /kick do owner",
-            ownerPullCommand = "Comando /puxar do owner",
+            ownerKickCommand = "Comando: /kick nome motivo",
+            ownerPullCommand = "Comando: /puxar nome",
             fastCommandRelay = "Envio rápido de comandos",
             startupSounds = "Novos sons aleatórios de inicialização",
             partialUsernames = "Busca por nome parcial",
@@ -433,12 +433,12 @@ local UPDATE_INFO_TRANSLATIONS = {
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 28 de septiembre de 2026",
+        updated = "Actualizado el 28 de septiembre de 2026 • Nuevos comandos del owner",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            ownerKickCommand = "Comando /kick del owner",
-            ownerPullCommand = "Comando /puxar del owner",
+            ownerKickCommand = "Comando: /kick nombre motivo",
+            ownerPullCommand = "Comando: /puxar nombre",
             fastCommandRelay = "Envío rápido de comandos",
             startupSounds = "Nuevos sonidos aleatorios de inicio",
             partialUsernames = "Búsqueda por nombre parcial",
