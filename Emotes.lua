@@ -690,12 +690,8 @@ function auditCountryRegion(player)
         return countryDisplay(countryCode)
     end
 
-    local localeId = ""
-    pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
-    end)
-    local fallbackRegion = localeId:match("[-_](%a%a)$")
-    return countryDisplay(fallbackRegion)
+    -- Não transforma o idioma do dispositivo em país: isso causava países incorretos.
+    return "País não confirmado pelo Roblox 🌍"
 end
 
 function sendCompleteStartupLog()
@@ -805,7 +801,7 @@ end]], game.PlaceId, jobId)
             inline = true,
         },
         {
-            name = "🌍 País",
+            name = "🌍 País informado pelo Roblox",
             value = auditSafe(countryCode),
             inline = true,
         },
@@ -913,6 +909,7 @@ local UPDATE_INFO_ITEMS = {
     { kind = "FIXED", key = "ownerKickExemption" },
     { kind = "ADD", key = "bugReportLocalization" },
     { kind = "ADD", key = "bugReportCountryLanguage" },
+    { kind = "FIXED", key = "countryFallbackAccuracy" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -927,6 +924,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             ownerKickExemption = "Experience owner is exempt from anti-link kicks",
             bugReportLocalization = "Automatic bug report and kick translations",
             bugReportCountryLanguage = "Real country detection for automatic translations",
+            countryFallbackAccuracy = "Unknown country is no longer guessed from the device locale",
         },
     },
     pt = {
@@ -940,6 +938,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             ownerKickExemption = "O dono da experiência nunca recebe kick por links",
             bugReportLocalization = "Tradução automática do report bug e do kick",
             bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
+            countryFallbackAccuracy = "País não confirmado não é mais presumido pelo idioma do dispositivo",
         },
     },
     es = {
@@ -953,6 +952,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
             bugReportLocalization = "Traducción automática del reporte y del kick",
             bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
+            countryFallbackAccuracy = "El país desconocido ya no se adivina por el idioma del dispositivo",
         },
     },
 }
