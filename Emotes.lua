@@ -728,37 +728,41 @@ local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
     { kind = "ADD", key = "startupSounds" },
+    { kind = "ADD", key = "donationSupport" },
     { kind = "FIXED", key = "partialUsernames" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 28, 2026 at 10:02 PM",
+        updated = "Updated on September 29, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
             startupSounds = "New random startup sounds",
+            donationSupport = "Repeatable donations with selectable Robux values",
             partialUsernames = "Partial username matching",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 28 de setembro de 2026 às 22:02",
+        updated = "Atualizado em 29 de setembro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
             startupSounds = "Novos sons aleatórios de inicialização",
+            donationSupport = "Doações repetíveis com valores de Robux selecionáveis",
             partialUsernames = "Busca por nome parcial",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 28 de septiembre de 2026 a las 22:02",
+        updated = "Actualizado el 29 de septiembre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
             startupSounds = "Nuevos sonidos aleatorios de inicio",
+            donationSupport = "Donaciones repetibles con valores de Robux seleccionables",
             partialUsernames = "Búsqueda por nombre parcial",
         },
     },
@@ -3898,8 +3902,10 @@ local function showDonationWindow()
         donate.BackgroundColor3 = Color3.fromRGB(95, 80, 45)
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
         status.Text = "Abrindo pagamento..."
-        local ok = pcall(function()
-            MarketplaceService:PromptProductPurchase(Players.LocalPlayer, selectedProduct.ProductId)
+        local ok, promptError = pcall(function()
+            local localPlayer = Players.LocalPlayer
+            if not localPlayer then error("Jogador local não encontrado") end
+            MarketplaceService:PromptProductPurchase(localPlayer, tonumber(selectedProduct.ProductId))
         end)
         if not ok then
             donationPendingProductId = nil
@@ -3907,7 +3913,10 @@ local function showDonationWindow()
             donate.AutoButtonColor = true
             donate.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = "Não foi possível abrir o pagamento."
+            local errorText = tostring(promptError or "erro desconhecido")
+            if #errorText > 150 then errorText = errorText:sub(1, 150) .. "..." end
+            status.Text = "Pagamento não abriu: " .. errorText
+            warn("[EmotesDark] Falha ao abrir Developer Product: " .. errorText)
         end
     end)
 end
