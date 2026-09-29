@@ -2620,7 +2620,7 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
-local EMOTES_DARK_TAG_DEFAULT_API = "https://emotes-dark-presence-bridge--pega123.replit.app/api"
+local EMOTES_DARK_TAG_DEFAULT_API = "https://imaginative-treacle-412930.netlify.app/api"
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
