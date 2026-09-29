@@ -71,45 +71,52 @@ local emotesDarkLanguageCache = nil
 local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
-    local language = "en"
-    local countryCode = ""
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
+    local countryCode = ""
+    local localeId = ""
+
     if player then
         pcall(function()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
     end
-
-    -- A tradução principal usa o país real retornado pelo Roblox.
-    local portugueseCountries = {
-        AO = true, BR = true, CV = true, GW = true, MZ = true, PT = true, ST = true, TL = true,
-    }
-    local spanishCountries = {
-        AR = true, BO = true, CL = true, CO = true, CR = true, CU = true, DO = true, EC = true,
-        ES = true, GT = true, HN = true, MX = true, NI = true, PA = true, PE = true, PR = true,
-        PY = true, SV = true, UY = true, VE = true,
-    }
-
-    if portugueseCountries[countryCode] then
-        language = "pt"
-    elseif spanishCountries[countryCode] then
-        language = "es"
-    else
-        -- Se a consulta do país falhar ou não houver tradução disponível, usa o locale.
-        local localeId = ""
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+    end)
+    if localeId == "" then
         pcall(function()
-            localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
         end)
-        if localeId == "" then
-            pcall(function()
-                localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-            end)
-        end
-        if localeId:match("^pt") then language = "pt" end
-        if localeId:match("^es") then language = "es" end
     end
 
+    -- O país é a primeira referência; o locale cobre países sem mapeamento explícito.
+    -- Para idiomas sem tradução pronta, o ticker usa tradução automática online.
+    local countryLanguages = {
+        -- Português
+        AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
+        -- Espanhol
+        AR="es", BO="es", CL="es", CO="es", CR="es", CU="es", DO="es", EC="es", ES="es", GT="es", HN="es", MX="es", NI="es", PA="es", PE="es", PR="es", PY="es", SV="es", UY="es", VE="es",
+        -- Inglês
+        AE="en", AG="en", AU="en", BB="en", BS="en", BZ="en", CA="en", DM="en", FJ="en", GB="en", GD="en", GG="en", GH="en", GI="en", GM="en", GU="en", GY="en", IE="en", IM="en", JM="en", KN="en", KY="en", LC="en", LR="en", MH="en", MT="en", MU="en", MW="en", MY="en", NG="en", NZ="en", PH="en", PK="en", SG="en", SL="en", SS="en", SZ="en", TC="en", TT="en", TV="en", UG="en", US="en", VC="en", VG="en", VI="en", ZA="en", ZM="en", ZW="en",
+        -- Francês
+        BF="fr", BI="fr", BJ="fr", CD="fr", CF="fr", CG="fr", CI="fr", CM="fr", DJ="fr", DZ="fr", FR="fr", GA="fr", GF="fr", GN="fr", GP="fr", HT="fr", KM="fr", LU="fr", MC="fr", MG="fr", ML="fr", MQ="fr", NC="fr", NE="fr", PF="fr", RE="fr", RW="fr", SC="fr", SN="fr", TD="fr", TG="fr", VU="fr", WF="fr", YT="fr",
+        -- Alemão
+        AT="de", CH="de", DE="de", LI="de",
+        -- Italiano
+        IT="it", SM="it", VA="it",
+        -- Japonês / coreano / chinês
+        JP="ja", KR="ko", CN="zh", HK="zh", MO="zh", TW="zh",
+        -- Russo e idiomas eslavos
+        BY="ru", KG="ru", KZ="ru", RU="ru", TJ="ru", TM="ru", UA="uk", PL="pl", CZ="cs", SK="sk", BG="bg", RS="sr", HR="hr", SI="sl",
+        -- Árabe
+        BH="ar", EG="ar", IQ="ar", JO="ar", KW="ar", LB="ar", LY="ar", MA="ar", OM="ar", QA="ar", SA="ar", SD="ar", SY="ar", TN="ar", YE="ar",
+        -- Outros idiomas amplamente usados
+        BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
+    }
+
+    local localeLanguage = localeId:match("^([a-z][a-z])")
+    local language = countryLanguages[countryCode] or localeLanguage or "en"
     emotesDarkLanguageCache = language
     return language
 end
@@ -951,6 +958,63 @@ local SCRIPT_NOTICE_TRANSLATIONS = {
     es = "El script será desactivado de ScriptBlox a las 23:00 por las actualizaciones que haremos en el script. El script solo será eliminado de ScriptBlox. Consigue el script en ScriptBlox antes de que sea demasiado tarde. | by Herobrineadmin2002",
 }
 
+local function emotesDarkTranslateText(sourceText, targetLanguage)
+    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
+    local request = emotesDarkGetRequest()
+    if type(request) ~= "function" then return sourceText end
+
+    local encodedText = ""
+    local okEncode = pcall(function()
+        encodedText = game:GetService("HttpService"):UrlEncode(sourceText)
+    end)
+    if not okEncode or encodedText == "" then return sourceText end
+
+    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
+    local okRequest, response = pcall(request, {
+        Url = url,
+        Method = "GET",
+        Headers = { ["Accept"] = "application/json" },
+    })
+    if not okRequest then return sourceText end
+
+    local body = emotesDarkUsableBody(emotesDarkResponseBody(response))
+    if not body then return sourceText end
+    local decodedOk, decoded = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(body)
+    end)
+    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText end
+
+    local parts = {}
+    for _, segment in ipairs(decoded[1]) do
+        if type(segment) == "table" and type(segment[1]) == "string" then
+            table.insert(parts, segment[1])
+        end
+    end
+    local translated = table.concat(parts)
+    return translated ~= "" and translated or sourceText
+end
+
+local function getUpdateInfoTranslation(language)
+    local known = UPDATE_INFO_TRANSLATIONS[language]
+    if known then return known end
+
+    local source = UPDATE_INFO_TRANSLATIONS.en
+    local translated = {
+        title = emotesDarkTranslateText(source.title, language),
+        updated = emotesDarkTranslateText(source.updated, language),
+        confirm = emotesDarkTranslateText(source.confirm, language),
+        prefixes = {},
+        items = {},
+    }
+    for key, value in pairs(source.prefixes) do
+        translated.prefixes[key] = emotesDarkTranslateText(value, language)
+    end
+    for key, value in pairs(source.items) do
+        translated.items[key] = emotesDarkTranslateText(value, language)
+    end
+    return translated
+end
+
 local function showScriptNoticeBanner()
     local oldGui = CoreGui:FindFirstChild("EmotesDarkScriptNotice")
     if oldGui then oldGui:Destroy() end
@@ -963,18 +1027,15 @@ local function showScriptNoticeBanner()
     noticeGui.Parent = CoreGui
 
     local banner = Instance.new("Frame")
-    banner.Name = "Notice"
+    banner.Name = "ScrollingNotice"
     banner.AnchorPoint = Vector2.new(0.5, 1)
-    banner.Position = UDim2.new(0.5, 0, 1, -8)
-    banner.Size = UDim2.new(1, -16, 0, 62)
+    banner.Position = UDim2.new(0.5, 0, 1, -5)
+    banner.Size = UDim2.new(1, 0, 0, 38)
     banner.BackgroundColor3 = Color3.fromRGB(105, 0, 12)
-    banner.BackgroundTransparency = 0.04
+    banner.BackgroundTransparency = 0.02
     banner.BorderSizePixel = 0
+    banner.ClipsDescendants = true
     banner.Parent = noticeGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = banner
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 45, 60)
@@ -982,23 +1043,53 @@ local function showScriptNoticeBanner()
     stroke.Parent = banner
 
     local label = Instance.new("TextLabel")
-    label.Name = "Message"
+    label.Name = "ScrollingMessage"
     label.BackgroundTransparency = 1
-    label.Position = UDim2.fromOffset(12, 5)
-    label.Size = UDim2.new(1, -24, 1, -10)
+    label.Position = UDim2.fromOffset(0, 0)
+    label.Size = UDim2.fromOffset(900, 38)
     label.Font = Enum.Font.GothamBold
     label.Text = SCRIPT_NOTICE_TRANSLATIONS.en
     label.TextColor3 = Color3.fromRGB(255, 235, 235)
-    label.TextSize = 13
-    label.TextWrapped = true
-    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextSize = 14
+    label.TextWrapped = false
+    label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Parent = banner
 
+    local tickerVersion = 0
+    local function setTickerText(value)
+        tickerVersion = tickerVersion + 1
+        label.Text = value
+    end
+
+    task.spawn(function()
+        while label.Parent and banner.Parent do
+            task.wait()
+            local version = tickerVersion
+            local viewportWidth = math.max(1, banner.AbsoluteSize.X)
+            local textWidth = math.max(260, label.TextBounds.X + 70)
+            label.Size = UDim2.fromOffset(textWidth, 38)
+            label.Position = UDim2.fromOffset(viewportWidth, 0)
+
+            local duration = math.max(8, (viewportWidth + textWidth) / 85)
+            local tween = TweenService:Create(label, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+                Position = UDim2.fromOffset(-textWidth, 0),
+            })
+            tween:Play()
+            while label.Parent and version == tickerVersion and tween.PlaybackState == Enum.PlaybackState.Playing do
+                task.wait(0.05)
+            end
+            if tween.PlaybackState == Enum.PlaybackState.Playing then tween:Cancel() end
+        end
+    end)
+
     task.spawn(function()
         local language = detectUpdateInfoLanguage()
-        local translation = SCRIPT_NOTICE_TRANSLATIONS[language] or SCRIPT_NOTICE_TRANSLATIONS.en
-        if label.Parent then label.Text = translation end
+        local translation = SCRIPT_NOTICE_TRANSLATIONS[language]
+        if not translation then
+            translation = emotesDarkTranslateText(SCRIPT_NOTICE_TRANSLATIONS.en, language)
+        end
+        if label.Parent then setTickerText(translation) end
     end)
 end
 
@@ -1238,7 +1329,7 @@ local function showUpdateInfoWindow()
 
     task.spawn(function()
         local language = detectUpdateInfoLanguage()
-        local translation = UPDATE_INFO_TRANSLATIONS[language] or UPDATE_INFO_TRANSLATIONS.en
+        local translation = getUpdateInfoTranslation(language)
         if not gui.Parent then return end
         title.Text = translation.title
         subtitle.Text = translation.updated
