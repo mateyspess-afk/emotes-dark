@@ -3714,8 +3714,7 @@ local function showDonationWindow()
     hint.Position = UDim2.new(0, 18, 0, 50)
     hint.Size = UDim2.new(1, -36, 0, 58)
     hint.Font = Enum.Font.Gotham
-    hint.Text = "Gostou do Emotes Dark?
-A sua doação ajuda a manter o projeto."
+    hint.Text = "Gostou do Emotes Dark?\nA sua doação ajuda a manter o projeto."
     hint.TextColor3 = Color3.fromRGB(170, 171, 181)
     hint.TextSize = 11
     hint.TextWrapped = true
