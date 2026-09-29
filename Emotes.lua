@@ -2682,6 +2682,9 @@ local EMOTES_DARK_TAG_RETIRED_API = "https://emotes-dark-presence-bridge--pega12
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
+local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
+local EMOTES_DARK_TAG_MIN_SCALE = EMOTES_DARK_TAG_REFERENCE_DISTANCE / EMOTES_DARK_TAG_MAX_DISTANCE
+local EMOTES_DARK_TAG_MAX_SCALE = 2.5
 local emotesDarkTagUsers = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
@@ -2828,12 +2831,20 @@ local function emotesDarkTagAttach(player)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
+    local tagContentScale
     if isOwner then
         local creatorTag = Instance.new("Frame")
         creatorTag.Name = "CreatorTag"
+        creatorTag.AnchorPoint = Vector2.new(0.5, 0.5)
+        creatorTag.Position = UDim2.fromScale(0.5, 0.5)
         creatorTag.Size = UDim2.fromScale(1, 1)
         creatorTag.BackgroundTransparency = 1
         creatorTag.Parent = tag
+
+        local creatorScale = Instance.new("UIScale")
+        creatorScale.Scale = 1
+        creatorScale.Parent = creatorTag
+        tagContentScale = creatorScale
 
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
@@ -2920,9 +2931,16 @@ local function emotesDarkTagAttach(player)
     else
         local darkTag = Instance.new("Frame")
         darkTag.Name = "DarkUserTag"
+        darkTag.AnchorPoint = Vector2.new(0.5, 0.5)
+        darkTag.Position = UDim2.fromScale(0.5, 0.5)
         darkTag.Size = UDim2.fromScale(1, 1)
         darkTag.BackgroundTransparency = 1
         darkTag.Parent = tag
+
+        local darkScale = Instance.new("UIScale")
+        darkScale.Scale = 1
+        darkScale.Parent = darkTag
+        tagContentScale = darkScale
 
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
@@ -3007,6 +3025,22 @@ local function emotesDarkTagAttach(player)
         end)
     end
     emotesDarkTags[key] = tag
+
+    task.spawn(function()
+        while tag.Parent and tagContentScale and tagContentScale.Parent do
+            local camera = workspace.CurrentCamera
+            if camera then
+                local distance = (camera.CFrame.Position - head.Position).Magnitude
+                local scale = EMOTES_DARK_TAG_REFERENCE_DISTANCE / math.max(distance, 1)
+                tagContentScale.Scale = math.clamp(
+                    scale,
+                    EMOTES_DARK_TAG_MIN_SCALE,
+                    EMOTES_DARK_TAG_MAX_SCALE
+                )
+            end
+            task.wait(0.05)
+        end
+    end)
 end
 
 local function emotesDarkTagSync(activeClients)
