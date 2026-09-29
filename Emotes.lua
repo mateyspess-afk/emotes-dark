@@ -16,6 +16,30 @@ BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 BUG_REPORT_LINK_KICK_SECONDS = 5 * 60
 BUG_REPORT_LINK_KICK_PATH = "7yd7/EmotesBugReportLinkKick.json"
 
+-- Donos nunca recebem kick por causa de links no report bug.
+OWNER_USER_IDS = {
+    [10956940752] = true,
+}
+
+local function emotesDarkIsLinkKickExempt(player)
+    if not player then return false end
+    if OWNER_USER_IDS[player.UserId] then return true end
+
+    local creatorType = game.CreatorType
+    if creatorType == Enum.CreatorType.User then
+        return tonumber(game.CreatorId) == player.UserId
+    end
+
+    if creatorType == Enum.CreatorType.Group then
+        local ok, groupInfo = pcall(function()
+            return game:GetService("GroupService"):GetGroupInfoAsync(game.CreatorId)
+        end)
+        return ok and groupInfo and groupInfo.Owner and tonumber(groupInfo.Owner.Id) == player.UserId
+    end
+
+    return false
+end
+
 local function emotesDarkReadLinkKickData()
     local data = {}
     if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_LINK_KICK_PATH) then
@@ -54,7 +78,7 @@ local function emotesDarkContainsLink(value)
 end
 
 local function emotesDarkRegisterLinkKick(player)
-    if not player then return false end
+    if not player or emotesDarkIsLinkKickExempt(player) then return false end
     local data = emotesDarkReadLinkKickData()
     data[tostring(player.UserId)] = os.time() + BUG_REPORT_LINK_KICK_SECONDS
     emotesDarkWriteLinkKickData(data)
@@ -70,6 +94,14 @@ local function emotesDarkEnforceLinkKick()
 
     local data = emotesDarkReadLinkKickData()
     local key = tostring(player.UserId)
+    if emotesDarkIsLinkKickExempt(player) then
+        if data[key] ~= nil then
+            data[key] = nil
+            emotesDarkWriteLinkKickData(data)
+        end
+        return false
+    end
+
     local expiresAt = tonumber(data[key]) or 0
     if expiresAt > os.time() then
         pcall(function()
@@ -795,6 +827,7 @@ local UPDATE_INFO_ITEMS = {
     { kind = "FIXED", key = "partialUsernames" },
     { kind = "ADD", key = "bugReportAntiLink" },
     { kind = "ADD", key = "bugReportLinkKick" },
+    { kind = "FIXED", key = "ownerKickExemption" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -808,6 +841,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             partialUsernames = "Partial username matching",
             bugReportAntiLink = "Anti-link protection in bug reports",
             bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
+            ownerKickExemption = "Experience owner is exempt from anti-link kicks",
         },
     },
     pt = {
@@ -820,6 +854,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             partialUsernames = "Busca por nome parcial",
             bugReportAntiLink = "Proteção contra links nos reports de bug",
             bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
+            ownerKickExemption = "O dono da experiência nunca recebe kick por links",
         },
     },
     es = {
@@ -832,6 +867,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             partialUsernames = "Búsqueda por nombre parcial",
             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
             bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
+            ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
         },
     },
 }
@@ -1144,10 +1180,7 @@ local StarterGui = game:GetService("StarterGui")
 local SoundService = game:GetService("SoundService")
 local request = emotesDarkGetRequest()
 
--- IDs adicionais podem ser cadastrados aqui. O criador da experiência é detectado automaticamente.
-OWNER_USER_IDS = {
-    [10956940752] = true,
-}
+-- OWNER_USER_IDS é inicializado junto da proteção anti-link. O criador da experiência é detectado automaticamente.
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
 
@@ -3251,7 +3284,12 @@ end
 
 local function submitBugReport(description)
     if emotesDarkContainsLink(description) then
-        emotesDarkRegisterLinkKick(Players.LocalPlayer)
+        local player = Players.LocalPlayer
+        local ownerExempt = emotesDarkIsLinkKickExempt(player)
+        emotesDarkRegisterLinkKick(player)
+        if ownerExempt then
+            return false, "Links are not allowed in bug reports."
+        end
         return false, "Links are not allowed in bug reports. You have been kicked for 5 minutes."
     end
 
@@ -3668,7 +3706,8 @@ local function showBugReportWindow()
         local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
         if emotesDarkContainsLink(description) then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
-            status.Text = "Links are not allowed. You have been kicked for 5 minutes."
+            local ownerExempt = emotesDarkIsLinkKickExempt(Players.LocalPlayer)
+            status.Text = ownerExempt and "Links are not allowed." or "Links are not allowed. You have been kicked for 5 minutes."
             emotesDarkRegisterLinkKick(Players.LocalPlayer)
             return
         end
