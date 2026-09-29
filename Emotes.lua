@@ -908,9 +908,7 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-    { kind = "ADD", key = "startupSounds" },
-    { kind = "FIXED", key = "partialUsernames" },
-    { kind = "ADD", key = "bugReportAntiLink" },
+     { kind = "ADD", key = "bugReportAntiLink" },
     { kind = "ADD", key = "bugReportLinkKick" },
     { kind = "FIXED", key = "ownerKickExemption" },
     { kind = "ADD", key = "bugReportLocalization" },
@@ -924,9 +922,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            startupSounds = "New random startup sounds",
-            partialUsernames = "Partial username matching",
-            bugReportAntiLink = "Anti-link protection in bug reports",
+             bugReportAntiLink = "Anti-link protection in bug reports",
             bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
             ownerKickExemption = "Experience owner is exempt from anti-link kicks",
             bugReportLocalization = "Automatic bug report and kick translations",
@@ -939,9 +935,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            startupSounds = "Novos sons aleatórios de inicialização",
-            partialUsernames = "Busca por nome parcial",
-            bugReportAntiLink = "Proteção contra links nos reports de bug",
+             bugReportAntiLink = "Proteção contra links nos reports de bug",
             bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
             ownerKickExemption = "O dono da experiência nunca recebe kick por links",
             bugReportLocalization = "Tradução automática do report bug e do kick",
@@ -954,9 +948,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            startupSounds = "Nuevos sonidos aleatorios de inicio",
-            partialUsernames = "Búsqueda por nombre parcial",
-            bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
+             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
             bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
             ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
             bugReportLocalization = "Traducción automática del reporte y del kick",
