@@ -2570,6 +2570,52 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(emotesDarkBindKickChat)
 
+-- Registered slash commands are intercepted by TextChatService before SendingMessage/MessageReceived.
+-- Bind existing game aliases when available; otherwise register client-local aliases so the owner can publish them through the bridge.
+pcall(function()
+    local textChatService = game:GetService("TextChatService")
+    local commandDefinitions = {
+        { alias = "/kick", name = "EmotesDarkKickCommand" },
+        { alias = "/puxar", name = "EmotesDarkPullCommand" },
+    }
+    local boundCommands = {}
+
+    local function bindOwnerCommand(command)
+        if boundCommands[command] then return end
+        boundCommands[command] = true
+        command.Triggered:Connect(function(originTextSource, unfilteredText)
+            local userId = originTextSource and originTextSource.UserId
+            local sender = userId and Players:GetPlayerByUserId(userId)
+            if sender then
+                emotesDarkHandleKickCommand(sender, unfilteredText)
+            end
+        end)
+    end
+
+    for _, definition in ipairs(commandDefinitions) do
+        local command
+        for _, candidate in ipairs(textChatService:GetDescendants()) do
+            if candidate:IsA("TextChatCommand") then
+                local primaryAlias = tostring(candidate.PrimaryAlias or ""):lower()
+                local secondaryAlias = tostring(candidate.SecondaryAlias or ""):lower()
+                if primaryAlias == definition.alias or secondaryAlias == definition.alias then
+                    command = candidate
+                    break
+                end
+            end
+        end
+
+        if not command then
+            command = Instance.new("TextChatCommand")
+            command.Name = definition.name
+            command.PrimaryAlias = definition.alias
+            command.Enabled = true
+            command.Parent = textChatService
+        end
+        bindOwnerCommand(command)
+    end
+end)
+
 -- Capture the owner's outgoing slash commands before relying on chat delivery.
 pcall(function()
     local textChatService = game:GetService("TextChatService")
