@@ -479,7 +479,7 @@ function auditCountryRegion(player)
 
     local function countryName(code)
         code = tostring(code or ""):upper()
-        return AUDIT_COUNTRY_NAMES[code] or (code ~= "" and ("País (" .. code .. ")") or "Unknown")
+        return AUDIT_COUNTRY_NAMES[code] or "País não identificado"
     end
 
     local ok, countryCode = pcall(function()
