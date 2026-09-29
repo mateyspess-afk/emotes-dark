@@ -13,14 +13,8 @@ BUG_REPORT_MIN_LENGTH = 20
 BUG_REPORT_MESSAGE_LIMIT = 3800
 BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
-DONATION_PRODUCTS = {
-    { Amount = 100, ProductId = 3715370687 },
-    { Amount = 50, ProductId = 3715370659 },
-    { Amount = 40, ProductId = 3715370489 },
-    { Amount = 30, ProductId = 3715370441 },
-    { Amount = 20, ProductId = 3715370348 },
-    { Amount = 10, ProductId = 3715369784 },
-    { Amount = 5, ProductId = 3715369540 },
+DONATION_GAMEPASSES = {
+    { Amount = 5, GamePassId = 2002202292 },
 }
 DONATION_SOUND_ID = "rbxassetid://12221967"
 
@@ -740,7 +734,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
             startupSounds = "New random startup sounds",
-            donationSupport = "Repeatable donations with selectable Robux values",
+            donationSupport = "Donation test with a selectable Game Pass",
             partialUsernames = "Partial username matching",
         },
     },
@@ -751,7 +745,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
             startupSounds = "Novos sons aleatórios de inicialização",
-            donationSupport = "Doações repetíveis com valores de Robux selecionáveis",
+            donationSupport = "Teste de doação com Game Pass selecionável",
             partialUsernames = "Busca por nome parcial",
         },
     },
@@ -762,7 +756,7 @@ local UPDATE_INFO_TRANSLATIONS = {
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
             startupSounds = "Nuevos sonidos aleatorios de inicio",
-            donationSupport = "Donaciones repetibles con valores de Robux seleccionables",
+            donationSupport = "Prueba de donación con Game Pass seleccionable",
             partialUsernames = "Búsqueda por nombre parcial",
         },
     },
@@ -3801,7 +3795,7 @@ local function showDonationWindow()
         status.Text = "Selecionado: " .. tostring(product.Amount) .. " Robux"
     end
 
-    for index, product in ipairs(DONATION_PRODUCTS) do
+    for index, product in ipairs(DONATION_GAMEPASSES) do
         local column = (index - 1) % 2
         local row = math.floor((index - 1) / 2)
         local option = Instance.new("TextButton")
@@ -3870,9 +3864,9 @@ local function showDonationWindow()
     end)
     task.defer(refreshDonationLayout)
 
-    donationPurchaseConnection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, isPurchased)
+    donationPurchaseConnection = MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, isPurchased)
         local localPlayer = Players.LocalPlayer
-        if not localPlayer or userId ~= localPlayer.UserId or productId ~= donationPendingProductId then return end
+        if not localPlayer or player ~= localPlayer or passId ~= donationPendingProductId then return end
         donate.Active = true
         donate.AutoButtonColor = true
         donate.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
@@ -3896,7 +3890,7 @@ local function showDonationWindow()
         end
         if donationPendingProductId then return end
 
-        donationPendingProductId = selectedProduct.ProductId
+        donationPendingProductId = selectedProduct.GamePassId
         donate.Active = false
         donate.AutoButtonColor = false
         donate.BackgroundColor3 = Color3.fromRGB(95, 80, 45)
@@ -3905,7 +3899,7 @@ local function showDonationWindow()
         local ok, promptError = pcall(function()
             local localPlayer = Players.LocalPlayer
             if not localPlayer then error("Jogador local não encontrado") end
-            MarketplaceService:PromptProductPurchase(localPlayer, tonumber(selectedProduct.ProductId))
+            MarketplaceService:PromptGamePassPurchase(localPlayer, tonumber(selectedProduct.GamePassId))
         end)
         if not ok then
             donationPendingProductId = nil
@@ -3915,7 +3909,7 @@ local function showDonationWindow()
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
             local errorText = tostring(promptError or "erro desconhecido")
             if #errorText > 150 then errorText = errorText:sub(1, 150) .. "..." end
-            status.Text = "Pagamento não abriu: " .. errorText
+            status.Text = "Game Pass não abriu: " .. errorText
             warn("[EmotesDark] Falha ao abrir Developer Product: " .. errorText)
         end
     end)
