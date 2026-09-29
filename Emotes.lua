@@ -906,47 +906,100 @@ local emotesDarkUpdateConfirmed = false
 local UPDATE_INFO_ITEMS = {
     { kind = "FIXED", key = "nametagScale" },
     { kind = "FIXED", key = "nametagIconAlignment" },
-    { kind = "FIXED", key = "multiplayerCommands" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 29, 2026",
+        updated = "Updated on September 29, 2026 at 19:32 (Fortaleza time)",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
             nametagScale = "Nametag size stays consistent as viewing distance changes",
             nametagIconAlignment = "Nametag icon stays centered beside the username",
-            multiplayerCommands = "Owner /kick and /puxar commands now reach other script users",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 29 de setembro de 2026",
+        updated = "Atualizado em 29 de setembro de 2026 às 19:32 (horário de Fortaleza)",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
             nametagScale = "Tamanho da nametag fica estável ao se aproximar ou afastar",
             nametagIconAlignment = "Ícone da nametag centralizado ao lado do nome",
-            multiplayerCommands = "Comandos /kick e /puxar do dono chegam aos outros usuários do script",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 29 de septiembre de 2026",
+        updated = "Actualizado el 29 de septiembre de 2026 a las 19:32 (hora de Fortaleza)",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
             nametagScale = "El tamaño de la etiqueta se mantiene estable al acercarse o alejarse",
             nametagIconAlignment = "El icono de la etiqueta queda centrado junto al nombre",
-            multiplayerCommands = "Los comandos /kick y /puxar del dueño llegan a los demás usuarios del script",
         },
     },
 }
 
 local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
+end
+
+local SCRIPT_NOTICE_TRANSLATIONS = {
+    en = "The script will be disabled from ScriptBlox at 11 PM because of updates we will make to the script. The script will only be removed from ScriptBlox. Please get the script from ScriptBlox before it is too late. | by Herobrineadmin2002",
+    pt = "O script será desativado do ScriptBlox às 23h por causa de atualizações que faremos no script. O script será apenas removido do ScriptBlox. Peguem o script no ScriptBlox antes que seja tarde demais. | by Herobrineadmin2002",
+    es = "El script será desactivado de ScriptBlox a las 23:00 por las actualizaciones que haremos en el script. El script solo será eliminado de ScriptBlox. Consigue el script en ScriptBlox antes de que sea demasiado tarde. | by Herobrineadmin2002",
+}
+
+local function showScriptNoticeBanner()
+    local oldGui = CoreGui:FindFirstChild("EmotesDarkScriptNotice")
+    if oldGui then oldGui:Destroy() end
+
+    local noticeGui = Instance.new("ScreenGui")
+    noticeGui.Name = "EmotesDarkScriptNotice"
+    noticeGui.IgnoreGuiInset = true
+    noticeGui.ResetOnSpawn = false
+    noticeGui.DisplayOrder = 10003
+    noticeGui.Parent = CoreGui
+
+    local banner = Instance.new("Frame")
+    banner.Name = "Notice"
+    banner.AnchorPoint = Vector2.new(0.5, 1)
+    banner.Position = UDim2.new(0.5, 0, 1, -8)
+    banner.Size = UDim2.new(1, -16, 0, 62)
+    banner.BackgroundColor3 = Color3.fromRGB(105, 0, 12)
+    banner.BackgroundTransparency = 0.04
+    banner.BorderSizePixel = 0
+    banner.Parent = noticeGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = banner
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 45, 60)
+    stroke.Thickness = 1.5
+    stroke.Parent = banner
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Message"
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.fromOffset(12, 5)
+    label.Size = UDim2.new(1, -24, 1, -10)
+    label.Font = Enum.Font.GothamBold
+    label.Text = SCRIPT_NOTICE_TRANSLATIONS.en
+    label.TextColor3 = Color3.fromRGB(255, 235, 235)
+    label.TextSize = 13
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Parent = banner
+
+    task.spawn(function()
+        local language = detectUpdateInfoLanguage()
+        local translation = SCRIPT_NOTICE_TRANSLATIONS[language] or SCRIPT_NOTICE_TRANSLATIONS.en
+        if label.Parent then label.Text = translation end
+    end)
 end
 
 local function showUpdateInfoWindow()
@@ -1210,6 +1263,11 @@ if _G.EmotesGUIRunning then
 end
 
 _G.EmotesGUIRunning = true
+
+local noticeShown, noticeError = pcall(showScriptNoticeBanner)
+if not noticeShown then
+    warn("[EmotesDark] Não foi possível mostrar o aviso inferior: " .. tostring(noticeError))
+end
 
 local updateInfoShown, updateInfoError = pcall(showUpdateInfoWindow)
 if not updateInfoShown then
