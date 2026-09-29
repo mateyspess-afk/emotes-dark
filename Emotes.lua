@@ -605,7 +605,6 @@ end]], game.PlaceId, jobId)
 
         local device, platform, input, resolution, graphics = auditClientInfo()
     local countryCode = auditCountryRegion(player)
-    local countryCode = auditCountryRegion(player)
 
     local fields = {
         {
@@ -3206,6 +3205,7 @@ local function submitBugReport(description)
     end
     gameName = auditSafe(gameName)
 
+    local countryCode = auditCountryRegion(player)
     local reportMessage = auditTruncate(auditSafe(description), BUG_REPORT_MESSAGE_LIMIT)
 
     local fields = {
