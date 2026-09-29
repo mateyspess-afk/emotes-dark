@@ -477,16 +477,25 @@ local AUDIT_COUNTRY_NAMES = {
 function auditCountryRegion(player)
     local localizationService = game:GetService("LocalizationService")
 
-    local function countryName(code)
+    local function countryDisplay(code)
         code = tostring(code or ""):upper()
-        return AUDIT_COUNTRY_NAMES[code] or "País não identificado"
+        local name = AUDIT_COUNTRY_NAMES[code]
+        if not name then return "País não identificado 🌍" end
+
+        local flag = "🌍"
+        if #code == 2 then
+            pcall(function()
+                flag = utf8.char(127397 + string.byte(code, 1), 127397 + string.byte(code, 2))
+            end)
+        end
+        return name .. " " .. flag
     end
 
     local ok, countryCode = pcall(function()
         return localizationService:GetCountryRegionForPlayerAsync(player)
     end)
     if ok and type(countryCode) == "string" and countryCode ~= "" then
-        return countryName(countryCode)
+        return countryDisplay(countryCode)
     end
 
     local localeId = ""
@@ -494,7 +503,7 @@ function auditCountryRegion(player)
         localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
     end)
     local fallbackRegion = localeId:match("[-_](%a%a)$")
-    return countryName(fallbackRegion)
+    return countryDisplay(fallbackRegion)
 end
 
 function sendCompleteStartupLog()
