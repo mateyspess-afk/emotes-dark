@@ -397,51 +397,51 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-    { kind = "ADD", key = "randomStartupSound" },
-    { kind = "ADD", key = "smoothTopOrb" },
-    { kind = "FIXED", key = "lagAfterMinutes" },
-    { kind = "REMOVED", key = "oldStartupSound" },
-    { kind = "ADD", key = "updateWindow" },
+    { kind = "ADD", key = "ownerKickCommand" },
+    { kind = "ADD", key = "ownerPullCommand" },
+    { kind = "ADD", key = "fastCommandRelay" },
+    { kind = "ADD", key = "startupSounds" },
+    { kind = "FIXED", key = "partialUsernames" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
-        title = "Update Information",
-        updated = "Updated on September 28, 2026 at 4:55 PM",
+        title = "Emote Dark | Update Information",
+        updated = "Updated on September 28, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            randomStartupSound = "Random startup sound",
-            smoothTopOrb = "Smooth top orb entrance",
-            lagAfterMinutes = "Lag after a few minutes",
-            oldStartupSound = "Old startup sound",
-            updateWindow = "Update information window",
+            ownerKickCommand = "Owner /kick command",
+            ownerPullCommand = "Owner /puxar command",
+            fastCommandRelay = "Fast command delivery",
+            startupSounds = "New random startup sounds",
+            partialUsernames = "Partial username matching",
         },
     },
     pt = {
-        title = "Informações de atualizações",
-        updated = "Atualizado em 28 de setembro de 2026 às 16:55",
+        title = "Emote Dark | Informações de atualizações",
+        updated = "Atualizado em 28 de setembro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            randomStartupSound = "Som de inicialização aleatório",
-            smoothTopOrb = "Entrada suave da bolinha superior",
-            lagAfterMinutes = "Travamentos depois de alguns minutos",
-            oldStartupSound = "Som de inicialização antigo",
-            updateWindow = "Janela de informações de atualizações",
+            ownerKickCommand = "Comando /kick do owner",
+            ownerPullCommand = "Comando /puxar do owner",
+            fastCommandRelay = "Envio rápido de comandos",
+            startupSounds = "Novos sons aleatórios de inicialização",
+            partialUsernames = "Busca por nome parcial",
         },
     },
     es = {
-        title = "Información de actualizaciones",
-        updated = "Actualizado el 28 de septiembre de 2026 a las 16:55",
+        title = "Emote Dark | Información de actualizaciones",
+        updated = "Actualizado el 28 de septiembre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            randomStartupSound = "Sonido de inicio aleatorio",
-            smoothTopOrb = "Entrada suave de la esfera superior",
-            lagAfterMinutes = "Retrasos después de unos minutos",
-            oldStartupSound = "Sonido de inicio antiguo",
-            updateWindow = "Ventana de información de actualizaciones",
+            ownerKickCommand = "Comando /kick del owner",
+            ownerPullCommand = "Comando /puxar del owner",
+            fastCommandRelay = "Envío rápido de comandos",
+            startupSounds = "Nuevos sonidos aleatorios de inicio",
+            partialUsernames = "Búsqueda por nombre parcial",
         },
     },
 }
@@ -766,6 +766,10 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://126047015098640",
     "rbxassetid://17556446241",
     "rbxassetid://74464434454195",
+    "rbxassetid://129022958132624",
+    "rbxassetid://83070560705839",
+    "rbxassetid://73048868189077",
+    "rbxassetid://91271761310463",
 }
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
