@@ -13,7 +13,16 @@ BUG_REPORT_MIN_LENGTH = 20
 BUG_REPORT_MESSAGE_LIMIT = 3800
 BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
 BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
-DONATION_PRODUCT_ID = 0 -- Substitua pelo ID do Developer Product
+DONATION_PRODUCTS = {
+    { Amount = 100, ProductId = 3715370687 },
+    { Amount = 50, ProductId = 3715370659 },
+    { Amount = 40, ProductId = 3715370489 },
+    { Amount = 30, ProductId = 3715370441 },
+    { Amount = 20, ProductId = 3715370348 },
+    { Amount = 10, ProductId = 3715369784 },
+    { Amount = 5, ProductId = 3715369540 },
+}
+DONATION_SOUND_ID = "rbxassetid://12221967"
 
 MAX_FIELD_LENGTH = 1024
 MAX_BIO_LENGTH = 150
@@ -3640,7 +3649,29 @@ end
 
 
 
+local donationPendingProductId = nil
+local donationPurchaseConnection = nil
+
+local function playDonationCoinSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = DONATION_SOUND_ID
+    sound.Volume = 1
+    sound.Parent = game:GetService("SoundService")
+    sound:Play()
+    sound.Ended:Connect(function()
+        sound:Destroy()
+    end)
+    task.delay(5, function()
+        if sound.Parent then sound:Destroy() end
+    end)
+end
+
 local function closeDonationWindow()
+    if donationPurchaseConnection then
+        donationPurchaseConnection:Disconnect()
+        donationPurchaseConnection = nil
+    end
+    donationPendingProductId = nil
     if donationWindow then
         donationWindow:Destroy()
         donationWindow = nil
@@ -3669,17 +3700,22 @@ local function showDonationWindow()
     card.Parent = SettingsLib.UI
     card.AnchorPoint = Vector2.new(0, 0.5)
     card.Position = UDim2.new(0.08, 0, 0.5, 0)
-    card.Size = UDim2.fromOffset(270, 260)
+    card.Size = UDim2.fromOffset(300, 350)
     card.BackgroundColor3 = Color3.fromRGB(24, 25, 31)
-    card.BackgroundTransparency = 0
     card.BorderSizePixel = 0
     card.Active = true
     card.ZIndex = 7001
     donationWindow = card
 
     local cardCorner = Instance.new("UICorner")
-    cardCorner.CornerRadius = UDim.new(0, 10)
+    cardCorner.CornerRadius = UDim.new(0, 12)
     cardCorner.Parent = card
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(255, 193, 7)
+    cardStroke.Thickness = 1
+    cardStroke.Transparency = 0.35
+    cardStroke.Parent = card
 
     local cardScale = Instance.new("UIScale")
     cardScale.Scale = 1
@@ -3691,7 +3727,7 @@ local function showDonationWindow()
     title.Position = UDim2.new(0, 18, 0, 12)
     title.Size = UDim2.new(1, -60, 0, 24)
     title.Font = Enum.Font.GothamBold
-    title.Text = "DOAR"
+    title.Text = "APOIE O EMOTES DARK"
     title.TextColor3 = Color3.fromRGB(242, 242, 247)
     title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -3711,24 +3747,26 @@ local function showDonationWindow()
     local hint = Instance.new("TextLabel")
     hint.Parent = card
     hint.BackgroundTransparency = 1
-    hint.Position = UDim2.new(0, 18, 0, 50)
-    hint.Size = UDim2.new(1, -36, 0, 58)
+    hint.Position = UDim2.new(0, 18, 0, 45)
+    hint.Size = UDim2.new(1, -36, 0, 32)
     hint.Font = Enum.Font.Gotham
-    hint.Text = "Gostou do Emotes Dark?\nA sua doação ajuda a manter o projeto."
+    hint.Text = "Escolha um valor e confirme a sua doação."
     hint.TextColor3 = Color3.fromRGB(170, 171, 181)
-    hint.TextSize = 11
+    hint.TextSize = 10
     hint.TextWrapped = true
     hint.TextXAlignment = Enum.TextXAlignment.Left
     hint.ZIndex = 7002
 
+    local selectedProduct = nil
+    local optionButtons = {}
     local status = Instance.new("TextLabel")
     status.Parent = card
     status.BackgroundTransparency = 1
-    status.Position = UDim2.new(0, 18, 0, 132)
-    status.Size = UDim2.new(1, -36, 0, 42)
+    status.Position = UDim2.new(0, 18, 1, -76)
+    status.Size = UDim2.new(1, -36, 0, 24)
     status.Font = Enum.Font.Gotham
-    status.Text = ""
-    status.TextColor3 = Color3.fromRGB(255, 150, 150)
+    status.Text = "Selecione um valor"
+    status.TextColor3 = Color3.fromRGB(170, 171, 181)
     status.TextSize = 10
     status.TextWrapped = true
     status.TextXAlignment = Enum.TextXAlignment.Left
@@ -3749,14 +3787,55 @@ local function showDonationWindow()
     donateCorner.CornerRadius = UDim.new(0, 7)
     donateCorner.Parent = donate
 
+    local function selectProduct(product, button)
+        selectedProduct = product
+        for _, entry in ipairs(optionButtons) do
+            entry.button.BackgroundColor3 = entry.button == button and Color3.fromRGB(255, 193, 7) or Color3.fromRGB(40, 42, 51)
+            entry.button.TextColor3 = entry.button == button and Color3.fromRGB(30, 30, 35) or Color3.fromRGB(242, 242, 247)
+        end
+        status.TextColor3 = Color3.fromRGB(160, 220, 170)
+        status.Text = "Selecionado: " .. tostring(product.Amount) .. " Robux"
+    end
+
+    for index, product in ipairs(DONATION_PRODUCTS) do
+        local column = (index - 1) % 2
+        local row = math.floor((index - 1) / 2)
+        local option = Instance.new("TextButton")
+        option.Parent = card
+        option.BackgroundColor3 = Color3.fromRGB(40, 42, 51)
+        option.Position = UDim2.new(0, 18 + column * 132, 0, 88 + row * 42)
+        option.Size = UDim2.fromOffset(120, 34)
+        option.Font = Enum.Font.GothamBold
+        option.Text = "💰 " .. tostring(product.Amount) .. " Robux"
+        option.TextColor3 = Color3.fromRGB(242, 242, 247)
+        option.TextSize = 10
+        option.AutoButtonColor = false
+        option.ZIndex = 7002
+
+        local optionCorner = Instance.new("UICorner")
+        optionCorner.CornerRadius = UDim.new(0, 7)
+        optionCorner.Parent = option
+
+        local optionStroke = Instance.new("UIStroke")
+        optionStroke.Color = Color3.fromRGB(75, 77, 88)
+        optionStroke.Thickness = 1
+        optionStroke.Parent = option
+
+        local entry = { button = option, product = product }
+        table.insert(optionButtons, entry)
+        option.MouseButton1Click:Connect(function()
+            selectProduct(product, option)
+        end)
+    end
+
     local function fitDonationCard()
         if not overlay.Parent then return end
         local viewport = overlay.AbsoluteSize
         local currentWidth = card.AbsoluteSize.X / math.max(cardScale.Scale, 0.01)
         local currentHeight = card.AbsoluteSize.Y / math.max(cardScale.Scale, 0.01)
         if viewport.X <= 0 or viewport.Y <= 0 or currentWidth <= 0 or currentHeight <= 0 then return end
-        local desiredWidth = math.clamp(viewport.X * 0.25, 245, 290)
-        local desiredHeight = math.clamp(viewport.Y * 0.50, 230, 265)
+        local desiredWidth = math.clamp(viewport.X * 0.28, 285, 320)
+        local desiredHeight = math.clamp(viewport.Y * 0.64, 320, 370)
         cardScale.Scale = math.min(desiredWidth / currentWidth, desiredHeight / currentHeight)
     end
 
@@ -3787,23 +3866,48 @@ local function showDonationWindow()
     end)
     task.defer(refreshDonationLayout)
 
-    close.MouseButton1Click:Connect(closeDonationWindow)
-    donate.MouseButton1Click:Connect(function()
-        local productId = tonumber(DONATION_PRODUCT_ID)
-        if not productId or productId <= 0 then
-            status.Text = "Configure o ID do Developer Product no topo do script."
-            return
-        end
-
-        local ok = pcall(function()
-            MarketplaceService:PromptProductPurchase(Players.LocalPlayer, productId)
-        end)
-        if ok then
+    donationPurchaseConnection = MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, isPurchased)
+        local localPlayer = Players.LocalPlayer
+        if not localPlayer or userId ~= localPlayer.UserId or productId ~= donationPendingProductId then return end
+        donate.Active = true
+        donate.AutoButtonColor = true
+        donate.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+        if isPurchased then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
-            status.Text = "Janela de doação aberta."
+            status.Text = "Doação confirmada: " .. tostring(selectedProduct.Amount) .. " Robux"
+            playDonationCoinSound()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = "Não foi possível abrir a doação."
+            status.Text = "Doação cancelada."
+        end
+        donationPendingProductId = nil
+    end)
+
+    close.MouseButton1Click:Connect(closeDonationWindow)
+    donate.MouseButton1Click:Connect(function()
+        if not selectedProduct then
+            status.TextColor3 = Color3.fromRGB(255, 193, 7)
+            status.Text = "Escolha um valor antes de doar."
+            return
+        end
+        if donationPendingProductId then return end
+
+        donationPendingProductId = selectedProduct.ProductId
+        donate.Active = false
+        donate.AutoButtonColor = false
+        donate.BackgroundColor3 = Color3.fromRGB(95, 80, 45)
+        status.TextColor3 = Color3.fromRGB(190, 191, 200)
+        status.Text = "Abrindo pagamento..."
+        local ok = pcall(function()
+            MarketplaceService:PromptProductPurchase(Players.LocalPlayer, selectedProduct.ProductId)
+        end)
+        if not ok then
+            donationPendingProductId = nil
+            donate.Active = true
+            donate.AutoButtonColor = true
+            donate.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+            status.TextColor3 = Color3.fromRGB(255, 150, 150)
+            status.Text = "Não foi possível abrir o pagamento."
         end
     end)
 end
