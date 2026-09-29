@@ -66,20 +66,52 @@ local function emotesDarkWriteLinkKickData(data)
     end)
 end
 
+local emotesDarkLanguageCache = nil
+
 local function emotesDarkDetectLanguage()
-    local localeId = ""
+    if emotesDarkLanguageCache then return emotesDarkLanguageCache end
+
+    local language = "en"
+    local countryCode = ""
     local localizationService = game:GetService("LocalizationService")
-    pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
-    end)
-    if localeId == "" then
+    local player = game:GetService("Players").LocalPlayer
+    if player then
         pcall(function()
-            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
+            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
     end
-    if localeId:match("^pt") then return "pt" end
-    if localeId:match("^es") then return "es" end
-    return "en"
+
+    -- A tradução principal usa o país real retornado pelo Roblox.
+    local portugueseCountries = {
+        AO = true, BR = true, CV = true, GW = true, MZ = true, PT = true, ST = true, TL = true,
+    }
+    local spanishCountries = {
+        AR = true, BO = true, CL = true, CO = true, CR = true, CU = true, DO = true, EC = true,
+        ES = true, GT = true, HN = true, MX = true, NI = true, PA = true, PE = true, PR = true,
+        PY = true, SV = true, UY = true, VE = true,
+    }
+
+    if portugueseCountries[countryCode] then
+        language = "pt"
+    elseif spanishCountries[countryCode] then
+        language = "es"
+    else
+        -- Se a consulta do país falhar ou não houver tradução disponível, usa o locale.
+        local localeId = ""
+        pcall(function()
+            localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+        end)
+        if localeId == "" then
+            pcall(function()
+                localeId = tostring(localizationService.SystemLocaleId or ""):lower()
+            end)
+        end
+        if localeId:match("^pt") then language = "pt" end
+        if localeId:match("^es") then language = "es" end
+    end
+
+    emotesDarkLanguageCache = language
+    return language
 end
 
 local BUG_REPORT_TRANSLATIONS = {
@@ -882,6 +914,7 @@ local UPDATE_INFO_ITEMS = {
     { kind = "ADD", key = "bugReportLinkKick" },
     { kind = "FIXED", key = "ownerKickExemption" },
     { kind = "ADD", key = "bugReportLocalization" },
+    { kind = "ADD", key = "bugReportCountryLanguage" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -897,6 +930,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
             ownerKickExemption = "Experience owner is exempt from anti-link kicks",
             bugReportLocalization = "Automatic bug report and kick translations",
+            bugReportCountryLanguage = "Translations selected from the player's country",
         },
     },
     pt = {
@@ -911,6 +945,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
             ownerKickExemption = "O dono da experiência nunca recebe kick por links",
             bugReportLocalization = "Tradução automática do report bug e do kick",
+            bugReportCountryLanguage = "Tradução escolhida pelo país do jogador",
         },
     },
     es = {
@@ -925,6 +960,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
             ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
             bugReportLocalization = "Traducción automática del reporte y del kick",
+            bugReportCountryLanguage = "Traducción elegida según el país del jugador",
         },
     },
 }
