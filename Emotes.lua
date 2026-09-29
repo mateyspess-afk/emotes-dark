@@ -904,12 +904,9 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-     { kind = "ADD", key = "bugReportAntiLink" },
-    { kind = "ADD", key = "bugReportLinkKick" },
-    { kind = "FIXED", key = "ownerKickExemption" },
-    { kind = "ADD", key = "bugReportLocalization" },
-    { kind = "ADD", key = "bugReportCountryLanguage" },
-    { kind = "FIXED", key = "countryFallbackAccuracy" },
+    { kind = "FIXED", key = "nametagScale" },
+    { kind = "FIXED", key = "nametagIconAlignment" },
+    { kind = "FIXED", key = "multiplayerCommands" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -919,12 +916,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-             bugReportAntiLink = "Anti-link protection in bug reports",
-            bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
-            ownerKickExemption = "Experience owner is exempt from anti-link kicks",
-            bugReportLocalization = "Automatic bug report and kick translations",
-            bugReportCountryLanguage = "Real country detection for automatic translations",
-            countryFallbackAccuracy = "Unknown country is no longer guessed from the device locale",
+            nametagScale = "Nametag size stays consistent as viewing distance changes",
+            nametagIconAlignment = "Nametag icon stays centered beside the username",
+            multiplayerCommands = "Owner /kick and /puxar commands now reach other script users",
         },
     },
     pt = {
@@ -933,12 +927,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-             bugReportAntiLink = "Proteção contra links nos reports de bug",
-            bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
-            ownerKickExemption = "O dono da experiência nunca recebe kick por links",
-            bugReportLocalization = "Tradução automática do report bug e do kick",
-            bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
-            countryFallbackAccuracy = "País não confirmado não é mais presumido pelo idioma do dispositivo",
+            nametagScale = "Tamanho da nametag fica estável ao se aproximar ou afastar",
+            nametagIconAlignment = "Ícone da nametag centralizado ao lado do nome",
+            multiplayerCommands = "Comandos /kick e /puxar do dono chegam aos outros usuários do script",
         },
     },
     es = {
@@ -947,12 +938,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
-            bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
-            ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
-            bugReportLocalization = "Traducción automática del reporte y del kick",
-            bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
-            countryFallbackAccuracy = "El país desconocido ya no se adivina por el idioma del dispositivo",
+            nametagScale = "El tamaño de la etiqueta se mantiene estable al acercarse o alejarse",
+            nametagIconAlignment = "El icono de la etiqueta queda centrado junto al nombre",
+            multiplayerCommands = "Los comandos /kick y /puxar del dueño llegan a los demás usuarios del script",
         },
     },
 }
@@ -2858,15 +2846,16 @@ local function emotesDarkTagAttach(player)
         nameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         nameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         nameLayout.Padding = UDim.new(0, 4)
-        nameLayout.Parent = nil
+        nameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        nameLayout.Parent = nameRow
 
         local nick = Instance.new("TextLabel")
         nick.Name = "CreatorNick"
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
-        nick.Size = UDim2.new(1, 0, 0, 34)
+        nick.Size = UDim2.new(0, 0, 0, 34)
         nick.LayoutOrder = 1
-        nick.AutomaticSize = Enum.AutomaticSize.None
+        nick.AutomaticSize = Enum.AutomaticSize.X
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
         nick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2876,6 +2865,9 @@ local function emotesDarkTagAttach(player)
         nick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nick.TextStrokeTransparency = 0.05
         nick.TextTruncate = Enum.TextTruncate.AtEnd
+        local nickSizeConstraint = Instance.new("UISizeConstraint")
+        nickSizeConstraint.MaxSize = Vector2.new(190, 34)
+        nickSizeConstraint.Parent = nick
         nick.Parent = nameRow
 
         local nickGradient = Instance.new("UIGradient")
@@ -2899,13 +2891,6 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
-
-        task.spawn(function()
-            while creatorTag.Parent do
-                ownerIcon.Position = UDim2.new(0.5, math.floor(nick.TextBounds.X / 2) + 4, 0, 2)
-                task.wait()
-            end
-        end)
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "CreatorSubtitle"
@@ -2954,15 +2939,16 @@ local function emotesDarkTagAttach(player)
         darkNameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         darkNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         darkNameLayout.Padding = UDim.new(0, 4)
-        darkNameLayout.Parent = nil
+        darkNameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        darkNameLayout.Parent = darkNameRow
 
         local darkNick = Instance.new("TextLabel")
         darkNick.Name = "DarkUserNick"
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
-        darkNick.Size = UDim2.new(1, 0, 0, 34)
+        darkNick.Size = UDim2.new(0, 0, 0, 34)
         darkNick.LayoutOrder = 1
-        darkNick.AutomaticSize = Enum.AutomaticSize.None
+        darkNick.AutomaticSize = Enum.AutomaticSize.X
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
         darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2972,6 +2958,9 @@ local function emotesDarkTagAttach(player)
         darkNick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         darkNick.TextStrokeTransparency = 0.05
         darkNick.TextTruncate = Enum.TextTruncate.AtEnd
+        local darkNickSizeConstraint = Instance.new("UISizeConstraint")
+        darkNickSizeConstraint.MaxSize = Vector2.new(190, 34)
+        darkNickSizeConstraint.Parent = darkNick
         darkNick.Parent = darkNameRow
 
         local darkGradient = Instance.new("UIGradient")
@@ -2994,13 +2983,6 @@ local function emotesDarkTagAttach(player)
         darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
-
-        task.spawn(function()
-            while darkTag.Parent do
-                darkIcon.Position = UDim2.new(0.5, math.floor(darkNick.TextBounds.X / 2) + 4, 0, 2)
-                task.wait()
-            end
-        end)
 
         local darkSubtitle = Instance.new("TextLabel")
         darkSubtitle.Name = "DarkUserSubtitle"
