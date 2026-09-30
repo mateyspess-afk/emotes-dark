@@ -2844,13 +2844,16 @@ local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functio
 local EMOTES_DARK_TAG_LEGACY_APIS = {
     ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
 }
-local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
+local EMOTES_DARK_TAG_POLL_SECONDS = 1 -- poll once per second to avoid bridge rate limits
+local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 6
+local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 3
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
 local EMOTES_DARK_TAG_MIN_SCALE = EMOTES_DARK_TAG_REFERENCE_DISTANCE / EMOTES_DARK_TAG_MAX_DISTANCE
 local EMOTES_DARK_TAG_MAX_SCALE = 2.5
 local emotesDarkTagUsers = {}
+local emotesDarkTagLastSeen = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
@@ -3204,15 +3207,23 @@ end
 
 local function emotesDarkTagSync(activeClients)
     local nextUsers = {}
+    local now = os.clock()
     for _, client in ipairs(activeClients or {}) do
         if type(client) == "table" and client.userId ~= nil then
-            nextUsers[tostring(client.userId)] = client
+            local key = tostring(client.userId)
+            nextUsers[key] = client
+            emotesDarkTagUsers[key] = client
+            emotesDarkTagLastSeen[key] = now
         end
     end
-    emotesDarkTagUsers = nextUsers
 
     for _, player in ipairs(Players:GetPlayers()) do
         local key = tostring(player.UserId)
+        local lastSeen = emotesDarkTagLastSeen[key]
+        if not nextUsers[key] and (not lastSeen or now - lastSeen > EMOTES_DARK_TAG_MISSING_GRACE_SECONDS) then
+            emotesDarkTagUsers[key] = nil
+            emotesDarkTagLastSeen[key] = nil
+        end
         if emotesDarkTagUsers[key] then
             emotesDarkTagAttach(player)
         else
@@ -3237,7 +3248,10 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    emotesDarkTagRemove(player.UserId)
+    local key = tostring(player.UserId)
+    emotesDarkTagUsers[key] = nil
+    emotesDarkTagLastSeen[key] = nil
+    emotesDarkTagRemove(key)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
@@ -3245,9 +3259,35 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 task.spawn(function()
+    local lastHeartbeat = 0
+    local nextAttempt = 0
+    local retrySeconds = 1
+    local lastCommandNonce = ""
+    while emotesDarkTagRunning and Players.LocalPlayer do
+        local now = os.clock()
+        local pendingKick = emotesDarkPendingKickCommand
+        local commandNonce = pendingKick and tostring(pendingKick.nonce or "") or ""
+        local newCommand = commandNonce ~= "" and commandNonce ~= lastCommandNonce
+        if now >= nextAttempt and (now - lastHeartbeat >= EMOTES_DARK_TAG_HEARTBEAT_SECONDS or newCommand) then
+            local registered = emotesDarkTagRequest("POST", "/clients/register", emotesDarkTagClientInfo())
+            if registered then
+                lastHeartbeat = os.clock()
+                nextAttempt = lastHeartbeat + EMOTES_DARK_TAG_HEARTBEAT_SECONDS
+                if newCommand then lastCommandNonce = commandNonce end
+                retrySeconds = 1
+            else
+                nextAttempt = os.clock() + retrySeconds
+                retrySeconds = math.min(retrySeconds * 2, 8)
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+task.spawn(function()
+    local retrySeconds = EMOTES_DARK_TAG_POLL_SECONDS
     while emotesDarkTagRunning and Players.LocalPlayer do
         local info = emotesDarkTagClientInfo()
-        emotesDarkTagRequest("POST", "/clients/register", info)
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
@@ -3281,8 +3321,12 @@ task.spawn(function()
                 end
             end
             emotesDarkTagSync(response.clients)
+            retrySeconds = EMOTES_DARK_TAG_POLL_SECONDS
+            task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
+        else
+            task.wait(retrySeconds)
+            retrySeconds = math.min(retrySeconds * 2, 8)
         end
-        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
     end
 end)
 
