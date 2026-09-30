@@ -2842,7 +2842,6 @@ end
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
 local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functions/api"
 local EMOTES_DARK_TAG_LEGACY_APIS = {
-    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
     ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
 }
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
