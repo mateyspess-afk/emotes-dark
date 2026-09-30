@@ -17,8 +17,8 @@ const ENDPOINTS = [
 ]
 
 const STEPS = [
-  'Conecte o repositório mateyspess-afk/emotes-dark à Netlify (Add new project → Import from Git).',
-  'Aguarde o deploy terminar e copie o domínio gerado, por exemplo algo-como-isto.netlify.app.',
+  'No v0, clique em Publish (canto superior direito) para publicar na Vercel.',
+  'Quando terminar, copie o domínio gerado, por exemplo algo-como-isto.vercel.app.',
   'No executor, antes de carregar o Emotes Dark, defina o endereço trocando SEU-SITE pelo seu domínio:',
 ]
 
@@ -56,7 +56,7 @@ export default function Page() {
         </ol>
         <CodeBlock
           label="linha de configuração"
-          code={'getgenv().EMOTES_DARK_PRESENCE_API = "https://SEU-SITE.netlify.app/api"'}
+          code={'getgenv().EMOTES_DARK_PRESENCE_API = "https://SEU-SITE.vercel.app/api"'}
         />
         <CurrentAddress />
         <p className="text-sm leading-relaxed text-muted-foreground">

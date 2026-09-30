@@ -9,7 +9,7 @@ const getServerOrigin = () => null
 
 export function CurrentAddress() {
   const origin = useSyncExternalStore(subscribe, getOrigin, getServerOrigin)
-  if (!origin || !origin.endsWith('.netlify.app')) return null
+  if (!origin || !origin.endsWith('.vercel.app')) return null
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-emerald-400/30 bg-emerald-400/5 p-4">

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GET as health } from '@/app/api/route'
 import { GET as active } from '@/app/api/clients/active/route'
 import { POST as register } from '@/app/api/clients/register/route'
-import { cleanupExpiredPresence } from '@/lib/presence/service'
+import { SCOPE_KEY_TTL_MS } from '@/lib/presence/service'
 import { setPresenceStoreForTests, type PresenceStore } from '@/lib/presence/store'
 import { createFakeStore } from './fake-store'
 
@@ -60,7 +60,7 @@ describe('GET /api', () => {
   it('informa quando o armazenamento está indisponível', async () => {
     const broken: PresenceStore = {
       ...fake.store,
-      get: () => Promise.reject(new Error('sem blobs')),
+      ping: () => Promise.reject(new Error('sem redis')),
     }
     setPresenceStoreForTests(broken)
     const response = await health()
@@ -137,7 +137,7 @@ describe('expiração', () => {
     await postRegister(player(1))
     vi.advanceTimersByTime(15_001)
     expect((await getActive()).body.clients).toEqual([])
-    expect(fake.data.size).toBe(0)
+    expect(fake.size()).toBe(0)
   })
 
   it('renovar o sinal mantém o usuário ativo', async () => {
@@ -148,15 +148,22 @@ describe('expiração', () => {
     expect((await getActive()).body.clients).toHaveLength(1)
   })
 
-  it('a limpeza agendada remove servidores abandonados', async () => {
+  it('mistura ativos e expirados no mesmo servidor', async () => {
+    await postRegister(player(1))
+    vi.advanceTimersByTime(10_000)
+    await postRegister(player(2))
+    vi.advanceTimersByTime(6_000)
+    const { body } = await getActive()
+    expect(body.clients.map((c: { userId: number }) => c.userId)).toEqual([2])
+    expect(fake.size()).toBe(1)
+  })
+
+  it('servidores abandonados expiram sozinhos sem ninguém consultar', async () => {
     await postRegister(player(1))
     await postRegister(player(2, { jobId: 'job-b' }))
-    vi.advanceTimersByTime(10_000)
-    await postRegister(player(3))
-    vi.advanceTimersByTime(6_000)
-
-    const result = await cleanupExpiredPresence(fake.store, Date.now())
-    expect(result).toEqual({ removed: 2, remaining: 1 })
-    expect([...fake.data.keys()]).toEqual(['presence/111/222/job-a/3'])
+    vi.advanceTimersByTime(SCOPE_KEY_TTL_MS)
+    expect(fake.scopes.size).toBe(2)
+    expect(fake.size()).toBe(0)
+    expect(fake.scopes.size).toBe(0)
   })
 })

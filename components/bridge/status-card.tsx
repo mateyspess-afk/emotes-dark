@@ -49,7 +49,7 @@ export function StatusCard() {
       <dl className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm sm:grid-cols-3">
         <div className="flex flex-col gap-1">
           <dt className="text-muted-foreground">Armazenamento</dt>
-          <dd className="font-mono">{data?.storage.ready ? 'Netlify Blobs' : '—'}</dd>
+          <dd className="font-mono">{data?.storage.ready ? 'Upstash Redis' : '—'}</dd>
         </div>
         <div className="flex flex-col gap-1">
           <dt className="text-muted-foreground">Expiração</dt>
@@ -66,7 +66,7 @@ export function StatusCard() {
       {state === 'degraded' && (
         <p className="rounded-md bg-amber-400/10 p-3 text-sm leading-relaxed text-amber-200">
           {
-            'A API respondeu, mas o Netlify Blobs não está acessível. Isso é esperado no preview do v0; depois de publicar na Netlify o armazenamento é configurado automaticamente.'
+            'A API respondeu, mas o Redis não está acessível. Confira se a integração Upstash for Redis está conectada ao projeto (Settings → Integrations no v0).'
           }
         </p>
       )}

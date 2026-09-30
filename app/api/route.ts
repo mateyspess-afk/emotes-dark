@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 async function checkStorage(): Promise<{ ready: boolean; error?: string }> {
   try {
-    await getPresenceStore().get('health/probe')
+    await getPresenceStore().ping()
     return { ready: true }
   } catch (error) {
     return { ready: false, error: error instanceof Error ? error.message : 'Falha desconhecida' }
@@ -21,7 +21,7 @@ export async function GET() {
       service: 'emotes-dark-bridge',
       status: storage.ready ? 'online' : 'degraded',
       storage: {
-        provider: 'netlify-blobs',
+        provider: 'upstash-redis',
         ready: storage.ready,
         ...(storage.error ? { error: storage.error } : {}),
       },
