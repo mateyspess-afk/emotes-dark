@@ -3256,15 +3256,21 @@ task.spawn(function()
             for _, client in ipairs(response.clients) do
                 local command = type(client) == "table" and client.command or nil
                 local action, nonce, senderUserId, encodedTarget, encodedReason
-                if type(command) == "table" then
-                    action, nonce = command.action, tostring(command.nonce or "")
-                    senderUserId, encodedTarget, encodedReason = tostring(command.senderUserId or ""), tostring(command.target or ""), tostring(command.reason or "")
+                local hasStructuredCommand = type(command) == "table"
+                    and (command.action == "kick" or command.action == "puxar")
+                    and tostring(command.nonce or "") ~= ""
+                    and tonumber(command.senderUserId) ~= nil
+                    and tostring(command.target or "") ~= ""
+                if hasStructuredCommand then
+                    action, nonce = command.action, tostring(command.nonce)
+                    senderUserId, encodedTarget, encodedReason = tostring(command.senderUserId), tostring(command.target), tostring(command.reason or "")
                 else
+                    -- Fall back to the legacy sessionId packet when the bridge returns no complete command object.
                     local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
                     local actionCode
                     _, actionCode, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("^(.-)_EDK_([KP])_(%d+)_(%d+)_([^_]*)_(.*)$")
                     if actionCode then action = actionCode == "K" and "kick" or "puxar"
-                    else action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$") end
+                    else action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]*)|(.*)$") end
                 end
                 local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
                 if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
