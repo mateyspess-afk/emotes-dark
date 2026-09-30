@@ -2602,6 +2602,20 @@ local emotesDarkKickListening = true
 local emotesDarkKickedMessage = ""
 local emotesDarkPendingKickCommand = nil
 local emotesDarkHandledKickCommands = {}
+local emotesDarkKickDiagnostics = {}
+
+local function emotesDarkKickDebug(nonce, stage, message)
+    nonce = tostring(nonce or "")
+    if nonce == "" then return end
+    local seen = emotesDarkKickDiagnostics[nonce]
+    if not seen then
+        seen = {}
+        emotesDarkKickDiagnostics[nonce] = seen
+    end
+    if seen[stage] then return end
+    seen[stage] = true
+    pcall(warn, string.format("[EmotesDark Bridge][%s] %s", stage, message or ""))
+end
 
 local function emotesDarkNormalizeKickName(value)
     value = tostring(value or ""):lower():gsub("^@", "")
@@ -2697,6 +2711,7 @@ local function emotesDarkHandleKickCommand(sender, message)
             reason = reason or "",
             expiresAt = os.time() + 15,
         }
+        emotesDarkKickDebug(emotesDarkPendingKickCommand.nonce, "captured", string.format("%s target fragment '%s'", command, target))
     end
 
     if command == "kick" and emotesDarkKickTargetMatches(target) then
@@ -3244,7 +3259,10 @@ end
 task.spawn(function()
     while emotesDarkTagRunning and Players.LocalPlayer do
         local info = emotesDarkTagClientInfo()
-        emotesDarkTagRequest("POST", "/clients/register", info)
+        local registration = emotesDarkTagRequest("POST", "/clients/register", info)
+        if emotesDarkPendingKickCommand then
+            emotesDarkKickDebug(emotesDarkPendingKickCommand.nonce, "register", registration and "register request returned a response" or "register request failed or returned no valid JSON")
+        end
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
@@ -3253,6 +3271,23 @@ task.spawn(function()
         )
         local response = emotesDarkTagRequest("GET", query)
         if response and type(response.clients) == "table" then
+            local pending = emotesDarkPendingKickCommand
+            if pending then
+                local nonce = tostring(pending.nonce or "")
+                local actionCode = pending.action == "puxar" and "P" or "K"
+                local marker = "_EDK_" .. actionCode .. "_" .. nonce .. "_"
+                local echoed = false
+                for _, client in ipairs(response.clients) do
+                    local structured = type(client) == "table" and client.command or nil
+                    local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
+                    if (type(structured) == "table" and tostring(structured.nonce or "") == nonce)
+                        or sessionId:find(marker, 1, true) then
+                        echoed = true
+                        break
+                    end
+                end
+                emotesDarkKickDebug(nonce, "active-read", echoed and "command packet returned by /clients/active" or "command packet not found in /clients/active")
+            end
             for _, client in ipairs(response.clients) do
                 local command = type(client) == "table" and client.command or nil
                 local action, nonce, senderUserId, encodedTarget, encodedReason
@@ -3274,10 +3309,12 @@ task.spawn(function()
                 end
                 local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
                 if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
+                    emotesDarkKickDebug(nonce, "sender-validated", "owner recognized by this client")
                     emotesDarkHandledKickCommands[nonce] = true
                     local target = emotesDarkDecodeKickField(encodedTarget)
                     local reason = emotesDarkDecodeKickField(encodedReason)
                     if emotesDarkKickTargetMatches(target) then
+                        emotesDarkKickDebug(nonce, "target-match", "target fragment matched this client")
                         if action == "kick" then emotesDarkKickSelf(reason)
                         elseif action == "puxar" then emotesDarkPullSelf(sender) end
                         break
