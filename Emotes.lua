@@ -2827,6 +2827,12 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
+local EMOTES_DARK_TAG_DEFAULT_API = "https://api-emotes-dark-bridge.vercel.app/api"
+local EMOTES_DARK_TAG_LEGACY_APIS = {
+    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
+    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
+    ["https://dark-bridge-sync.base44.app/functions/api"] = true,
+}
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
@@ -2859,9 +2865,13 @@ local function emotesDarkTagApiUrl()
     local env = emotesDarkTagEnvironment()
     local configured = env and env[EMOTES_DARK_TAG_API_ENV_NAME]
     if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
-        return configured:gsub("%s+", ""):gsub("/+$", "")
+        local normalized = configured:gsub("%s+", ""):gsub("/+$", "")
+        if EMOTES_DARK_TAG_LEGACY_APIS[normalized] then
+            return EMOTES_DARK_TAG_DEFAULT_API
+        end
+        return normalized
     end
-    return nil
+    return EMOTES_DARK_TAG_DEFAULT_API
 end
 
 local function emotesDarkTagDecode(response)
