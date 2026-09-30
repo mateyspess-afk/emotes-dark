@@ -944,39 +944,59 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-    { kind = "FIXED", key = "nametagScale" },
-    { kind = "FIXED", key = "nametagIconAlignment" },
+    { kind = "REMOVED", key = "ticker" },
+    { kind = "REMOVED", key = "commandsMessage" },
+    { kind = "ADD", key = "startupSounds" },
+    { kind = "ADD", key = "randomStoreIntro" },
+    { kind = "FIXED", key = "bugReportTranslation" },
+    { kind = "FIXED", key = "updateInfoTranslation" },
+    { kind = "FIXED", key = "placeholderPreservation" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 29, 2026 at 19:32 (Fortaleza time)",
+        updated = "Updated on September 29, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            nametagScale = "Nametag size stays consistent as viewing distance changes",
-            nametagIconAlignment = "Nametag icon stays centered beside the username",
+            ticker = "Lower scrolling ticker removed completely",
+            commandsMessage = "Commands message removed from the update information window",
+            startupSounds = "Added 3 new startup sounds",
+            randomStoreIntro = "60% chance to choose a random Audio Store intro with a maximum duration of 10 seconds",
+            bugReportTranslation = "Automatic translation now works in the bug report window",
+            updateInfoTranslation = "Automatic translation now works in the update information window",
+            placeholderPreservation = "Fixed preservation of placeholders such as %s in automatic translations",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 29 de setembro de 2026 às 19:32 (horário de Fortaleza)",
+        updated = "Atualizado em 29 de setembro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            nametagScale = "Tamanho da nametag fica estável ao se aproximar ou afastar",
-            nametagIconAlignment = "Ícone da nametag centralizado ao lado do nome",
+            ticker = "Letreiro inferior rolante removido completamente",
+            commandsMessage = "Mensagem sobre comandos removida da janela de informações de atualizações",
+            startupSounds = "Adicionados 3 novos sons de inicialização",
+            randomStoreIntro = "60% de chance de escolher uma intro aleatória da Loja de Áudios com no máximo 10 segundos",
+            bugReportTranslation = "Tradução automática corrigida na janela de report de bugs",
+            updateInfoTranslation = "Tradução automática corrigida na janela de informações de atualizações",
+            placeholderPreservation = "Corrigida a preservação de placeholders como %s nas traduções automáticas",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 29 de septiembre de 2026 a las 19:32 (hora de Fortaleza)",
+        updated = "Actualizado el 29 de septiembre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            nametagScale = "El tamaño de la etiqueta se mantiene estable al acercarse o alejarse",
-            nametagIconAlignment = "El icono de la etiqueta queda centrado junto al nombre",
+            ticker = "Se eliminó por completo el letrero inferior desplazable",
+            commandsMessage = "Se eliminó el mensaje sobre comandos de la ventana de información de actualizaciones",
+            startupSounds = "Se añadieron 3 nuevos sonidos de inicio",
+            randomStoreIntro = "60% de probabilidad de elegir una intro aleatoria de la Tienda de Audio de hasta 10 segundos",
+            bugReportTranslation = "Se corrigió la traducción automática en la ventana de reportar bugs",
+            updateInfoTranslation = "Se corrigió la traducción automática en la ventana de información de actualizaciones",
+            placeholderPreservation = "Se corrigió la preservación de placeholders como %s en las traducciones automáticas",
         },
     },
 }
