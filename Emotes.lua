@@ -3259,7 +3259,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 task.spawn(function()
-    local lastHeartbeat = 0
+    local lastHeartbeat = -EMOTES_DARK_TAG_HEARTBEAT_SECONDS
     local nextAttempt = 0
     local retrySeconds = 1
     local lastCommandNonce = ""
