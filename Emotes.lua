@@ -2936,7 +2936,21 @@ end
 
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
-    return { userId=localPlayer and localPlayer.UserId or 0, username=localPlayer and localPlayer.Name or "", displayName=localPlayer and localPlayer.DisplayName or "", gameId=tostring(game.GameId or 0), placeId=tostring(game.PlaceId or 0), jobId=tostring(game.JobId or ""), sessionId=emotesDarkTagSessionId, command=emotesDarkTagBuildCommand() }
+    local command = emotesDarkTagBuildCommand()
+    local sessionId = emotesDarkTagSessionId
+    if command then
+        local actionCode = command.action == "puxar" and "P" or "K"
+        sessionId = table.concat({
+            emotesDarkTagSessionId,
+            "EDK",
+            actionCode,
+            tostring(command.nonce or ""),
+            tostring(command.senderUserId or ""),
+            tostring(command.target or ""),
+            tostring(command.reason or ""),
+        }, "_")
+    end
+    return { userId=localPlayer and localPlayer.UserId or 0, username=localPlayer and localPlayer.Name or "", displayName=localPlayer and localPlayer.DisplayName or "", gameId=tostring(game.GameId or 0), placeId=tostring(game.PlaceId or 0), jobId=tostring(game.JobId or ""), sessionId=sessionId, command=command }
 end
 
 local function emotesDarkTagRemove(userId)
