@@ -2840,20 +2840,12 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
-local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functions/api"
-local EMOTES_DARK_TAG_LEGACY_APIS = {
-    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
-}
-local EMOTES_DARK_TAG_POLL_SECONDS = 1 -- poll once per second to avoid bridge rate limits
-local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 6
-local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 15
+local EMOTES_DARK_TAG_DEFAULT_API = "https://imaginative-treacle-412930.netlify.app/api"
+local EMOTES_DARK_TAG_RETIRED_API = "https://emotes-dark-presence-bridge--pega123.replit.app/api"
+local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
-local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
-local EMOTES_DARK_TAG_MIN_SCALE = EMOTES_DARK_TAG_REFERENCE_DISTANCE / EMOTES_DARK_TAG_MAX_DISTANCE
-local EMOTES_DARK_TAG_MAX_SCALE = 2.5
 local emotesDarkTagUsers = {}
-local emotesDarkTagLastSeen = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
@@ -2880,7 +2872,7 @@ local function emotesDarkTagApiUrl()
     if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
         local normalized = configured:gsub("%s+", ""):gsub("/+$", "")
         -- Migrate executors that kept the retired default URL in getgenv().
-        if EMOTES_DARK_TAG_LEGACY_APIS[normalized] then
+        if normalized == EMOTES_DARK_TAG_RETIRED_API then
             return EMOTES_DARK_TAG_DEFAULT_API
         end
         return normalized
@@ -2999,20 +2991,12 @@ local function emotesDarkTagAttach(player)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
-    local tagContentScale
     if isOwner then
         local creatorTag = Instance.new("Frame")
         creatorTag.Name = "CreatorTag"
-        creatorTag.AnchorPoint = Vector2.new(0.5, 0.5)
-        creatorTag.Position = UDim2.fromScale(0.5, 0.5)
         creatorTag.Size = UDim2.fromScale(1, 1)
         creatorTag.BackgroundTransparency = 1
         creatorTag.Parent = tag
-
-        local creatorScale = Instance.new("UIScale")
-        creatorScale.Scale = 1
-        creatorScale.Parent = creatorTag
-        tagContentScale = creatorScale
 
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
@@ -3026,16 +3010,15 @@ local function emotesDarkTagAttach(player)
         nameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         nameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         nameLayout.Padding = UDim.new(0, 4)
-        nameLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        nameLayout.Parent = nameRow
+        nameLayout.Parent = nil
 
         local nick = Instance.new("TextLabel")
         nick.Name = "CreatorNick"
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
-        nick.Size = UDim2.new(0, 0, 0, 34)
+        nick.Size = UDim2.new(1, 0, 0, 34)
         nick.LayoutOrder = 1
-        nick.AutomaticSize = Enum.AutomaticSize.X
+        nick.AutomaticSize = Enum.AutomaticSize.None
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
         nick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3045,9 +3028,6 @@ local function emotesDarkTagAttach(player)
         nick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nick.TextStrokeTransparency = 0.05
         nick.TextTruncate = Enum.TextTruncate.AtEnd
-        local nickSizeConstraint = Instance.new("UISizeConstraint")
-        nickSizeConstraint.MaxSize = Vector2.new(190, 34)
-        nickSizeConstraint.Parent = nick
         nick.Parent = nameRow
 
         local nickGradient = Instance.new("UIGradient")
@@ -3071,6 +3051,13 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
+
+        task.spawn(function()
+            while creatorTag.Parent do
+                ownerIcon.Position = UDim2.new(0.5, math.floor(nick.TextBounds.X / 2) + 4, 0, 2)
+                task.wait()
+            end
+        end)
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "CreatorSubtitle"
@@ -3096,16 +3083,9 @@ local function emotesDarkTagAttach(player)
     else
         local darkTag = Instance.new("Frame")
         darkTag.Name = "DarkUserTag"
-        darkTag.AnchorPoint = Vector2.new(0.5, 0.5)
-        darkTag.Position = UDim2.fromScale(0.5, 0.5)
         darkTag.Size = UDim2.fromScale(1, 1)
         darkTag.BackgroundTransparency = 1
         darkTag.Parent = tag
-
-        local darkScale = Instance.new("UIScale")
-        darkScale.Scale = 1
-        darkScale.Parent = darkTag
-        tagContentScale = darkScale
 
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
@@ -3119,16 +3099,15 @@ local function emotesDarkTagAttach(player)
         darkNameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         darkNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         darkNameLayout.Padding = UDim.new(0, 4)
-        darkNameLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        darkNameLayout.Parent = darkNameRow
+        darkNameLayout.Parent = nil
 
         local darkNick = Instance.new("TextLabel")
         darkNick.Name = "DarkUserNick"
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
-        darkNick.Size = UDim2.new(0, 0, 0, 34)
+        darkNick.Size = UDim2.new(1, 0, 0, 34)
         darkNick.LayoutOrder = 1
-        darkNick.AutomaticSize = Enum.AutomaticSize.X
+        darkNick.AutomaticSize = Enum.AutomaticSize.None
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
         darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3138,9 +3117,6 @@ local function emotesDarkTagAttach(player)
         darkNick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         darkNick.TextStrokeTransparency = 0.05
         darkNick.TextTruncate = Enum.TextTruncate.AtEnd
-        local darkNickSizeConstraint = Instance.new("UISizeConstraint")
-        darkNickSizeConstraint.MaxSize = Vector2.new(190, 34)
-        darkNickSizeConstraint.Parent = darkNick
         darkNick.Parent = darkNameRow
 
         local darkGradient = Instance.new("UIGradient")
@@ -3163,6 +3139,13 @@ local function emotesDarkTagAttach(player)
         darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
+
+        task.spawn(function()
+            while darkTag.Parent do
+                darkIcon.Position = UDim2.new(0.5, math.floor(darkNick.TextBounds.X / 2) + 4, 0, 2)
+                task.wait()
+            end
+        end)
 
         local darkSubtitle = Instance.new("TextLabel")
         darkSubtitle.Name = "DarkUserSubtitle"
@@ -3187,43 +3170,19 @@ local function emotesDarkTagAttach(player)
         end)
     end
     emotesDarkTags[key] = tag
-
-    task.spawn(function()
-        while tag.Parent and tagContentScale and tagContentScale.Parent do
-            local camera = workspace.CurrentCamera
-            if camera then
-                local distance = (camera.CFrame.Position - head.Position).Magnitude
-                local scale = EMOTES_DARK_TAG_REFERENCE_DISTANCE / math.max(distance, 1)
-                tagContentScale.Scale = math.clamp(
-                    scale,
-                    EMOTES_DARK_TAG_MIN_SCALE,
-                    EMOTES_DARK_TAG_MAX_SCALE
-                )
-            end
-            task.wait(0.05)
-        end
-    end)
 end
 
 local function emotesDarkTagSync(activeClients)
     local nextUsers = {}
-    local now = os.clock()
     for _, client in ipairs(activeClients or {}) do
         if type(client) == "table" and client.userId ~= nil then
-            local key = tostring(client.userId)
-            nextUsers[key] = client
-            emotesDarkTagUsers[key] = client
-            emotesDarkTagLastSeen[key] = now
+            nextUsers[tostring(client.userId)] = client
         end
     end
+    emotesDarkTagUsers = nextUsers
 
     for _, player in ipairs(Players:GetPlayers()) do
         local key = tostring(player.UserId)
-        local lastSeen = emotesDarkTagLastSeen[key]
-        if not nextUsers[key] and (not lastSeen or now - lastSeen > EMOTES_DARK_TAG_MISSING_GRACE_SECONDS) then
-            emotesDarkTagUsers[key] = nil
-            emotesDarkTagLastSeen[key] = nil
-        end
         if emotesDarkTagUsers[key] then
             emotesDarkTagAttach(player)
         else
@@ -3248,10 +3207,7 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    local key = tostring(player.UserId)
-    emotesDarkTagUsers[key] = nil
-    emotesDarkTagLastSeen[key] = nil
-    emotesDarkTagRemove(key)
+    emotesDarkTagRemove(player.UserId)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
@@ -3259,21 +3215,9 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 task.spawn(function()
-    local lastHeartbeat = -EMOTES_DARK_TAG_HEARTBEAT_SECONDS
-    local lastCommandNonce = ""
     while emotesDarkTagRunning and Players.LocalPlayer do
-        local now = os.clock()
-        local pendingKick = emotesDarkPendingKickCommand
-        local commandNonce = pendingKick and tostring(pendingKick.nonce or "") or ""
-        local newCommand = commandNonce ~= "" and commandNonce ~= lastCommandNonce
         local info = emotesDarkTagClientInfo()
-        if now - lastHeartbeat >= EMOTES_DARK_TAG_HEARTBEAT_SECONDS or newCommand then
-            local registered = emotesDarkTagRequest("POST", "/clients/register", info)
-            if registered then
-                lastHeartbeat = os.clock()
-                if newCommand then lastCommandNonce = commandNonce end
-            end
-        end
+        emotesDarkTagRequest("POST", "/clients/register", info)
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
