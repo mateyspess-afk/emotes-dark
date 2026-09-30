@@ -1348,14 +1348,55 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://91271761310463",
 }
 
--- Intros da loja de áudios: há 60% de chance de tocar uma delas na inicialização.
--- A reprodução dessas intros é sempre encerrada no máximo após 10 segundos.
-local STARTUP_INTRO_SOUND_IDS = {
+-- Intros da Loja de Áudios. Os três IDs enviados ficam como fallback adicional.
+local STARTUP_INTRO_FALLBACK_SOUND_IDS = {
     "rbxassetid://115224076671067",
     "rbxassetid://95266823224738",
     "rbxassetid://80275040249402",
 }
+local STARTUP_INTRO_SEARCH_URL = "https://apis.roblox.com/toolbox-service/v2/assets:search?searchCategoryType=Audio&query=intro&audioMaxDurationSeconds=10&maxPageSize=100&pageNumber=0"
 local STARTUP_INTRO_CHANCE = 0.60
+local startupIntroSoundCache
+
+local function getCreatorStoreIntroSoundIds()
+    if startupIntroSoundCache then return startupIntroSoundCache end
+
+    local soundIds = {}
+    local seen = {}
+    local function addSoundId(value)
+        local id = tostring(value or ""):match("%d+")
+        if id and not seen[id] then
+            seen[id] = true
+            table.insert(soundIds, "rbxassetid://" .. id)
+        end
+    end
+
+    local okBody, body = pcall(function()
+        return emotesDarkDownload(STARTUP_INTRO_SEARCH_URL)
+    end)
+    if okBody and body then
+        local decodedOk, decoded = pcall(function()
+            return HttpService:JSONDecode(body)
+        end)
+        if decodedOk and type(decoded) == "table" and type(decoded.creatorStoreAssets) == "table" then
+            for _, entry in ipairs(decoded.creatorStoreAssets) do
+                local asset = type(entry) == "table" and entry.asset
+                local title = type(asset) == "table" and tostring(asset.title or asset.name or ""):lower() or ""
+                local duration = type(asset) == "table" and tonumber(asset.durationSeconds)
+                if type(asset) == "table" and title:find("intro", 1, true) and duration and duration <= 10 then
+                    addSoundId(asset.id)
+                end
+            end
+        end
+    end
+
+    for _, fallbackId in ipairs(STARTUP_INTRO_FALLBACK_SOUND_IDS) do
+        addSoundId(fallbackId)
+    end
+
+    startupIntroSoundCache = soundIds
+    return soundIds
+end
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
@@ -1366,7 +1407,7 @@ end
 
 local function playDarkEmoteSound(kind)
     local startupIntro = kind == "startup" and math.random() <= STARTUP_INTRO_CHANCE
-    local soundIds = startupIntro and STARTUP_INTRO_SOUND_IDS
+    local soundIds = startupIntro and getCreatorStoreIntroSoundIds()
         or kind == "startup" and STARTUP_SOUND_IDS
         or kind == "click" and CLICK_SOUND_IDS
         or kind == "emote" and EMOTE_SOUND_IDS
