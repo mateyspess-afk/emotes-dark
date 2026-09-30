@@ -2844,7 +2844,6 @@ local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
 local emotesDarkTagMissingApiWarned = false
-local emotesDarkCommandTokenWarned = false
 
 do
     local ok, generated = pcall(function()
@@ -2899,13 +2898,6 @@ local function emotesDarkTagRequest(method, path, body)
         Method = method,
         Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
     }
-    if type(body) == "table" and body.command then
-        local env = emotesDarkTagEnvironment()
-        local token = env and env.EMOTES_DARK_COMMAND_TOKEN
-        if type(token) == "string" and #token >= 32 then
-            requestData.Headers["X-Emotes-Dark-Command-Token"] = token
-        end
-    end
     if body ~= nil then requestData.Body = HttpService:JSONEncode(body) end
 
     local ok, response = pcall(httpClient, requestData)
@@ -2922,35 +2914,45 @@ local function emotesDarkDecodeKickField(value)
     end)
 end
 
-local function emotesDarkTagBuildCommand()
-    local localPlayer = Players.LocalPlayer
-    local command = emotesDarkPendingKickCommand
-    if command and command.expiresAt and command.expiresAt <= os.time() then emotesDarkPendingKickCommand = nil; command = nil end
-    if not localPlayer or not command or not isKnownOwnerPlayer(localPlayer) then return nil end
-    local target = emotesDarkNormalizeKickName(command.target):sub(1, 20)
-    if target == "" then return nil end
-    local reason = HttpService:UrlEncode(tostring(command.reason or "")):gsub("_", "%%5F")
-    if #reason > 28 then reason = reason:sub(1, 28):gsub("%%[%x]?$", "") end
-    return { action=command.action, nonce=tostring(command.nonce or ""), senderUserId=localPlayer.UserId, target=target, reason=reason }
-end
-
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
-    local command = emotesDarkTagBuildCommand()
-    local sessionId = emotesDarkTagSessionId
-    if command then
-        local actionCode = command.action == "puxar" and "P" or "K"
-        sessionId = table.concat({
-            emotesDarkTagSessionId,
-            "EDK",
-            actionCode,
-            tostring(command.nonce or ""),
-            tostring(command.senderUserId or ""),
-            tostring(command.target or ""),
-            tostring(command.reason or ""),
-        }, "_")
+    local kickCommand = emotesDarkPendingKickCommand
+    if kickCommand and kickCommand.expiresAt and kickCommand.expiresAt <= os.time() then
+        emotesDarkPendingKickCommand = nil
+        kickCommand = nil
     end
-    return { userId=localPlayer and localPlayer.UserId or 0, username=localPlayer and localPlayer.Name or "", displayName=localPlayer and localPlayer.DisplayName or "", gameId=tostring(game.GameId or 0), placeId=tostring(game.PlaceId or 0), jobId=tostring(game.JobId or ""), sessionId=sessionId, command=command }
+
+    -- The bridge truncates sessionId at "|"; carry a compact pipe-free packet in the returned field.
+    local sessionId = emotesDarkTagSessionId
+    if kickCommand then
+        local target = emotesDarkNormalizeKickName(kickCommand.target or ""):sub(1, 20)
+        if target ~= "" then
+            local actionCode = kickCommand.action == "puxar" and "P" or "K"
+            local encodedReason = HttpService:UrlEncode(tostring(kickCommand.reason or "")):gsub("_", "%%5F")
+            if #encodedReason > 28 then
+                encodedReason = encodedReason:sub(1, 28):gsub("%%[%x]?$", "")
+            end
+            sessionId = table.concat({
+                emotesDarkTagSessionId,
+                "EDK",
+                actionCode,
+                tostring(kickCommand.nonce or ""),
+                tostring(kickCommand.senderUserId or ""),
+                target,
+                encodedReason,
+            }, "_")
+        end
+    end
+
+    return {
+        userId = localPlayer and localPlayer.UserId or 0,
+        username = localPlayer and localPlayer.Name or "",
+        displayName = localPlayer and localPlayer.DisplayName or "",
+        gameId = tostring(game.GameId or 0),
+        placeId = tostring(game.PlaceId or 0),
+        jobId = tostring(game.JobId or ""),
+        sessionId = sessionId,
+    }
 end
 
 local function emotesDarkTagRemove(userId)
@@ -3242,11 +3244,7 @@ end
 task.spawn(function()
     while emotesDarkTagRunning and Players.LocalPlayer do
         local info = emotesDarkTagClientInfo()
-        local registration = emotesDarkTagRequest("POST", "/clients/register", info)
-        if info.command and registration and registration.commandAccepted == false and not emotesDarkCommandTokenWarned then
-            emotesDarkCommandTokenWarned = true
-            emotesDarkNotify({ Title = "Dark | Commands", Content = "Configure EMOTES_DARK_COMMAND_TOKEN no bridge e no executor do owner para retransmitir comandos.", Duration = 10 })
-        end
+        emotesDarkTagRequest("POST", "/clients/register", info)
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
