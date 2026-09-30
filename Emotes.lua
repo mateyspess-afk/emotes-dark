@@ -71,57 +71,48 @@ local emotesDarkLanguageCache = nil
 local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
+    local language = "en"
+    local countryCode = ""
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
-    local countryCode = ""
-    local localeId = ""
-
     if player then
         pcall(function()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
     end
-    pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
-    end)
-    if localeId == "" then
-        pcall(function()
-            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-        end)
-    end
 
-    -- O país é a primeira referência; o locale cobre países sem mapeamento explícito.
-    -- Para idiomas sem tradução pronta, o ticker usa tradução automática online.
-    local countryLanguages = {
-        -- Português
-        AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
-        -- Espanhol
-        AR="es", BO="es", CL="es", CO="es", CR="es", CU="es", DO="es", EC="es", ES="es", GT="es", HN="es", MX="es", NI="es", PA="es", PE="es", PR="es", PY="es", SV="es", UY="es", VE="es",
-        -- Inglês
-        AE="en", AG="en", AU="en", BB="en", BS="en", BZ="en", CA="en", DM="en", FJ="en", GB="en", GD="en", GG="en", GH="en", GI="en", GM="en", GU="en", GY="en", IE="en", IM="en", JM="en", KN="en", KY="en", LC="en", LR="en", MH="en", MT="en", MU="en", MW="en", MY="en", NG="en", NZ="en", PH="en", PK="en", SG="en", SL="en", SS="en", SZ="en", TC="en", TT="en", TV="en", UG="en", US="en", VC="en", VG="en", VI="en", ZA="en", ZM="en", ZW="en",
-        -- Francês
-        BF="fr", BI="fr", BJ="fr", CD="fr", CF="fr", CG="fr", CI="fr", CM="fr", DJ="fr", DZ="fr", FR="fr", GA="fr", GF="fr", GN="fr", GP="fr", HT="fr", KM="fr", LU="fr", MC="fr", MG="fr", ML="fr", MQ="fr", NC="fr", NE="fr", PF="fr", RE="fr", RW="fr", SC="fr", SN="fr", TD="fr", TG="fr", VU="fr", WF="fr", YT="fr",
-        -- Alemão
-        AT="de", CH="de", DE="de", LI="de",
-        -- Italiano
-        IT="it", SM="it", VA="it",
-        -- Japonês / coreano / chinês
-        JP="ja", KR="ko", CN="zh", HK="zh", MO="zh", TW="zh",
-        -- Russo e idiomas eslavos
-        BY="ru", KG="ru", KZ="ru", RU="ru", TJ="ru", TM="ru", UA="uk", PL="pl", CZ="cs", SK="sk", BG="bg", RS="sr", HR="hr", SI="sl",
-        -- Árabe
-        BH="ar", EG="ar", IQ="ar", JO="ar", KW="ar", LB="ar", LY="ar", MA="ar", OM="ar", QA="ar", SA="ar", SD="ar", SY="ar", TN="ar", YE="ar",
-        -- Outros idiomas amplamente usados
-        BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
+    -- A tradução principal usa o país real retornado pelo Roblox.
+    local portugueseCountries = {
+        AO = true, BR = true, CV = true, GW = true, MZ = true, PT = true, ST = true, TL = true,
+    }
+    local spanishCountries = {
+        AR = true, BO = true, CL = true, CO = true, CR = true, CU = true, DO = true, EC = true,
+        ES = true, GT = true, HN = true, MX = true, NI = true, PA = true, PE = true, PR = true,
+        PY = true, SV = true, UY = true, VE = true,
     }
 
-    local localeLanguage = localeId:match("^([a-z][a-z])")
-    local language = countryLanguages[countryCode] or localeLanguage or "en"
+    if portugueseCountries[countryCode] then
+        language = "pt"
+    elseif spanishCountries[countryCode] then
+        language = "es"
+    else
+        -- Se a consulta do país falhar ou não houver tradução disponível, usa o locale.
+        local localeId = ""
+        pcall(function()
+            localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+        end)
+        if localeId == "" then
+            pcall(function()
+                localeId = tostring(localizationService.SystemLocaleId or ""):lower()
+            end)
+        end
+        if localeId:match("^pt") then language = "pt" end
+        if localeId:match("^es") then language = "es" end
+    end
+
     emotesDarkLanguageCache = language
     return language
 end
-
-local emotesDarkTranslateText
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -153,39 +144,8 @@ local BUG_REPORT_TRANSLATIONS = {
     },
 }
 
-local emotesDarkBugTranslationCache = {}
-
-local function getBugReportTranslation(language)
-    if emotesDarkBugTranslationCache[language] then
-        return emotesDarkBugTranslationCache[language]
-    end
-
-    local known = BUG_REPORT_TRANSLATIONS[language]
-    if known then
-        emotesDarkBugTranslationCache[language] = known
-        return known
-    end
-
-    local source = BUG_REPORT_TRANSLATIONS.en
-    local translated = {}
-    for key, value in pairs(source) do
-        if type(value) == "string" then
-            translated[key] = emotesDarkTranslateText(value, language)
-        elseif type(value) == "table" then
-            translated[key] = {}
-            for nestedKey, nestedValue in pairs(value) do
-                translated[key][nestedKey] = type(nestedValue) == "string" and emotesDarkTranslateText(nestedValue, language) or nestedValue
-            end
-        else
-            translated[key] = value
-        end
-    end
-    emotesDarkBugTranslationCache[language] = translated
-    return translated
-end
-
 local function emotesDarkBugText(key, ...)
-    local translations = getBugReportTranslation(emotesDarkDetectLanguage()) or BUG_REPORT_TRANSLATIONS.en
+    local translations = BUG_REPORT_TRANSLATIONS[emotesDarkDetectLanguage()] or BUG_REPORT_TRANSLATIONS.en
     local value = translations[key] or BUG_REPORT_TRANSLATIONS.en[key] or key
     if select("#", ...) > 0 then return string.format(value, ...) end
     return value
@@ -944,13 +904,12 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-    { kind = "REMOVED", key = "ticker" },
-    { kind = "REMOVED", key = "commandsMessage" },
-    { kind = "ADD", key = "startupSounds" },
-    { kind = "ADD", key = "randomStoreIntro" },
-    { kind = "FIXED", key = "bugReportTranslation" },
-    { kind = "FIXED", key = "updateInfoTranslation" },
-    { kind = "FIXED", key = "placeholderPreservation" },
+     { kind = "ADD", key = "bugReportAntiLink" },
+    { kind = "ADD", key = "bugReportLinkKick" },
+    { kind = "FIXED", key = "ownerKickExemption" },
+    { kind = "ADD", key = "bugReportLocalization" },
+    { kind = "ADD", key = "bugReportCountryLanguage" },
+    { kind = "FIXED", key = "countryFallbackAccuracy" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -960,13 +919,12 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-            ticker = "Lower scrolling ticker removed completely",
-            commandsMessage = "Commands message removed from the update information window",
-            startupSounds = "Added 3 new startup sounds",
-            randomStoreIntro = "60% chance to choose a random Audio Store intro with a maximum duration of 10 seconds",
-            bugReportTranslation = "Automatic translation now works in the bug report window",
-            updateInfoTranslation = "Automatic translation now works in the update information window",
-            placeholderPreservation = "Fixed preservation of placeholders such as %s in automatic translations",
+             bugReportAntiLink = "Anti-link protection in bug reports",
+            bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
+            ownerKickExemption = "Experience owner is exempt from anti-link kicks",
+            bugReportLocalization = "Automatic bug report and kick translations",
+            bugReportCountryLanguage = "Real country detection for automatic translations",
+            countryFallbackAccuracy = "Unknown country is no longer guessed from the device locale",
         },
     },
     pt = {
@@ -975,13 +933,12 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-            ticker = "Letreiro inferior rolante removido completamente",
-            commandsMessage = "Mensagem sobre comandos removida da janela de informações de atualizações",
-            startupSounds = "Adicionados 3 novos sons de inicialização",
-            randomStoreIntro = "60% de chance de escolher uma intro aleatória da Loja de Áudios com no máximo 10 segundos",
-            bugReportTranslation = "Tradução automática corrigida na janela de report de bugs",
-            updateInfoTranslation = "Tradução automática corrigida na janela de informações de atualizações",
-            placeholderPreservation = "Corrigida a preservação de placeholders como %s nas traduções automáticas",
+             bugReportAntiLink = "Proteção contra links nos reports de bug",
+            bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
+            ownerKickExemption = "O dono da experiência nunca recebe kick por links",
+            bugReportLocalization = "Tradução automática do report bug e do kick",
+            bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
+            countryFallbackAccuracy = "País não confirmado não é mais presumido pelo idioma do dispositivo",
         },
     },
     es = {
@@ -990,78 +947,18 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-            ticker = "Se eliminó por completo el letrero inferior desplazable",
-            commandsMessage = "Se eliminó el mensaje sobre comandos de la ventana de información de actualizaciones",
-            startupSounds = "Se añadieron 3 nuevos sonidos de inicio",
-            randomStoreIntro = "60% de probabilidad de elegir una intro aleatoria de la Tienda de Audio de hasta 10 segundos",
-            bugReportTranslation = "Se corrigió la traducción automática en la ventana de reportar bugs",
-            updateInfoTranslation = "Se corrigió la traducción automática en la ventana de información de actualizaciones",
-            placeholderPreservation = "Se corrigió la preservación de placeholders como %s en las traducciones automáticas",
+             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
+            bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
+            ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
+            bugReportLocalization = "Traducción automática del reporte y del kick",
+            bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
+            countryFallbackAccuracy = "El país desconocido ya no se adivina por el idioma del dispositivo",
         },
     },
 }
 
 local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
-end
-
-emotesDarkTranslateText = function(sourceText, targetLanguage)
-    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
-    local request = emotesDarkGetRequest()
-    if type(request) ~= "function" then return sourceText end
-
-    local encodedSource = tostring(sourceText):gsub("%%s", "__EMOTES_VALUE__")
-    local encodedText = ""
-    local okEncode = pcall(function()
-        encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
-    end)
-    if not okEncode or encodedText == "" then return sourceText end
-
-    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
-    local okRequest, response = pcall(request, {
-        Url = url,
-        Method = "GET",
-        Headers = { ["Accept"] = "application/json" },
-    })
-    if not okRequest then return sourceText end
-
-    local body = emotesDarkUsableBody(emotesDarkResponseBody(response))
-    if not body then return sourceText end
-    local decodedOk, decoded = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(body)
-    end)
-    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText end
-
-    local parts = {}
-    for _, segment in ipairs(decoded[1]) do
-        if type(segment) == "table" and type(segment[1]) == "string" then
-            table.insert(parts, segment[1])
-        end
-    end
-    local translated = table.concat(parts)
-    if translated == "" then return sourceText end
-    return translated:gsub("__EMOTES_VALUE__", "%%s")
-end
-
-local function getUpdateInfoTranslation(language)
-    local known = UPDATE_INFO_TRANSLATIONS[language]
-    if known then return known end
-
-    local source = UPDATE_INFO_TRANSLATIONS.en
-    local translated = {
-        title = emotesDarkTranslateText(source.title, language),
-        updated = emotesDarkTranslateText(source.updated, language),
-        confirm = emotesDarkTranslateText(source.confirm, language),
-        prefixes = {},
-        items = {},
-    }
-    for key, value in pairs(source.prefixes) do
-        translated.prefixes[key] = emotesDarkTranslateText(value, language)
-    end
-    for key, value in pairs(source.items) do
-        translated.items[key] = emotesDarkTranslateText(value, language)
-    end
-    return translated
 end
 
 local function showUpdateInfoWindow()
@@ -1300,7 +1197,7 @@ local function showUpdateInfoWindow()
 
     task.spawn(function()
         local language = detectUpdateInfoLanguage()
-        local translation = getUpdateInfoTranslation(language)
+        local translation = UPDATE_INFO_TRANSLATIONS[language] or UPDATE_INFO_TRANSLATIONS.en
         if not gui.Parent then return end
         title.Text = translation.title
         subtitle.Text = translation.updated
@@ -1357,7 +1254,7 @@ local request = emotesDarkGetRequest()
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
 
--- Sons do Dark Emote. Os sons antigos continuam disponíveis.
+-- Sons do Dark Emote. O som de execução é escolhido uma vez por execução do script.
 local STARTUP_SOUND_IDS = {
     "rbxassetid://126047015098640",
     "rbxassetid://17556446241",
@@ -1367,56 +1264,6 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://73048868189077",
     "rbxassetid://91271761310463",
 }
-
--- Intros aleatórias da Loja de Áudios com no máximo 10 segundos. Os três IDs enviados ficam como fallback adicional.
-local STARTUP_INTRO_FALLBACK_SOUND_IDS = {
-    "rbxassetid://115224076671067",
-    "rbxassetid://95266823224738",
-    "rbxassetid://80275040249402",
-}
-local STARTUP_INTRO_SEARCH_URL = "https://apis.roblox.com/toolbox-service/v2/assets:search?searchCategoryType=Audio&query=intro&audioMaxDurationSeconds=10&maxPageSize=100&pageNumber=0"
-local STARTUP_INTRO_CHANCE = 0.60
-local startupIntroSoundCache
-
-local function getCreatorStoreIntroSoundIds()
-    if startupIntroSoundCache then return startupIntroSoundCache end
-
-    local soundIds = {}
-    local seen = {}
-    local function addSoundId(value)
-        local id = tostring(value or ""):match("%d+")
-        if id and not seen[id] then
-            seen[id] = true
-            table.insert(soundIds, "rbxassetid://" .. id)
-        end
-    end
-
-    local okBody, body = pcall(function()
-        return emotesDarkDownload(STARTUP_INTRO_SEARCH_URL)
-    end)
-    if okBody and body then
-        local decodedOk, decoded = pcall(function()
-            return HttpService:JSONDecode(body)
-        end)
-        if decodedOk and type(decoded) == "table" and type(decoded.creatorStoreAssets) == "table" then
-            for _, entry in ipairs(decoded.creatorStoreAssets) do
-                local asset = type(entry) == "table" and entry.asset
-                local title = type(asset) == "table" and tostring(asset.title or asset.name or ""):lower() or ""
-                local duration = type(asset) == "table" and tonumber(asset.durationSeconds)
-                if type(asset) == "table" and title:find("intro", 1, true) and duration and duration <= 10 then
-                    addSoundId(asset.id)
-                end
-            end
-        end
-    end
-
-    for _, fallbackId in ipairs(STARTUP_INTRO_FALLBACK_SOUND_IDS) do
-        addSoundId(fallbackId)
-    end
-
-    startupIntroSoundCache = soundIds
-    return soundIds
-end
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
@@ -1426,9 +1273,7 @@ local function pickSoundId(soundIds)
 end
 
 local function playDarkEmoteSound(kind)
-    local startupIntro = kind == "startup" and math.random() <= STARTUP_INTRO_CHANCE
-    local soundIds = startupIntro and getCreatorStoreIntroSoundIds()
-        or kind == "startup" and STARTUP_SOUND_IDS
+    local soundIds = kind == "startup" and STARTUP_SOUND_IDS
         or kind == "click" and CLICK_SOUND_IDS
         or kind == "emote" and EMOTE_SOUND_IDS
         or OWNER_SOUND_IDS
@@ -1442,8 +1287,7 @@ local function playDarkEmoteSound(kind)
         sound.Parent = SoundService
     end
 
-    local selectedSoundId = pickSoundId(soundIds)
-    sound.SoundId = selectedSoundId
+    sound.SoundId = pickSoundId(soundIds)
     sound.Volume = kind == "startup" and 0.7 or (kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5))
     sound.PlaybackSpeed = kind == "startup" and 1
         or (kind == "emote" and (math.random(90, 112) / 100)
@@ -1455,13 +1299,6 @@ local function playDarkEmoteSound(kind)
     end)
     sound:Stop()
     sound:Play()
-    if startupIntro then
-        task.delay(10, function()
-            if sound.Parent and sound.SoundId == selectedSoundId then
-                sound:Stop()
-            end
-        end)
-    end
 end
 
 local function playEmoteSound()
@@ -2840,8 +2677,11 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
-local EMOTES_DARK_TAG_DEFAULT_API = "https://imaginative-treacle-412930.netlify.app/api"
-local EMOTES_DARK_TAG_RETIRED_API = "https://emotes-dark-presence-bridge--pega123.replit.app/api"
+local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functions/api"
+local EMOTES_DARK_TAG_RETIRED_APIS = {
+    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
+    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
+}
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
@@ -2872,7 +2712,7 @@ local function emotesDarkTagApiUrl()
     if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
         local normalized = configured:gsub("%s+", ""):gsub("/+$", "")
         -- Migrate executors that kept the retired default URL in getgenv().
-        if normalized == EMOTES_DARK_TAG_RETIRED_API then
+        if EMOTES_DARK_TAG_RETIRED_APIS[normalized] then
             return EMOTES_DARK_TAG_DEFAULT_API
         end
         return normalized
@@ -3892,16 +3732,6 @@ local function showBugReportWindow()
     send.TextColor3 = Color3.fromRGB(30, 30, 35)
     send.TextSize = 10
     send.ZIndex = 7002
-
-    task.spawn(function()
-        local language = emotesDarkDetectLanguage()
-        local translation = getBugReportTranslation(language)
-        if not title.Parent then return end
-        title.Text = translation.title or title.Text
-        hint.Text = translation.hint or hint.Text
-        textBox.PlaceholderText = translation.placeholder or textBox.PlaceholderText
-        send.Text = translation.send or send.Text
-    end)
 
     local sendCorner = Instance.new("UICorner")
     sendCorner.CornerRadius = UDim.new(0, 7)
