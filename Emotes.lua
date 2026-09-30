@@ -985,12 +985,12 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
-local function emotesDarkTranslateText(sourceText, targetLanguage)
+emotesDarkTranslateText = function(sourceText, targetLanguage)
     if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
     local request = emotesDarkGetRequest()
     if type(request) ~= "function" then return sourceText end
 
-    local encodedSource = tostring(sourceText):gsub("%%%%s", "__EMOTES_VALUE__")
+    local encodedSource = tostring(sourceText):gsub("%%s", "__EMOTES_VALUE__")
     local encodedText = ""
     local okEncode = pcall(function()
         encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
