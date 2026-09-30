@@ -1348,13 +1348,13 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://91271761310463",
 }
 
--- Intros da Loja de Áudios. Os três IDs enviados ficam como fallback adicional.
+-- Áudios aleatórios da Loja de Áudios com no máximo 10 segundos. Os três IDs enviados ficam como fallback adicional.
 local STARTUP_INTRO_FALLBACK_SOUND_IDS = {
     "rbxassetid://115224076671067",
     "rbxassetid://95266823224738",
     "rbxassetid://80275040249402",
 }
-local STARTUP_INTRO_SEARCH_URL = "https://apis.roblox.com/toolbox-service/v2/assets:search?searchCategoryType=Audio&query=intro&audioMaxDurationSeconds=10&maxPageSize=100&pageNumber=0"
+local STARTUP_INTRO_SEARCH_URL = "https://apis.roblox.com/toolbox-service/v2/assets:search?searchCategoryType=Audio&audioMaxDurationSeconds=10&maxPageSize=100&pageNumber=0"
 local STARTUP_INTRO_CHANCE = 0.60
 local startupIntroSoundCache
 
@@ -1383,7 +1383,7 @@ local function getCreatorStoreIntroSoundIds()
                 local asset = type(entry) == "table" and entry.asset
                 local title = type(asset) == "table" and tostring(asset.title or asset.name or ""):lower() or ""
                 local duration = type(asset) == "table" and tonumber(asset.durationSeconds)
-                if type(asset) == "table" and title:find("intro", 1, true) and duration and duration <= 10 then
+                if type(asset) == "table" and duration and duration <= 10 then
                     addSoundId(asset.id)
                 end
             end
