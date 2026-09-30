@@ -1337,7 +1337,7 @@ local request = emotesDarkGetRequest()
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
 
--- Sons do Dark Emote. O som de execução é escolhido uma vez por execução do script.
+-- Sons do Dark Emote. Os sons antigos continuam disponíveis.
 local STARTUP_SOUND_IDS = {
     "rbxassetid://126047015098640",
     "rbxassetid://17556446241",
@@ -1347,6 +1347,15 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://73048868189077",
     "rbxassetid://91271761310463",
 }
+
+-- Intros da loja de áudios: há 60% de chance de tocar uma delas na inicialização.
+-- A reprodução dessas intros é sempre encerrada no máximo após 10 segundos.
+local STARTUP_INTRO_SOUND_IDS = {
+    "rbxassetid://115224076671067",
+    "rbxassetid://95266823224738",
+    "rbxassetid://80275040249402",
+}
+local STARTUP_INTRO_CHANCE = 0.60
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
@@ -1356,7 +1365,9 @@ local function pickSoundId(soundIds)
 end
 
 local function playDarkEmoteSound(kind)
-    local soundIds = kind == "startup" and STARTUP_SOUND_IDS
+    local startupIntro = kind == "startup" and math.random() <= STARTUP_INTRO_CHANCE
+    local soundIds = startupIntro and STARTUP_INTRO_SOUND_IDS
+        or kind == "startup" and STARTUP_SOUND_IDS
         or kind == "click" and CLICK_SOUND_IDS
         or kind == "emote" and EMOTE_SOUND_IDS
         or OWNER_SOUND_IDS
@@ -1370,7 +1381,8 @@ local function playDarkEmoteSound(kind)
         sound.Parent = SoundService
     end
 
-    sound.SoundId = pickSoundId(soundIds)
+    local selectedSoundId = pickSoundId(soundIds)
+    sound.SoundId = selectedSoundId
     sound.Volume = kind == "startup" and 0.7 or (kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5))
     sound.PlaybackSpeed = kind == "startup" and 1
         or (kind == "emote" and (math.random(90, 112) / 100)
@@ -1382,6 +1394,13 @@ local function playDarkEmoteSound(kind)
     end)
     sound:Stop()
     sound:Play()
+    if startupIntro then
+        task.delay(10, function()
+            if sound.Parent and sound.SoundId == selectedSoundId then
+                sound:Stop()
+            end
+        end)
+    end
 end
 
 local function playEmoteSound()
