@@ -2827,11 +2827,6 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
-local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functions/api"
-local EMOTES_DARK_TAG_RETIRED_APIS = {
-    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
-    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
-}
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
@@ -2842,6 +2837,7 @@ local emotesDarkTagUsers = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
+local emotesDarkTagMissingApiWarned = false
 
 do
     local ok, generated = pcall(function()
@@ -2863,14 +2859,9 @@ local function emotesDarkTagApiUrl()
     local env = emotesDarkTagEnvironment()
     local configured = env and env[EMOTES_DARK_TAG_API_ENV_NAME]
     if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
-        local normalized = configured:gsub("%s+", ""):gsub("/+$", "")
-        -- Migrate executors that kept an obsolete bridge URL in getgenv().
-        if EMOTES_DARK_TAG_RETIRED_APIS[normalized] then
-            return EMOTES_DARK_TAG_DEFAULT_API
-        end
-        return normalized
+        return configured:gsub("%s+", ""):gsub("/+$", "")
     end
-    return EMOTES_DARK_TAG_DEFAULT_API
+    return nil
 end
 
 local function emotesDarkTagDecode(response)
@@ -2883,9 +2874,17 @@ end
 local function emotesDarkTagRequest(method, path, body)
     local httpClient = emotesDarkGetRequest()
     if type(httpClient) ~= "function" then return nil end
+    local baseUrl = emotesDarkTagApiUrl()
+    if not baseUrl then
+        if not emotesDarkTagMissingApiWarned then
+            emotesDarkTagMissingApiWarned = true
+            pcall(warn, "[EmotesDark] Configure getgenv().EMOTES_DARK_PRESENCE_API with your bridge API URL.")
+        end
+        return nil
+    end
 
     local requestData = {
-        Url = emotesDarkTagApiUrl() .. path,
+        Url = baseUrl .. path,
         Method = method,
         Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
     }
