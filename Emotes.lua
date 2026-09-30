@@ -3270,7 +3270,7 @@ task.spawn(function()
                     local actionCode
                     _, actionCode, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("^(.-)_EDK_([KP])_(%d+)_(%d+)_([^_]*)_(.*)$")
                     if actionCode then action = actionCode == "K" and "kick" or "puxar"
-                    else action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]*)|(.*)$") end
+                    else action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$") end
                 end
                 local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
                 if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
