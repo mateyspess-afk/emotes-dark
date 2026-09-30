@@ -64,12 +64,12 @@ O script não inclui webhook secreto no código publicado.
 
 A tag preta **DARK USER** aparece acima da cabeça somente para jogadores que estão executando este script no mesmo jogo e servidor, com um brilho branco animado. O dono recebe uma tag preta exclusiva **OWNER USER**. Ambas desaparecem a mais de 55 studs e reaparecem automaticamente quando você se aproxima. A presença é registrada pelo bridge já utilizado pelo projeto e expira automaticamente quando o usuário sai ou para de enviar sinal.
 
-Se você já está com uma cópia antiga rodando, execute o script atualizado novamente. O script usa a URL da bridge definida em `getgenv().EMOTES_DARK_PRESENCE_API` e não escolhe nem substitui o provedor.
+Se você já está com uma cópia antiga rodando, execute o script atualizado novamente. A API de presença e comandos do projeto é `https://api-emotes-dark-bridge.vercel.app/api`. O script aceita uma URL personalizada em `getgenv().EMOTES_DARK_PRESENCE_API`.
 
-Configure antes de executar:
+Para configurar manualmente antes de executar:
 
 ```lua
-getgenv().EMOTES_DARK_PRESENCE_API = "https://seu-dominio/caminho-da-api"
+getgenv().EMOTES_DARK_PRESENCE_API = "https://api-emotes-dark-bridge.vercel.app/api"
 ```
 
-A bridge deve aceitar `POST /clients/register` e `GET /clients/active`. Use a URL base da API, sem inserir tokens ou chaves na URL.
+A bridge precisa aceitar `POST /clients/register` e `GET /clients/active`. Configure a URL base sem incluir tokens ou chaves.
