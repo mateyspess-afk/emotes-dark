@@ -60,10 +60,10 @@ O script não inclui webhook secreto no código publicado.
 
 A tag preta **DARK USER** aparece acima da cabeça somente para jogadores que estão executando este script no mesmo jogo e servidor, com um brilho branco animado. O dono recebe uma tag preta exclusiva **OWNER USER**. Ambas desaparecem a mais de 55 studs e reaparecem automaticamente quando você se aproxima. A presença é registrada pelo bridge já utilizado pelo projeto e expira automaticamente quando o usuário sai ou para de enviar sinal.
 
-Se você já está com uma cópia antiga rodando, execute o script atualizado novamente. A URL antiga do bridge, se estiver salva em `getgenv().EMOTES_DARK_PRESENCE_API`, é redirecionada automaticamente; outras URLs personalizadas continuam sendo respeitadas.
+Se você já está com uma cópia antiga rodando, execute o script atualizado novamente. URLs legadas salvas em getgenv().EMOTES_DARK_PRESENCE_API sao redirecionadas automaticamente para o bridge Base44 atual; outras URLs personalizadas continuam sendo respeitadas.
 
 Se precisar trocar o bridge, configure antes de executar:
 
 ```lua
-getgenv().EMOTES_DARK_PRESENCE_API = "https://seu-bridge.exemplo/api"
+getgenv().EMOTES_DARK_PRESENCE_API = "https://dark-bridge-sync.base44.app/functions/api"
 ```
