@@ -71,8 +71,8 @@ local emotesDarkLanguageCache = nil
 local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
-    local language = "en"
     local countryCode = ""
+    local localeId = ""
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
     if player then
@@ -80,39 +80,35 @@ local function emotesDarkDetectLanguage()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
     end
-
-    -- A tradução principal usa o país real retornado pelo Roblox.
-    local portugueseCountries = {
-        AO = true, BR = true, CV = true, GW = true, MZ = true, PT = true, ST = true, TL = true,
-    }
-    local spanishCountries = {
-        AR = true, BO = true, CL = true, CO = true, CR = true, CU = true, DO = true, EC = true,
-        ES = true, GT = true, HN = true, MX = true, NI = true, PA = true, PE = true, PR = true,
-        PY = true, SV = true, UY = true, VE = true,
-    }
-
-    if portugueseCountries[countryCode] then
-        language = "pt"
-    elseif spanishCountries[countryCode] then
-        language = "es"
-    else
-        -- Se a consulta do país falhar ou não houver tradução disponível, usa o locale.
-        local localeId = ""
+    pcall(function()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+    end)
+    if localeId == "" then
         pcall(function()
-            localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
         end)
-        if localeId == "" then
-            pcall(function()
-                localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-            end)
-        end
-        if localeId:match("^pt") then language = "pt" end
-        if localeId:match("^es") then language = "es" end
     end
 
+    local countryLanguages = {
+        AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
+        AR="es", BO="es", CL="es", CO="es", CR="es", CU="es", DO="es", EC="es", ES="es", GT="es", HN="es", MX="es", NI="es", PA="es", PE="es", PR="es", PY="es", SV="es", UY="es", VE="es",
+        AE="en", AG="en", AU="en", BB="en", BS="en", BZ="en", CA="en", DM="en", FJ="en", GB="en", GD="en", GG="en", GH="en", GI="en", GM="en", GU="en", GY="en", IE="en", IM="en", JM="en", KN="en", KY="en", LC="en", LR="en", MH="en", MT="en", MU="en", MW="en", MY="en", NG="en", NZ="en", PH="en", PK="en", SG="en", SL="en", SS="en", SZ="en", TC="en", TT="en", TV="en", UG="en", US="en", VC="en", VG="en", VI="en", ZA="en", ZM="en", ZW="en",
+        BF="fr", BI="fr", BJ="fr", CD="fr", CF="fr", CG="fr", CI="fr", CM="fr", DJ="fr", DZ="fr", FR="fr", GA="fr", GF="fr", GN="fr", GP="fr", HT="fr", KM="fr", LU="fr", MC="fr", MG="fr", ML="fr", MQ="fr", NC="fr", NE="fr", PF="fr", RE="fr", RW="fr", SC="fr", SN="fr", TD="fr", TG="fr", VU="fr", WF="fr", YT="fr",
+        AT="de", CH="de", DE="de", LI="de",
+        IT="it", SM="it", VA="it",
+        JP="ja", KR="ko", CN="zh", HK="zh", MO="zh", TW="zh",
+        BY="ru", KG="ru", KZ="ru", RU="ru", TJ="ru", TM="ru", UA="uk", PL="pl", CZ="cs", SK="sk", BG="bg", RS="sr", HR="hr", SI="sl",
+        BH="ar", EG="ar", IQ="ar", JO="ar", KW="ar", LB="ar", LY="ar", MA="ar", OM="ar", QA="ar", SA="ar", SD="ar", SY="ar", TN="ar", YE="ar",
+        BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
+    }
+
+    local localeLanguage = localeId:match("^([a-z][a-z])")
+    local language = countryLanguages[countryCode] or localeLanguage or "en"
     emotesDarkLanguageCache = language
     return language
 end
+
+local emotesDarkTranslateText
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -144,8 +140,43 @@ local BUG_REPORT_TRANSLATIONS = {
     },
 }
 
+local emotesDarkBugTranslationCache = {}
+
+local function getBugReportTranslation(language)
+    if emotesDarkBugTranslationCache[language] then
+        return emotesDarkBugTranslationCache[language]
+    end
+
+    local known = BUG_REPORT_TRANSLATIONS[language]
+    if known then
+        emotesDarkBugTranslationCache[language] = known
+        return known
+    end
+
+    local source = BUG_REPORT_TRANSLATIONS.en
+    if type(emotesDarkTranslateText) ~= "function" then
+        return source
+    end
+
+    local translated = {}
+    for key, value in pairs(source) do
+        if type(value) == "string" then
+            translated[key] = emotesDarkTranslateText(value, language)
+        elseif type(value) == "table" then
+            translated[key] = {}
+            for nestedKey, nestedValue in pairs(value) do
+                translated[key][nestedKey] = type(nestedValue) == "string" and emotesDarkTranslateText(nestedValue, language) or nestedValue
+            end
+        else
+            translated[key] = value
+        end
+    end
+    emotesDarkBugTranslationCache[language] = translated
+    return translated
+end
+
 local function emotesDarkBugText(key, ...)
-    local translations = BUG_REPORT_TRANSLATIONS[emotesDarkDetectLanguage()] or BUG_REPORT_TRANSLATIONS.en
+    local translations = getBugReportTranslation(emotesDarkDetectLanguage()) or BUG_REPORT_TRANSLATIONS.en
     local value = translations[key] or BUG_REPORT_TRANSLATIONS.en[key] or key
     if select("#", ...) > 0 then return string.format(value, ...) end
     return value
@@ -961,6 +992,65 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
+emotesDarkTranslateText = function(sourceText, targetLanguage)
+    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
+    local request = emotesDarkGetRequest()
+    if type(request) ~= "function" then return sourceText end
+
+    local encodedSource = tostring(sourceText):gsub("%%s", "__EMOTES_VALUE__")
+    local encodedText = ""
+    local okEncode = pcall(function()
+        encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
+    end)
+    if not okEncode or encodedText == "" then return sourceText end
+
+    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
+    local okRequest, response = pcall(request, {
+        Url = url,
+        Method = "GET",
+        Headers = { ["Accept"] = "application/json" },
+    })
+    if not okRequest then return sourceText end
+
+    local body = emotesDarkUsableBody(emotesDarkResponseBody(response))
+    if not body then return sourceText end
+    local decodedOk, decoded = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(body)
+    end)
+    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText end
+
+    local parts = {}
+    for _, segment in ipairs(decoded[1]) do
+        if type(segment) == "table" and type(segment[1]) == "string" then
+            table.insert(parts, segment[1])
+        end
+    end
+    local translated = table.concat(parts)
+    if translated == "" then return sourceText end
+    return translated:gsub("__EMOTES_VALUE__", "%%s")
+end
+
+local function getUpdateInfoTranslation(language)
+    local known = UPDATE_INFO_TRANSLATIONS[language]
+    if known then return known end
+
+    local source = UPDATE_INFO_TRANSLATIONS.en
+    local translated = {
+        title = emotesDarkTranslateText(source.title, language),
+        updated = emotesDarkTranslateText(source.updated, language),
+        confirm = emotesDarkTranslateText(source.confirm, language),
+        prefixes = {},
+        items = {},
+    }
+    for key, value in pairs(source.prefixes) do
+        translated.prefixes[key] = emotesDarkTranslateText(value, language)
+    end
+    for key, value in pairs(source.items) do
+        translated.items[key] = emotesDarkTranslateText(value, language)
+    end
+    return translated
+end
+
 local function showUpdateInfoWindow()
     local sharedEnv = emotesDarkExecutorEnv()
     local oldConnection = sharedEnv and sharedEnv.EmotesDarkUpdateInfoInputConnection
@@ -1197,7 +1287,7 @@ local function showUpdateInfoWindow()
 
     task.spawn(function()
         local language = detectUpdateInfoLanguage()
-        local translation = UPDATE_INFO_TRANSLATIONS[language] or UPDATE_INFO_TRANSLATIONS.en
+        local translation = getUpdateInfoTranslation(language)
         if not gui.Parent then return end
         title.Text = translation.title
         subtitle.Text = translation.updated
@@ -1264,6 +1354,56 @@ local STARTUP_SOUND_IDS = {
     "rbxassetid://73048868189077",
     "rbxassetid://91271761310463",
 }
+
+local STARTUP_INTRO_FALLBACK_SOUND_IDS = {
+    "rbxassetid://115224076671067",
+    "rbxassetid://95266823224738",
+    "rbxassetid://80275040249402",
+}
+local STARTUP_INTRO_SEARCH_URL = "https://apis.roblox.com/toolbox-service/v2/assets:search?searchCategoryType=Audio&query=intro&audioMaxDurationSeconds=10&maxPageSize=100&pageNumber=0"
+local STARTUP_INTRO_CHANCE = 0.60
+local startupIntroSoundCache
+
+local function getCreatorStoreIntroSoundIds()
+    if startupIntroSoundCache then return startupIntroSoundCache end
+
+    local soundIds = {}
+    local seen = {}
+    local function addSoundId(value)
+        local id = tostring(value or ""):match("%d+")
+        if id and not seen[id] then
+            seen[id] = true
+            table.insert(soundIds, "rbxassetid://" .. id)
+        end
+    end
+
+    local okBody, body = pcall(function()
+        return emotesDarkDownload(STARTUP_INTRO_SEARCH_URL)
+    end)
+    if okBody and body then
+        local decodedOk, decoded = pcall(function()
+            return HttpService:JSONDecode(body)
+        end)
+        if decodedOk and type(decoded) == "table" and type(decoded.creatorStoreAssets) == "table" then
+            for _, entry in ipairs(decoded.creatorStoreAssets) do
+                local asset = type(entry) == "table" and entry.asset
+                local title = type(asset) == "table" and tostring(asset.title or asset.name or ""):lower() or ""
+                local duration = type(asset) == "table" and tonumber(asset.durationSeconds)
+                if type(asset) == "table" and title:find("intro", 1, true) and duration and duration <= 10 then
+                    addSoundId(asset.id)
+                end
+            end
+        end
+    end
+
+    for _, fallbackId in ipairs(STARTUP_INTRO_FALLBACK_SOUND_IDS) do
+        addSoundId(fallbackId)
+    end
+
+    startupIntroSoundCache = soundIds
+    return soundIds
+end
+
 local CLICK_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local EMOTE_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
 local OWNER_SOUND_IDS = { "rbxasset://sounds/electronicpingshort.wav" }
@@ -1273,7 +1413,9 @@ local function pickSoundId(soundIds)
 end
 
 local function playDarkEmoteSound(kind)
-    local soundIds = kind == "startup" and STARTUP_SOUND_IDS
+    local startupIntro = kind == "startup" and math.random() <= STARTUP_INTRO_CHANCE
+    local soundIds = startupIntro and getCreatorStoreIntroSoundIds()
+        or kind == "startup" and STARTUP_SOUND_IDS
         or kind == "click" and CLICK_SOUND_IDS
         or kind == "emote" and EMOTE_SOUND_IDS
         or OWNER_SOUND_IDS
@@ -1287,7 +1429,8 @@ local function playDarkEmoteSound(kind)
         sound.Parent = SoundService
     end
 
-    sound.SoundId = pickSoundId(soundIds)
+    local selectedSoundId = pickSoundId(soundIds)
+    sound.SoundId = selectedSoundId
     sound.Volume = kind == "startup" and 0.7 or (kind == "owner" and 0.7 or (kind == "click" and 0.35 or 0.5))
     sound.PlaybackSpeed = kind == "startup" and 1
         or (kind == "emote" and (math.random(90, 112) / 100)
@@ -1299,6 +1442,13 @@ local function playDarkEmoteSound(kind)
     end)
     sound:Stop()
     sound:Play()
+    if startupIntro then
+        task.delay(10, function()
+            if sound.Parent and sound.SoundId == selectedSoundId then
+                sound:Stop()
+            end
+        end)
+    end
 end
 
 local function playEmoteSound()
@@ -2682,6 +2832,9 @@ local EMOTES_DARK_TAG_RETIRED_API = "https://emotes-dark-presence-bridge--pega12
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
+local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
+local EMOTES_DARK_TAG_MIN_SCALE = EMOTES_DARK_TAG_REFERENCE_DISTANCE / EMOTES_DARK_TAG_MAX_DISTANCE
+local EMOTES_DARK_TAG_MAX_SCALE = 2.5
 local emotesDarkTagUsers = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
@@ -2828,12 +2981,20 @@ local function emotesDarkTagAttach(player)
     tag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     tag.Parent = head
 
+    local tagContentScale
     if isOwner then
         local creatorTag = Instance.new("Frame")
         creatorTag.Name = "CreatorTag"
+        creatorTag.AnchorPoint = Vector2.new(0.5, 0.5)
+        creatorTag.Position = UDim2.fromScale(0.5, 0.5)
         creatorTag.Size = UDim2.fromScale(1, 1)
         creatorTag.BackgroundTransparency = 1
         creatorTag.Parent = tag
+
+        local creatorScale = Instance.new("UIScale")
+        creatorScale.Scale = 1
+        creatorScale.Parent = creatorTag
+        tagContentScale = creatorScale
 
         local nameRow = Instance.new("Frame")
         nameRow.Name = "NameRow"
@@ -2847,15 +3008,16 @@ local function emotesDarkTagAttach(player)
         nameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         nameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         nameLayout.Padding = UDim.new(0, 4)
-        nameLayout.Parent = nil
+        nameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        nameLayout.Parent = nameRow
 
         local nick = Instance.new("TextLabel")
         nick.Name = "CreatorNick"
         nick.BackgroundTransparency = 1
         nick.Position = UDim2.fromOffset(0, 0)
-        nick.Size = UDim2.new(1, 0, 0, 34)
+        nick.Size = UDim2.new(0, 0, 0, 34)
         nick.LayoutOrder = 1
-        nick.AutomaticSize = Enum.AutomaticSize.None
+        nick.AutomaticSize = Enum.AutomaticSize.X
         nick.Font = Enum.Font.GothamBlack
         nick.Text = player.Name
         nick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2865,6 +3027,9 @@ local function emotesDarkTagAttach(player)
         nick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nick.TextStrokeTransparency = 0.05
         nick.TextTruncate = Enum.TextTruncate.AtEnd
+        local nickSizeConstraint = Instance.new("UISizeConstraint")
+        nickSizeConstraint.MaxSize = Vector2.new(190, 34)
+        nickSizeConstraint.Parent = nick
         nick.Parent = nameRow
 
         local nickGradient = Instance.new("UIGradient")
@@ -2888,13 +3053,6 @@ local function emotesDarkTagAttach(player)
         ownerIcon.Image = "rbxassetid://11322089611"
         ownerIcon.ScaleType = Enum.ScaleType.Fit
         ownerIcon.Parent = nameRow
-
-        task.spawn(function()
-            while creatorTag.Parent do
-                ownerIcon.Position = UDim2.new(0.5, math.floor(nick.TextBounds.X / 2) + 4, 0, 2)
-                task.wait()
-            end
-        end)
 
         local subtitle = Instance.new("TextLabel")
         subtitle.Name = "CreatorSubtitle"
@@ -2920,9 +3078,16 @@ local function emotesDarkTagAttach(player)
     else
         local darkTag = Instance.new("Frame")
         darkTag.Name = "DarkUserTag"
+        darkTag.AnchorPoint = Vector2.new(0.5, 0.5)
+        darkTag.Position = UDim2.fromScale(0.5, 0.5)
         darkTag.Size = UDim2.fromScale(1, 1)
         darkTag.BackgroundTransparency = 1
         darkTag.Parent = tag
+
+        local darkScale = Instance.new("UIScale")
+        darkScale.Scale = 1
+        darkScale.Parent = darkTag
+        tagContentScale = darkScale
 
         local darkNameRow = Instance.new("Frame")
         darkNameRow.Name = "DarkNameRow"
@@ -2936,15 +3101,16 @@ local function emotesDarkTagAttach(player)
         darkNameLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         darkNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         darkNameLayout.Padding = UDim.new(0, 4)
-        darkNameLayout.Parent = nil
+        darkNameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        darkNameLayout.Parent = darkNameRow
 
         local darkNick = Instance.new("TextLabel")
         darkNick.Name = "DarkUserNick"
         darkNick.BackgroundTransparency = 1
         darkNick.Position = UDim2.fromOffset(0, 0)
-        darkNick.Size = UDim2.new(1, 0, 0, 34)
+        darkNick.Size = UDim2.new(0, 0, 0, 34)
         darkNick.LayoutOrder = 1
-        darkNick.AutomaticSize = Enum.AutomaticSize.None
+        darkNick.AutomaticSize = Enum.AutomaticSize.X
         darkNick.Font = Enum.Font.GothamBlack
         darkNick.Text = player.Name
         darkNick.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2954,6 +3120,9 @@ local function emotesDarkTagAttach(player)
         darkNick.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         darkNick.TextStrokeTransparency = 0.05
         darkNick.TextTruncate = Enum.TextTruncate.AtEnd
+        local darkNickSizeConstraint = Instance.new("UISizeConstraint")
+        darkNickSizeConstraint.MaxSize = Vector2.new(190, 34)
+        darkNickSizeConstraint.Parent = darkNick
         darkNick.Parent = darkNameRow
 
         local darkGradient = Instance.new("UIGradient")
@@ -2976,13 +3145,6 @@ local function emotesDarkTagAttach(player)
         darkIcon.Image = "rbxassetid://81489458260315"
         darkIcon.ScaleType = Enum.ScaleType.Fit
         darkIcon.Parent = darkNameRow
-
-        task.spawn(function()
-            while darkTag.Parent do
-                darkIcon.Position = UDim2.new(0.5, math.floor(darkNick.TextBounds.X / 2) + 4, 0, 2)
-                task.wait()
-            end
-        end)
 
         local darkSubtitle = Instance.new("TextLabel")
         darkSubtitle.Name = "DarkUserSubtitle"
@@ -3007,6 +3169,22 @@ local function emotesDarkTagAttach(player)
         end)
     end
     emotesDarkTags[key] = tag
+
+    task.spawn(function()
+        while tag.Parent and tagContentScale and tagContentScale.Parent do
+            local camera = workspace.CurrentCamera
+            if camera then
+                local distance = (camera.CFrame.Position - head.Position).Magnitude
+                local scale = EMOTES_DARK_TAG_REFERENCE_DISTANCE / math.max(distance, 1)
+                tagContentScale.Scale = math.clamp(
+                    scale,
+                    EMOTES_DARK_TAG_MIN_SCALE,
+                    EMOTES_DARK_TAG_MAX_SCALE
+                )
+            end
+            task.wait(0.05)
+        end
+    end)
 end
 
 local function emotesDarkTagSync(activeClients)
@@ -3729,6 +3907,16 @@ local function showBugReportWindow()
     send.TextColor3 = Color3.fromRGB(30, 30, 35)
     send.TextSize = 10
     send.ZIndex = 7002
+
+    task.spawn(function()
+        local language = emotesDarkDetectLanguage()
+        local translation = getBugReportTranslation(language)
+        if not title.Parent then return end
+        title.Text = translation.title or title.Text
+        hint.Text = translation.hint or hint.Text
+        textBox.PlaceholderText = translation.placeholder or textBox.PlaceholderText
+        send.Text = translation.send or send.Text
+    end)
 
     local sendCorner = Instance.new("UICorner")
     sendCorner.CornerRadius = UDim.new(0, 7)
