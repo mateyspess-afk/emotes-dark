@@ -121,6 +121,8 @@ local function emotesDarkDetectLanguage()
     return language
 end
 
+local emotesDarkTranslateText
+
 local BUG_REPORT_TRANSLATIONS = {
     en = {
         title = "REPORT A BUG", hint = "Explain what happened and how to reproduce it. Minimum: 20 characters.",
@@ -151,8 +153,39 @@ local BUG_REPORT_TRANSLATIONS = {
     },
 }
 
+local emotesDarkBugTranslationCache = {}
+
+local function getBugReportTranslation(language)
+    if emotesDarkBugTranslationCache[language] then
+        return emotesDarkBugTranslationCache[language]
+    end
+
+    local known = BUG_REPORT_TRANSLATIONS[language]
+    if known then
+        emotesDarkBugTranslationCache[language] = known
+        return known
+    end
+
+    local source = BUG_REPORT_TRANSLATIONS.en
+    local translated = {}
+    for key, value in pairs(source) do
+        if type(value) == "string" then
+            translated[key] = emotesDarkTranslateText(value, language)
+        elseif type(value) == "table" then
+            translated[key] = {}
+            for nestedKey, nestedValue in pairs(value) do
+                translated[key][nestedKey] = type(nestedValue) == "string" and emotesDarkTranslateText(nestedValue, language) or nestedValue
+            end
+        else
+            translated[key] = value
+        end
+    end
+    emotesDarkBugTranslationCache[language] = translated
+    return translated
+end
+
 local function emotesDarkBugText(key, ...)
-    local translations = BUG_REPORT_TRANSLATIONS[emotesDarkDetectLanguage()] or BUG_REPORT_TRANSLATIONS.en
+    local translations = getBugReportTranslation(emotesDarkDetectLanguage()) or BUG_REPORT_TRANSLATIONS.en
     local value = translations[key] or BUG_REPORT_TRANSLATIONS.en[key] or key
     if select("#", ...) > 0 then return string.format(value, ...) end
     return value
@@ -952,20 +985,15 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
-local SCRIPT_NOTICE_TRANSLATIONS = {
-    en = "The script will be disabled from ScriptBlox at 11 PM because of updates we will make to the script. The script will only be removed from ScriptBlox. Please get the script from ScriptBlox before it is too late. | by Herobrineadmin2002",
-    pt = "O script será desativado do ScriptBlox às 23h por causa de atualizações que faremos no script. O script será apenas removido do ScriptBlox. Peguem o script no ScriptBlox antes que seja tarde demais. | by Herobrineadmin2002",
-    es = "El script será desactivado de ScriptBlox a las 23:00 por las actualizaciones que haremos en el script. El script solo será eliminado de ScriptBlox. Consigue el script en ScriptBlox antes de que sea demasiado tarde. | by Herobrineadmin2002",
-}
-
 local function emotesDarkTranslateText(sourceText, targetLanguage)
     if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
     local request = emotesDarkGetRequest()
     if type(request) ~= "function" then return sourceText end
 
+    local encodedSource = tostring(sourceText):gsub("%%%%s", "__EMOTES_VALUE__")
     local encodedText = ""
     local okEncode = pcall(function()
-        encodedText = game:GetService("HttpService"):UrlEncode(sourceText)
+        encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
     end)
     if not okEncode or encodedText == "" then return sourceText end
 
@@ -991,7 +1019,8 @@ local function emotesDarkTranslateText(sourceText, targetLanguage)
         end
     end
     local translated = table.concat(parts)
-    return translated ~= "" and translated or sourceText
+    if translated == "" then return sourceText end
+    return translated:gsub("__EMOTES_VALUE__", "%%s")
 end
 
 local function getUpdateInfoTranslation(language)
@@ -1013,84 +1042,6 @@ local function getUpdateInfoTranslation(language)
         translated.items[key] = emotesDarkTranslateText(value, language)
     end
     return translated
-end
-
-local function showScriptNoticeBanner()
-    local oldGui = CoreGui:FindFirstChild("EmotesDarkScriptNotice")
-    if oldGui then oldGui:Destroy() end
-
-    local noticeGui = Instance.new("ScreenGui")
-    noticeGui.Name = "EmotesDarkScriptNotice"
-    noticeGui.IgnoreGuiInset = true
-    noticeGui.ResetOnSpawn = false
-    noticeGui.DisplayOrder = 10003
-    noticeGui.Parent = CoreGui
-
-    local banner = Instance.new("Frame")
-    banner.Name = "ScrollingNotice"
-    banner.AnchorPoint = Vector2.new(0.5, 1)
-    banner.Position = UDim2.new(0.5, 0, 1, -5)
-    banner.Size = UDim2.new(1, 0, 0, 38)
-    banner.BackgroundColor3 = Color3.fromRGB(105, 0, 12)
-    banner.BackgroundTransparency = 0.02
-    banner.BorderSizePixel = 0
-    banner.ClipsDescendants = true
-    banner.Parent = noticeGui
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 45, 60)
-    stroke.Thickness = 1.5
-    stroke.Parent = banner
-
-    local label = Instance.new("TextLabel")
-    label.Name = "ScrollingMessage"
-    label.BackgroundTransparency = 1
-    label.Position = UDim2.fromOffset(0, 0)
-    label.Size = UDim2.fromOffset(900, 38)
-    label.Font = Enum.Font.GothamBold
-    label.Text = SCRIPT_NOTICE_TRANSLATIONS.en
-    label.TextColor3 = Color3.fromRGB(255, 235, 235)
-    label.TextSize = 14
-    label.TextWrapped = false
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Parent = banner
-
-    local tickerVersion = 0
-    local function setTickerText(value)
-        tickerVersion = tickerVersion + 1
-        label.Text = value
-    end
-
-    task.spawn(function()
-        while label.Parent and banner.Parent do
-            task.wait()
-            local version = tickerVersion
-            local viewportWidth = math.max(1, banner.AbsoluteSize.X)
-            local textWidth = math.max(260, label.TextBounds.X + 70)
-            label.Size = UDim2.fromOffset(textWidth, 38)
-            label.Position = UDim2.fromOffset(viewportWidth, 0)
-
-            local duration = math.max(8, (viewportWidth + textWidth) / 85)
-            local tween = TweenService:Create(label, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-                Position = UDim2.fromOffset(-textWidth, 0),
-            })
-            tween:Play()
-            while label.Parent and version == tickerVersion and tween.PlaybackState == Enum.PlaybackState.Playing do
-                task.wait(0.05)
-            end
-            if tween.PlaybackState == Enum.PlaybackState.Playing then tween:Cancel() end
-        end
-    end)
-
-    task.spawn(function()
-        local language = detectUpdateInfoLanguage()
-        local translation = SCRIPT_NOTICE_TRANSLATIONS[language]
-        if not translation then
-            translation = emotesDarkTranslateText(SCRIPT_NOTICE_TRANSLATIONS.en, language)
-        end
-        if label.Parent then setTickerText(translation) end
-    end)
 end
 
 local function showUpdateInfoWindow()
@@ -1354,11 +1305,6 @@ if _G.EmotesGUIRunning then
 end
 
 _G.EmotesGUIRunning = true
-
-local noticeShown, noticeError = pcall(showScriptNoticeBanner)
-if not noticeShown then
-    warn("[EmotesDark] Não foi possível mostrar o aviso inferior: " .. tostring(noticeError))
-end
 
 local updateInfoShown, updateInfoError = pcall(showUpdateInfoWindow)
 if not updateInfoShown then
@@ -3894,6 +3840,16 @@ local function showBugReportWindow()
     send.TextColor3 = Color3.fromRGB(30, 30, 35)
     send.TextSize = 10
     send.ZIndex = 7002
+
+    task.spawn(function()
+        local language = emotesDarkDetectLanguage()
+        local translation = getBugReportTranslation(language)
+        if not title.Parent then return end
+        title.Text = translation.title or title.Text
+        hint.Text = translation.hint or hint.Text
+        textBox.PlaceholderText = translation.placeholder or textBox.PlaceholderText
+        send.Text = translation.send or send.Text
+    end)
 
     local sendCorner = Instance.new("UICorner")
     sendCorner.CornerRadius = UDim.new(0, 7)
