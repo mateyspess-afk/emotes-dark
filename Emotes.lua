@@ -2846,7 +2846,7 @@ local EMOTES_DARK_TAG_LEGACY_APIS = {
 }
 local EMOTES_DARK_TAG_POLL_SECONDS = 1 -- poll once per second to avoid bridge rate limits
 local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 6
-local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 3
+local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 15
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
