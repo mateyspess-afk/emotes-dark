@@ -2840,8 +2840,11 @@ end
 
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
-local EMOTES_DARK_TAG_DEFAULT_API = "https://imaginative-treacle-412930.netlify.app/api"
-local EMOTES_DARK_TAG_RETIRED_API = "https://emotes-dark-presence-bridge--pega123.replit.app/api"
+local EMOTES_DARK_TAG_DEFAULT_API = "https://dark-bridge-sync.base44.app/functions/api"
+local EMOTES_DARK_TAG_LEGACY_APIS = {
+    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
+    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
+}
 local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
@@ -2875,7 +2878,7 @@ local function emotesDarkTagApiUrl()
     if type(configured) == "string" and configured:gsub("%s+", "") ~= "" then
         local normalized = configured:gsub("%s+", ""):gsub("/+$", "")
         -- Migrate executors that kept the retired default URL in getgenv().
-        if normalized == EMOTES_DARK_TAG_RETIRED_API then
+        if EMOTES_DARK_TAG_LEGACY_APIS[normalized] then
             return EMOTES_DARK_TAG_DEFAULT_API
         end
         return normalized
