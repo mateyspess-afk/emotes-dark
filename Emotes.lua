@@ -3260,34 +3260,20 @@ end
 
 task.spawn(function()
     local lastHeartbeat = -EMOTES_DARK_TAG_HEARTBEAT_SECONDS
-    local nextAttempt = 0
-    local retrySeconds = 1
     local lastCommandNonce = ""
     while emotesDarkTagRunning and Players.LocalPlayer do
         local now = os.clock()
         local pendingKick = emotesDarkPendingKickCommand
         local commandNonce = pendingKick and tostring(pendingKick.nonce or "") or ""
         local newCommand = commandNonce ~= "" and commandNonce ~= lastCommandNonce
-        if now >= nextAttempt and (now - lastHeartbeat >= EMOTES_DARK_TAG_HEARTBEAT_SECONDS or newCommand) then
-            local registered = emotesDarkTagRequest("POST", "/clients/register", emotesDarkTagClientInfo())
+        local info = emotesDarkTagClientInfo()
+        if now - lastHeartbeat >= EMOTES_DARK_TAG_HEARTBEAT_SECONDS or newCommand then
+            local registered = emotesDarkTagRequest("POST", "/clients/register", info)
             if registered then
                 lastHeartbeat = os.clock()
-                nextAttempt = lastHeartbeat + EMOTES_DARK_TAG_HEARTBEAT_SECONDS
                 if newCommand then lastCommandNonce = commandNonce end
-                retrySeconds = 1
-            else
-                nextAttempt = os.clock() + retrySeconds
-                retrySeconds = math.min(retrySeconds * 2, 8)
             end
         end
-        task.wait(0.1)
-    end
-end)
-
-task.spawn(function()
-    local retrySeconds = EMOTES_DARK_TAG_POLL_SECONDS
-    while emotesDarkTagRunning and Players.LocalPlayer do
-        local info = emotesDarkTagClientInfo()
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
@@ -3321,12 +3307,8 @@ task.spawn(function()
                 end
             end
             emotesDarkTagSync(response.clients)
-            retrySeconds = EMOTES_DARK_TAG_POLL_SECONDS
-            task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
-        else
-            task.wait(retrySeconds)
-            retrySeconds = math.min(retrySeconds * 2, 8)
         end
+        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
     end
 end)
 
