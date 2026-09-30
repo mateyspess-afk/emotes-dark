@@ -2682,10 +2682,14 @@ local EMOTES_DARK_TAG_RETIRED_APIS = {
     ["https://imaginative-treacle-412930.netlify.app/api"] = true,
     ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
 }
-local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
+local EMOTES_DARK_TAG_POLL_SECONDS = 6
+local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 15
+local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 30
+local EMOTES_DARK_TAG_MAX_BACKOFF_SECONDS = 60
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local emotesDarkTagUsers = {}
+local emotesDarkTagLastSeen = {}
 local emotesDarkTags = {}
 local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
@@ -3013,13 +3017,21 @@ local function emotesDarkTagAttach(player)
 end
 
 local function emotesDarkTagSync(activeClients)
-    local nextUsers = {}
+    local now = os.clock()
     for _, client in ipairs(activeClients or {}) do
         if type(client) == "table" and client.userId ~= nil then
-            nextUsers[tostring(client.userId)] = client
+            local key = tostring(client.userId)
+            emotesDarkTagUsers[key] = client
+            emotesDarkTagLastSeen[key] = now
         end
     end
-    emotesDarkTagUsers = nextUsers
+
+    for key, lastSeen in pairs(emotesDarkTagLastSeen) do
+        if now - lastSeen > EMOTES_DARK_TAG_MISSING_GRACE_SECONDS then
+            emotesDarkTagLastSeen[key] = nil
+            emotesDarkTagUsers[key] = nil
+        end
+    end
 
     for _, player in ipairs(Players:GetPlayers()) do
         local key = tostring(player.UserId)
@@ -3047,17 +3059,35 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    emotesDarkTagRemove(player.UserId)
+    local key = tostring(player.UserId)
+    emotesDarkTagUsers[key] = nil
+    emotesDarkTagLastSeen[key] = nil
+    emotesDarkTagRemove(key)
 end)
 
-for _, player in ipairs(Players:GetPlayers()) do
-    emotesDarkTagWatchPlayer(player)
-end
-
 task.spawn(function()
+    local lastHeartbeat = -EMOTES_DARK_TAG_HEARTBEAT_SECONDS
+    local lastCommandNonce = ""
+    local retryDelay = EMOTES_DARK_TAG_POLL_SECONDS
+
     while emotesDarkTagRunning and Players.LocalPlayer do
+        local requestsSucceeded = true
+        local now = os.clock()
+        local pendingKick = emotesDarkPendingKickCommand
+        local commandNonce = pendingKick and tostring(pendingKick.nonce or "") or ""
+        local newCommand = commandNonce ~= "" and commandNonce ~= lastCommandNonce
         local info = emotesDarkTagClientInfo()
-        emotesDarkTagRequest("POST", "/clients/register", info)
+
+        if now - lastHeartbeat >= EMOTES_DARK_TAG_HEARTBEAT_SECONDS or newCommand then
+            local registered = emotesDarkTagRequest("POST", "/clients/register", info)
+            if registered then
+                lastHeartbeat = os.clock()
+                if newCommand then lastCommandNonce = commandNonce end
+            else
+                requestsSucceeded = false
+            end
+        end
+
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
@@ -3091,8 +3121,16 @@ task.spawn(function()
                 end
             end
             emotesDarkTagSync(response.clients)
+        else
+            requestsSucceeded = false
         end
-        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
+
+        if requestsSucceeded then
+            retryDelay = EMOTES_DARK_TAG_POLL_SECONDS
+        else
+            retryDelay = math.min(retryDelay * 1.5, EMOTES_DARK_TAG_MAX_BACKOFF_SECONDS)
+        end
+        task.wait(retryDelay)
     end
 end)
 
