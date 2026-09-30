@@ -14,6 +14,10 @@ Uma reimplementação modular do script de emotes, criada para ser mais estável
 - Controle de velocidade de `0.1x` a `4x`.
 - Modo **Andar** para manter o emote ativo durante o movimento.
 - Atalhos para PC e botão flutuante para touch.
+- Detecção do idioma por país/locale, com tradução automática online da interface quando não houver texto traduzido.
+- Tradução automática do formulário de report de bugs e da janela de atualizações, preservando placeholders como `%s`.
+- Em 60% das inicializações, tenta escolher uma intro do catálogo de áudio do Roblox com até 10 segundos; usa IDs de fallback se não houver resultado.
+- Nametags `DARK USER` e `OWNER USER` ajustam a escala conforme a distância e ficam ocultas além de 55 studs.
 - Limpeza segura: executar o script novamente encerra a instância anterior antes de criar outra.
 
 ## Atalhos
