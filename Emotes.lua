@@ -2845,7 +2845,7 @@ local EMOTES_DARK_TAG_LEGACY_APIS = {
     ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
 }
 local EMOTES_DARK_TAG_POLL_SECONDS = 1 -- poll once per second to avoid bridge rate limits
-local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 6
+local EMOTES_DARK_TAG_HEARTBEAT_SECONDS = 1
 local EMOTES_DARK_TAG_MISSING_GRACE_SECONDS = 3
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
