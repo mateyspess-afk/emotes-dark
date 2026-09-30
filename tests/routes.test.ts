@@ -20,11 +20,14 @@ function player(userId: number, overrides: Record<string, unknown> = {}) {
   }
 }
 
-function postRegister(body: unknown) {
+function postRegister(body: unknown, token?: string) {
   return register(
     new Request(`${BASE}/clients/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'X-Emotes-Dark-Command-Token': token } : {}),
+      },
       body: typeof body === 'string' ? body : JSON.stringify(body),
     }),
   )
@@ -36,8 +39,10 @@ async function getActive(scope: Record<string, string> = server) {
 }
 
 let fake: ReturnType<typeof createFakeStore>
+const COMMAND_TOKEN = 'a'.repeat(64)
 
 beforeEach(() => {
+  vi.stubEnv('EMOTES_DARK_COMMAND_TOKEN', COMMAND_TOKEN)
   fake = createFakeStore()
   setPresenceStoreForTests(fake.store)
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -46,6 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   setPresenceStoreForTests(null)
+  vi.unstubAllEnvs()
   vi.useRealTimers()
 })
 
@@ -95,6 +101,26 @@ describe('POST /api/clients/register', () => {
   it('rejeita corpos grandes demais', async () => {
     const response = await postRegister(player(1, { displayName: 'x'.repeat(5000) }))
     expect(response.status).toBe(413)
+  })
+})
+
+describe('relay de comandos', () => {
+  const command = { action: 'kick', nonce: '17672256001234', senderUserId: 1, target: 'alvo', reason: 'motivo' }
+
+  it('publica o comando separado do sessionId somente com token válido', async () => {
+    const response = await postRegister(player(1, { command }), COMMAND_TOKEN)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ commandAccepted: true })
+    const { body } = await getActive()
+    expect(body.clients[0].command).toEqual(command)
+  })
+
+  it('mantém presença mas não retransmite comando sem token', async () => {
+    const response = await postRegister(player(1, { command }))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ commandAccepted: false })
+    const { body } = await getActive()
+    expect(body.clients[0]).not.toHaveProperty('command')
   })
 })
 

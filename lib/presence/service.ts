@@ -27,6 +27,7 @@ export async function registerPresence(
     displayName: registration.displayName,
     sessionId: registration.sessionId,
     lastSeen: now,
+    ...(registration.command ? { command: registration.command } : {}),
   }
   await store.upsert(scopeKey(registration), record, SCOPE_KEY_TTL_MS)
   return record
@@ -45,11 +46,12 @@ export async function listActivePresence(
   return records
     .filter((record) => !isExpired(record, now))
     .sort((a, b) => b.lastSeen - a.lastSeen)
-    .map(({ userId, username, displayName, sessionId, lastSeen }) => ({
+    .map(({ userId, username, displayName, sessionId, lastSeen, command }) => ({
       userId,
       username,
       displayName,
       sessionId,
       lastSeen,
+      ...(command ? { command } : {}),
     }))
 }

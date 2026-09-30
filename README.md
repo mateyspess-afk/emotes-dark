@@ -93,7 +93,7 @@ para que as nametags apareçam para os outros jogadores.
 | `POST` | `/api/clients/register` | Corpo JSON com `userId`, `username`, `displayName`, `gameId`, `placeId`, `jobId`, `sessionId`. |
 | `GET` | `/api/clients/active?gameId=…&placeId=…&jobId=…` | Devolve `{ "clients": [...] }` apenas daquele servidor. |
 
-Cada cliente devolvido tem `userId`, `username`, `displayName`, `sessionId` e `lastSeen` (ms).
+Cada cliente devolvido tem `userId`, `username`, `displayName`, `sessionId` e `lastSeen` (ms), além do campo `command` quando houver um comando autorizado ainda ativo. O comando é validado com ação, nonce, remetente, alvo e motivo codificado.
 
 ### Regras
 
@@ -102,8 +102,8 @@ Cada cliente devolvido tem `userId`, `username`, `displayName`, `sessionId` e `l
 - Inativo após **15 segundos** sem novo `register`. Registros expirados são apagados a cada consulta
   de `/active`. As chaves do servidor expiram sozinhas no Redis 60 s após o último sinal, então
   servidores abandonados são limpos sem precisar de tarefa agendada.
-- **Comandos no `sessionId` são descartados.** Tudo a partir de `|DK|` (e do formato compacto `_EDK_`)
-  é removido antes de gravar; comandos de kick/puxar nunca são guardados nem retransmitidos.
+- O `sessionId` continua sendo limpo e nunca carrega comandos. `kick` e `puxar` usam um campo `command` separado, aceito apenas com o cabeçalho `X-Emotes-Dark-Command-Token` correspondente à variável secreta `EMOTES_DARK_COMMAND_TOKEN` (mínimo 32 caracteres). Sem token válido, a presença é registrada normalmente e o comando não é retransmitido.
+- O token deve existir apenas no ambiente Production do bridge e no `getgenv().EMOTES_DARK_COMMAND_TOKEN` do executor do owner; não o publique no arquivo distribuído.
 - Validação: ids numéricos, `jobId` alfanumérico com hífen (até 64), `username` no formato Roblox,
   `displayName` sem caracteres de controle (até 32). Dados inválidos retornam `400`.
 - Limites: corpo até **2 KB** (`413`), URL até 1024 caracteres (`414`), até 200 clientes por servidor.

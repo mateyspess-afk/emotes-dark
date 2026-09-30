@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis'
+import type { RelayCommand } from './validation'
 
 export type PresenceRecord = {
   userId: number
@@ -6,6 +7,7 @@ export type PresenceRecord = {
   displayName: string
   sessionId: string
   lastSeen: number
+  command?: RelayCommand
 }
 
 /**

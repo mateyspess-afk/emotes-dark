@@ -17,11 +17,20 @@ export type ServerScope = {
   jobId: string
 }
 
+export type RelayCommand = {
+  action: 'kick' | 'puxar'
+  nonce: string
+  senderUserId: number
+  target: string
+  reason: string
+}
+
 export type Registration = ServerScope & {
   userId: number
   username: string
   displayName: string
   sessionId: string
+  command?: RelayCommand
 }
 
 export type ValidationResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -76,6 +85,29 @@ export function validateScope(input: Record<string, unknown>): ValidationResult<
   return { ok: true, data: { gameId, placeId, jobId } }
 }
 
+const COMMAND_NONCE = /^\d{10,20}$/
+const COMMAND_TARGET = /^[A-Za-z0-9_]{1,20}$/
+const COMMAND_REASON = /^(?:[A-Za-z0-9.~-]|%[0-9A-Fa-f]{2})*$/
+
+function validateRelayCommand(input: unknown, userId: number): ValidationResult<RelayCommand | undefined> {
+  if (input === undefined) return { ok: true, data: undefined }
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return { ok: false, error: 'command inválido' }
+  }
+  const command = input as Record<string, unknown>
+  const action = command.action
+  if (action !== 'kick' && action !== 'puxar') return { ok: false, error: 'ação de command inválida' }
+  const nonce = typeof command.nonce === 'string' ? command.nonce : ''
+  if (!COMMAND_NONCE.test(nonce)) return { ok: false, error: 'nonce de command inválido' }
+  const senderUserId = toUserId(command.senderUserId)
+  if (senderUserId === null || senderUserId !== userId) return { ok: false, error: 'senderUserId de command não corresponde ao cliente' }
+  const target = typeof command.target === 'string' ? command.target : ''
+  if (!COMMAND_TARGET.test(target)) return { ok: false, error: 'target de command inválido' }
+  const reason = typeof command.reason === 'string' ? command.reason : ''
+  if (reason.length > 28 || !COMMAND_REASON.test(reason)) return { ok: false, error: 'reason de command inválido' }
+  return { ok: true, data: { action, nonce, senderUserId, target, reason } }
+}
+
 export function validateRegistration(input: unknown): ValidationResult<Registration> {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return { ok: false, error: 'O corpo precisa ser um objeto JSON' }
@@ -91,6 +123,9 @@ export function validateRegistration(input: unknown): ValidationResult<Registrat
   const scope = validateScope(body)
   if (!scope.ok) return scope
 
+  const command = validateRelayCommand(body.command, userId)
+  if (!command.ok) return command
+
   return {
     ok: true,
     data: {
@@ -99,6 +134,7 @@ export function validateRegistration(input: unknown): ValidationResult<Registrat
       username,
       displayName: toDisplayName(body.displayName, username),
       sessionId: stripSessionCommands(body.sessionId),
+      ...(command.data ? { command: command.data } : {}),
     },
   }
 }

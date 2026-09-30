@@ -33,6 +33,17 @@ describe('validateRegistration', () => {
     expect(result).toEqual({ ok: true, data: { ...valid } })
   })
 
+  it('aceita comando explícito somente para o cliente que o enviou', () => {
+    const command = { action: 'kick', nonce: '17672256001234', senderUserId: 123456, target: 'alvo_1', reason: 'motivo%20de%20teste' }
+    const result = validateRegistration({ ...valid, command })
+    expect(result.ok && result.data.command).toEqual(command)
+  })
+
+  it('rejeita comandos com remetente diferente do cliente', () => {
+    const result = validateRegistration({ ...valid, command: { action: 'kick', nonce: '17672256001234', senderUserId: 9, target: 'alvo', reason: '' } })
+    expect(result.ok).toBe(false)
+  })
+
   it('aceita ids numéricos como string', () => {
     const result = validateRegistration({ ...valid, userId: '123456', gameId: 111 })
     expect(result.ok).toBe(true)
