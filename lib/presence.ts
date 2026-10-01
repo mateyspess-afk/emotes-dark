@@ -94,19 +94,40 @@ function serverPresenceHashKey(gameId: string, placeId: string, jobId: string) {
   return `${PREFIX}server:${serverKey(gameId, placeId, jobId)}`
 }
 
+const STORAGE_TIMEOUT_MS = 2_500
+
+async function withStorageTimeout<T>(operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Redis excedeu o tempo limite')), STORAGE_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 export async function savePresence(presence: Presence) {
   const client = getRedis()
   const key = serverPresenceHashKey(presence.gameId, presence.placeId, presence.jobId)
   // Uma hash por servidor evita SCAN/MGET de chaves dinâmicas no Upstash.
   // O TTL do servidor é renovado enquanto houver heartbeats ativos.
-  await client.hset(key, { [presence.userId]: JSON.stringify(presence) })
-  await client.expire(key, Math.ceil(PRESENCE_TTL_MS / 1000))
+  await withStorageTimeout(
+    client
+      .pipeline()
+      .hset(key, { [presence.userId]: JSON.stringify(presence) })
+      .expire(key, Math.ceil(PRESENCE_TTL_MS / 1000))
+      .exec(),
+  )
 }
 
 export async function activePresences(gameId: string, placeId: string, jobId: string) {
   const client = getRedis()
   const key = serverPresenceHashKey(gameId, placeId, jobId)
-  const values = await client.hgetall<Record<string, string>>(key)
+  const values = await withStorageTimeout(client.hgetall<Record<string, string>>(key))
   if (!values) return []
 
   const active: Presence[] = []
