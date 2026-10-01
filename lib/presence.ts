@@ -86,38 +86,35 @@ async function withStorageTimeout<T>(operation: Promise<T>): Promise<T> {
   }
 }
 
+type ServerPresenceState = Record<string, Presence>
+
 export async function savePresence(presence: Presence) {
   const client = getRedis()
   const key = serverPresenceHashKey(presence.gameId, presence.placeId, presence.jobId)
-  // Uma hash por servidor evita SCAN/MGET de chaves dinâmicas no Upstash.
-  // O TTL do servidor é renovado enquanto houver heartbeats ativos.
+  const current = (await withStorageTimeout(client.get<ServerPresenceState>(key))) ?? {}
+  current[presence.userId] = presence
+  // Uma leitura e uma escrita por heartbeat, sem SCAN/MGET de chaves dinâmicas.
   await withStorageTimeout(
-    client
-      .pipeline()
-      .hset(key, { [presence.userId]: JSON.stringify(presence) })
-      .expire(key, Math.ceil(PRESENCE_TTL_MS / 1000))
-      .exec(),
+    client.set(key, JSON.stringify(current), { ex: Math.ceil(PRESENCE_TTL_MS / 1000) }),
   )
 }
 
 export async function activePresences(gameId: string, placeId: string, jobId: string) {
   const client = getRedis()
   const key = serverPresenceHashKey(gameId, placeId, jobId)
-  const values = await withStorageTimeout(client.hgetall<Record<string, string>>(key))
+  const values = await withStorageTimeout(client.get<ServerPresenceState>(key))
   if (!values) return []
 
   const active: Presence[] = []
   const stale: string[] = []
-  for (const [userId, serialized] of Object.entries(values)) {
-    try {
-      const presence = JSON.parse(serialized) as Presence
-      if (presence.userId === userId && isPresenceActive(presence.lastSeen)) active.push(presence)
-      else stale.push(userId)
-    } catch {
-      stale.push(userId)
-    }
+  for (const [userId, presence] of Object.entries(values)) {
+    if (presence.userId === userId && isPresenceActive(presence.lastSeen)) active.push(presence)
+    else stale.push(userId)
   }
-  if (stale.length) await withStorageTimeout(client.hdel(key, ...stale))
+  if (stale.length) {
+    for (const userId of stale) delete values[userId]
+    await withStorageTimeout(client.set(key, JSON.stringify(values), { ex: Math.ceil(PRESENCE_TTL_MS / 1000) }))
+  }
   return active
 }
 
