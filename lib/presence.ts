@@ -1,15 +1,8 @@
 import { Redis } from '@upstash/redis'
 
-export const PRESENCE_TTL_MS = 15_000
+export const PRESENCE_TTL_MS = 30_000
 const PREFIX = 'emotes-dark:presence:'
 
-export type CommandPacket = {
-  action: 'kick' | 'puxar'
-  nonce: string
-  senderUserId: string
-  target: string
-  reason: string
-}
 
 export type Presence = {
   userId: string
@@ -49,23 +42,6 @@ export function cleanText(value: unknown, field: keyof typeof limits): string {
   const result = value.trim()
   if (!result || result.length > limits[field]) throw new Error(`${field} inválido`)
   return result
-}
-
-export function parseCommandPacket(sessionId: string): CommandPacket | undefined {
-  const marker = sessionId.indexOf('_EDK_')
-  if (marker < 0) return undefined
-  const parts = sessionId.slice(marker + 5).split('_')
-  if (parts.length < 6) return undefined
-  const [actionCode, nonce, senderUserId, target, ...reasonParts] = parts
-  if (!nonce || !senderUserId || !target) return undefined
-  if (actionCode !== 'K' && actionCode !== 'P') return undefined
-  return {
-    action: actionCode === 'K' ? 'kick' : 'puxar',
-    nonce,
-    senderUserId,
-    target,
-    reason: reasonParts.join('_'),
-  }
 }
 
 export function sanitizeSessionId(value: unknown): string {
@@ -127,16 +103,12 @@ export async function savePresence(presence: Presence) {
 export async function activePresences(gameId: string, placeId: string, jobId: string) {
   const client = getRedis()
   const key = serverPresenceHashKey(gameId, placeId, jobId)
-  const userIds = await withStorageTimeout(client.hkeys<string[]>(key))
-  if (!userIds?.length) return []
+  const values = await withStorageTimeout(client.hgetall<Record<string, string>>(key))
+  if (!values) return []
 
-  const serializedValues = await withStorageTimeout(
-    client.pipeline(userIds.map((userId) => ['hget', key, userId])).exec<string[]>(),
-  )
   const active: Presence[] = []
   const stale: string[] = []
-  userIds.forEach((userId, index) => {
-    const serialized = serializedValues[index]
+  for (const [userId, serialized] of Object.entries(values)) {
     try {
       const presence = JSON.parse(serialized) as Presence
       if (presence.userId === userId && isPresenceActive(presence.lastSeen)) active.push(presence)
@@ -144,8 +116,8 @@ export async function activePresences(gameId: string, placeId: string, jobId: st
     } catch {
       stale.push(userId)
     }
-  })
-  if (stale.length) await client.hdel(key, ...stale)
+  }
+  if (stale.length) await withStorageTimeout(client.hdel(key, ...stale))
   return active
 }
 
