@@ -2598,209 +2598,6 @@ local function isOwnerPlayer(player)
     return isKnownOwnerPlayer(player)
 end
 
-local emotesDarkKickListening = true
-local emotesDarkKickedMessage = ""
-local emotesDarkPendingKickCommand = nil
-local emotesDarkHandledKickCommands = {}
-local emotesDarkKickDiagnostics = {}
-
-local function emotesDarkKickDebug(nonce, stage, message)
-    nonce = tostring(nonce or "")
-    if nonce == "" then return end
-    local seen = emotesDarkKickDiagnostics[nonce]
-    if not seen then
-        seen = {}
-        emotesDarkKickDiagnostics[nonce] = seen
-    end
-    if seen[stage] then return end
-    seen[stage] = true
-    pcall(warn, string.format("[EmotesDark Bridge][%s] %s", stage, message or ""))
-end
-
-local function emotesDarkNormalizeKickName(value)
-    value = tostring(value or ""):lower():gsub("^@", "")
-    return value:gsub("[^%w]", "")
-end
-
-local function emotesDarkKickTargetMatches(target)
-    local localPlayer = Players.LocalPlayer
-    if not localPlayer or type(target) ~= "string" then return false end
-    local normalizedTarget = emotesDarkNormalizeKickName(target)
-    local username = emotesDarkNormalizeKickName(localPlayer.Name)
-    local displayName = emotesDarkNormalizeKickName(localPlayer.DisplayName)
-    return normalizedTarget ~= "" and (username:find(normalizedTarget, 1, true) ~= nil or displayName:find(normalizedTarget, 1, true) ~= nil)
-end
-
-local EMOTES_DARK_KICK_TRANSLATIONS = {
-    en = {
-        title = "Dark | Emote",
-        message = "You were kicked from the server by the owner.",
-        reason = "Reason: ",
-        defaultReason = "Removed by the owner.",
-    },
-    pt = {
-        title = "Dark | Emote",
-        message = "Você foi expulso do servidor pelo owner.",
-        reason = "Motivo: ",
-        defaultReason = "Removido pelo owner.",
-    },
-    es = {
-        title = "Dark | Emote",
-        message = "Fuiste expulsado del servidor por el owner.",
-        reason = "Motivo: ",
-        defaultReason = "Eliminado por el owner.",
-    },
-}
-
-local function emotesDarkKickSelf(reason)
-    local localPlayer = Players.LocalPlayer
-    if not localPlayer then return end
-
-    local language = detectUpdateInfoLanguage()
-    local translation = EMOTES_DARK_KICK_TRANSLATIONS[language] or EMOTES_DARK_KICK_TRANSLATIONS.en
-    local kickReason = reason ~= "" and reason or translation.defaultReason
-    local kickMessage = translation.title .. "\n" .. translation.message .. "\n" .. translation.reason .. kickReason
-    pcall(function()
-        localPlayer:Kick(kickMessage)
-    end)
-end
-
-local function emotesDarkFindRoot(player)
-    local character = player and player.Character
-    return character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"))
-end
-
-local function emotesDarkPullSelf(owner)
-    local localPlayer = Players.LocalPlayer
-    if not localPlayer or not owner then return end
-
-    task.spawn(function()
-        for _ = 1, 12 do
-            local targetRoot = emotesDarkFindRoot(localPlayer)
-            local ownerRoot = emotesDarkFindRoot(owner)
-            if targetRoot and ownerRoot then
-                pcall(function()
-                    targetRoot.CFrame = ownerRoot.CFrame * CFrame.new(0, 0, -3)
-                    targetRoot.AssemblyLinearVelocity = Vector3.zero
-                    targetRoot.AssemblyAngularVelocity = Vector3.zero
-                end)
-                return
-            end
-            task.wait(0.1)
-        end
-    end)
-end
-
-local function emotesDarkHandleKickCommand(sender, message)
-    if not emotesDarkKickListening or State.scriptKicked or not sender or type(message) ~= "string" then return end
-    if not isKnownOwnerPlayer(sender) then return end
-
-    local command, arguments = message:match("^%s*/(%S+)%s*(.-)%s*$")
-    command = command and command:lower() or ""
-    if command ~= "kick" and command ~= "puxar" then return end
-
-    local target, reason = arguments:match("^(%S+)%s*(.-)%s*$")
-    if not target then return end
-
-    if sender == Players.LocalPlayer then
-        emotesDarkPendingKickCommand = {
-            action = command,
-            nonce = tostring(os.time()) .. string.format("%04d", math.random(1000, 9999)),
-            senderUserId = sender.UserId,
-            target = target,
-            reason = reason or "",
-            expiresAt = os.time() + 15,
-        }
-        emotesDarkKickDebug(emotesDarkPendingKickCommand.nonce, "captured", string.format("%s target fragment '%s'", command, target))
-    end
-
-    if command == "kick" and emotesDarkKickTargetMatches(target) then
-        emotesDarkKickSelf(reason or "")
-    elseif command == "puxar" and emotesDarkKickTargetMatches(target) then
-        emotesDarkPullSelf(sender)
-    end
-end
-
-local function emotesDarkBindKickChat(player)
-    if not player then return end
-    pcall(function()
-        player.Chatted:Connect(function(message)
-            emotesDarkHandleKickCommand(player, message)
-        end)
-    end)
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-    emotesDarkBindKickChat(player)
-end
-Players.PlayerAdded:Connect(emotesDarkBindKickChat)
-
--- Registered slash commands are intercepted by TextChatService before SendingMessage/MessageReceived.
--- Bind existing game aliases when available; otherwise register client-local aliases so the owner can publish them through the bridge.
-pcall(function()
-    local textChatService = game:GetService("TextChatService")
-    local commandDefinitions = {
-        { alias = "/kick", name = "EmotesDarkKickCommand" },
-        { alias = "/puxar", name = "EmotesDarkPullCommand" },
-    }
-    local boundCommands = {}
-
-    local function bindOwnerCommand(command)
-        if boundCommands[command] then return end
-        boundCommands[command] = true
-        command.Triggered:Connect(function(originTextSource, unfilteredText)
-            local userId = originTextSource and originTextSource.UserId
-            local sender = userId and Players:GetPlayerByUserId(userId)
-            if sender then
-                emotesDarkHandleKickCommand(sender, unfilteredText)
-            end
-        end)
-    end
-
-    for _, definition in ipairs(commandDefinitions) do
-        local command
-        for _, candidate in ipairs(textChatService:GetDescendants()) do
-            if candidate:IsA("TextChatCommand") then
-                local primaryAlias = tostring(candidate.PrimaryAlias or ""):lower()
-                local secondaryAlias = tostring(candidate.SecondaryAlias or ""):lower()
-                if primaryAlias == definition.alias or secondaryAlias == definition.alias then
-                    command = candidate
-                    break
-                end
-            end
-        end
-
-        if not command then
-            command = Instance.new("TextChatCommand")
-            command.Name = definition.name
-            command.PrimaryAlias = definition.alias
-            command.Enabled = true
-            command.Parent = textChatService
-        end
-        bindOwnerCommand(command)
-    end
-end)
-
--- Capture the owner's outgoing slash commands before relying on chat delivery.
-pcall(function()
-    local textChatService = game:GetService("TextChatService")
-    textChatService.SendingMessage:Connect(function(message)
-        local localPlayer = Players.LocalPlayer
-        if localPlayer then
-            emotesDarkHandleKickCommand(localPlayer, message and message.Text or "")
-        end
-    end)
-end)
-
-pcall(function()
-    local textChatService = game:GetService("TextChatService")
-    textChatService.MessageReceived:Connect(function(message)
-        local source = message and message.TextSource
-        local sender = source and Players:GetPlayerByUserId(source.UserId)
-        emotesDarkHandleKickCommand(sender, message and message.Text or "")
-    end)
-end)
-
 local function announceOwner(player, alreadyPresent)
     if not Config.OwnerAlertEnabled or not isOwnerPlayer(player) then return end
     if ownerAlertSeen[player.UserId] then return end
@@ -2848,7 +2645,7 @@ local EMOTES_DARK_TAG_LEGACY_APIS = {
     ["https://imaginative-treacle-412930.netlify.app/api"] = true,
     ["https://dark-bridge-sync.base44.app/functions/api"] = true,
 }
-local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização rápida do kick e das tags
+local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização da presença e das nametags
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
@@ -2922,43 +2719,8 @@ local function emotesDarkTagRequest(method, path, body)
     return emotesDarkTagDecode(response) or {}
 end
 
-local function emotesDarkDecodeKickField(value)
-    value = tostring(value or ""):gsub("%+", " ")
-    return value:gsub("%%(%x%x)", function(hex)
-        return string.char(tonumber(hex, 16))
-    end)
-end
-
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
-    local kickCommand = emotesDarkPendingKickCommand
-    if kickCommand and kickCommand.expiresAt and kickCommand.expiresAt <= os.time() then
-        emotesDarkPendingKickCommand = nil
-        kickCommand = nil
-    end
-
-    -- The bridge truncates sessionId at "|"; carry a compact pipe-free packet in the returned field.
-    local sessionId = emotesDarkTagSessionId
-    if kickCommand then
-        local target = emotesDarkNormalizeKickName(kickCommand.target or ""):sub(1, 20)
-        if target ~= "" then
-            local actionCode = kickCommand.action == "puxar" and "P" or "K"
-            local encodedReason = HttpService:UrlEncode(tostring(kickCommand.reason or "")):gsub("_", "%%5F")
-            if #encodedReason > 28 then
-                encodedReason = encodedReason:sub(1, 28):gsub("%%[%x]?$", "")
-            end
-            sessionId = table.concat({
-                emotesDarkTagSessionId,
-                "EDK",
-                actionCode,
-                tostring(kickCommand.nonce or ""),
-                tostring(kickCommand.senderUserId or ""),
-                target,
-                encodedReason,
-            }, "_")
-        end
-    end
-
     return {
         userId = localPlayer and localPlayer.UserId or 0,
         username = localPlayer and localPlayer.Name or "",
@@ -2966,7 +2728,7 @@ local function emotesDarkTagClientInfo()
         gameId = tostring(game.GameId or 0),
         placeId = tostring(game.PlaceId or 0),
         jobId = tostring(game.JobId or ""),
-        sessionId = sessionId,
+        sessionId = emotesDarkTagSessionId,
     }
 end
 
@@ -3259,10 +3021,7 @@ end
 task.spawn(function()
     while emotesDarkTagRunning and Players.LocalPlayer do
         local info = emotesDarkTagClientInfo()
-        local registration = emotesDarkTagRequest("POST", "/clients/register", info)
-        if emotesDarkPendingKickCommand then
-            emotesDarkKickDebug(emotesDarkPendingKickCommand.nonce, "register", registration and "register request returned a response" or "register request failed or returned no valid JSON")
-        end
+        emotesDarkTagRequest("POST", "/clients/register", info)
         local query = string.format(
             "/clients/active?gameId=%s&placeId=%s&jobId=%s",
             HttpService:UrlEncode(info.gameId),
@@ -3271,56 +3030,6 @@ task.spawn(function()
         )
         local response = emotesDarkTagRequest("GET", query)
         if response and type(response.clients) == "table" then
-            local pending = emotesDarkPendingKickCommand
-            if pending then
-                local nonce = tostring(pending.nonce or "")
-                local actionCode = pending.action == "puxar" and "P" or "K"
-                local marker = "_EDK_" .. actionCode .. "_" .. nonce .. "_"
-                local echoed = false
-                for _, client in ipairs(response.clients) do
-                    local structured = type(client) == "table" and client.command or nil
-                    local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
-                    if (type(structured) == "table" and tostring(structured.nonce or "") == nonce)
-                        or sessionId:find(marker, 1, true) then
-                        echoed = true
-                        break
-                    end
-                end
-                emotesDarkKickDebug(nonce, "active-read", echoed and "command packet returned by /clients/active" or "command packet not found in /clients/active")
-            end
-            for _, client in ipairs(response.clients) do
-                local command = type(client) == "table" and client.command or nil
-                local action, nonce, senderUserId, encodedTarget, encodedReason
-                local hasStructuredCommand = type(command) == "table"
-                    and (command.action == "kick" or command.action == "puxar")
-                    and tostring(command.nonce or "") ~= ""
-                    and tonumber(command.senderUserId) ~= nil
-                    and tostring(command.target or "") ~= ""
-                if hasStructuredCommand then
-                    action, nonce = command.action, tostring(command.nonce)
-                    senderUserId, encodedTarget, encodedReason = tostring(command.senderUserId), tostring(command.target), tostring(command.reason or "")
-                else
-                    -- Fall back to the legacy sessionId packet when the bridge returns no complete command object.
-                    local sessionId = type(client) == "table" and tostring(client.sessionId or "") or ""
-                    local actionCode
-                    _, actionCode, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("^(.-)_EDK_([KP])_(%d+)_(%d+)_([^_]*)_(.*)$")
-                    if actionCode then action = actionCode == "K" and "kick" or "puxar"
-                    else action, nonce, senderUserId, encodedTarget, encodedReason = sessionId:match("|DK|([^|]+)|([^|]+)|([^|]+)|([^|]*)|(.*)$") end
-                end
-                local sender = senderUserId and Players:GetPlayerByUserId(tonumber(senderUserId))
-                if sender and isKnownOwnerPlayer(sender) and nonce and nonce ~= "" and not emotesDarkHandledKickCommands[nonce] then
-                    emotesDarkKickDebug(nonce, "sender-validated", "owner recognized by this client")
-                    emotesDarkHandledKickCommands[nonce] = true
-                    local target = emotesDarkDecodeKickField(encodedTarget)
-                    local reason = emotesDarkDecodeKickField(encodedReason)
-                    if emotesDarkKickTargetMatches(target) then
-                        emotesDarkKickDebug(nonce, "target-match", "target fragment matched this client")
-                        if action == "kick" then emotesDarkKickSelf(reason)
-                        elseif action == "puxar" then emotesDarkPullSelf(sender) end
-                        break
-                    end
-                end
-            end
             emotesDarkTagSync(response.clients)
         end
         task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
