@@ -2640,12 +2640,8 @@ end
 -- Presença compartilhada: só jogadores que registraram esta execução recebem a nametag.
 local EMOTES_DARK_TAG_API_ENV_NAME = "EMOTES_DARK_PRESENCE_API"
 local EMOTES_DARK_TAG_DEFAULT_API = "https://api-emotes-dark-bridge.vercel.app/api"
-local EMOTES_DARK_TAG_LEGACY_APIS = {
-    ["https://emotes-dark-presence-bridge--pega123.replit.app/api"] = true,
-    ["https://imaginative-treacle-412930.netlify.app/api"] = true,
-    ["https://dark-bridge-sync.base44.app/functions/api"] = true,
-}
-local EMOTES_DARK_TAG_POLL_SECONDS = 0.5 -- sincronização da presença e das nametags
+local EMOTES_DARK_TAG_REGISTER_SECONDS = 10
+local EMOTES_DARK_TAG_ACTIVE_SECONDS = 5
 -- A Roblox BillboardGui deixa de renderizar fora desta distância e volta ao aproximar.
 local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
@@ -3022,17 +3018,20 @@ task.spawn(function()
     while emotesDarkTagRunning and Players.LocalPlayer do
         local info = emotesDarkTagClientInfo()
         emotesDarkTagRequest("POST", "/clients/register", info)
-        local query = string.format(
-            "/clients/active?gameId=%s&placeId=%s&jobId=%s",
-            HttpService:UrlEncode(info.gameId),
-            HttpService:UrlEncode(info.placeId),
-            HttpService:UrlEncode(info.jobId)
-        )
-        local response = emotesDarkTagRequest("GET", query)
-        if response and type(response.clients) == "table" then
-            emotesDarkTagSync(response.clients)
+        local nextRegisterAt = os.clock() + EMOTES_DARK_TAG_REGISTER_SECONDS
+        while emotesDarkTagRunning and Players.LocalPlayer and os.clock() < nextRegisterAt do
+            local query = string.format(
+                "/clients/active?gameId=%s&placeId=%s&jobId=%s",
+                HttpService:UrlEncode(info.gameId),
+                HttpService:UrlEncode(info.placeId),
+                HttpService:UrlEncode(info.jobId)
+            )
+            local response = emotesDarkTagRequest("GET", query)
+            if response and type(response.clients) == "table" then
+                emotesDarkTagSync(response.clients)
+            end
+            task.wait(EMOTES_DARK_TAG_ACTIVE_SECONDS)
         end
-        task.wait(EMOTES_DARK_TAG_POLL_SECONDS)
     end
 end)
 
