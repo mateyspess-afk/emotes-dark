@@ -84,35 +84,37 @@ function serverKey(gameId: string, placeId: string, jobId: string) {
   return `${gameId}:${placeId}:${jobId}`
 }
 
-function presenceKey(presence: Pick<Presence, 'gameId' | 'placeId' | 'jobId' | 'userId'>) {
-  return `${PREFIX}${serverKey(presence.gameId, presence.placeId, presence.jobId)}:${presence.userId}`
-}
-
-function serverIndexKey(gameId: string, placeId: string, jobId: string) {
-  return `${PREFIX}index:${serverKey(gameId, placeId, jobId)}`
+function serverPresenceHashKey(gameId: string, placeId: string, jobId: string) {
+  return `${PREFIX}server:${serverKey(gameId, placeId, jobId)}`
 }
 
 export async function savePresence(presence: Presence) {
   const client = getRedis()
-  const key = presenceKey(presence)
-  await client.set(key, presence, { px: PRESENCE_TTL_MS })
-  await client.sadd(serverIndexKey(presence.gameId, presence.placeId, presence.jobId), key)
-  await client.expire(serverIndexKey(presence.gameId, presence.placeId, presence.jobId), Math.ceil(PRESENCE_TTL_MS / 1000))
+  const key = serverPresenceHashKey(presence.gameId, presence.placeId, presence.jobId)
+  // Uma hash por servidor evita SCAN/MGET de chaves dinâmicas no Upstash.
+  // O TTL do servidor é renovado enquanto houver heartbeats ativos.
+  await client.hset(key, { [presence.userId]: JSON.stringify(presence) })
+  await client.expire(key, Math.ceil(PRESENCE_TTL_MS / 1000))
 }
 
 export async function activePresences(gameId: string, placeId: string, jobId: string) {
   const client = getRedis()
-  const indexKey = serverIndexKey(gameId, placeId, jobId)
-  const keys = await client.smembers<string[]>(indexKey)
-  if (!keys.length) return []
-  const values = await client.mget<(Presence | null)[]>(...keys)
+  const key = serverPresenceHashKey(gameId, placeId, jobId)
+  const values = await client.hgetall<Record<string, string>>(key)
+  if (!values) return []
+
   const active: Presence[] = []
   const stale: string[] = []
-  values.forEach((presence, index) => {
-    if (presence && isPresenceActive(presence.lastSeen)) active.push(presence)
-    else stale.push(keys[index])
-  })
-  if (stale.length) await client.srem(indexKey, ...stale)
+  for (const [userId, serialized] of Object.entries(values)) {
+    try {
+      const presence = JSON.parse(serialized) as Presence
+      if (presence.userId === userId && isPresenceActive(presence.lastSeen)) active.push(presence)
+      else stale.push(userId)
+    } catch {
+      stale.push(userId)
+    }
+  }
+  if (stale.length) await client.hdel(key, ...stale)
   return active
 }
 
