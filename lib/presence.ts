@@ -34,7 +34,13 @@ const limits = {
 
 let redis: Redis | undefined
 function getRedis() {
-  if (!redis) redis = Redis.fromEnv()
+  if (redis) return redis
+
+  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) throw new Error('Redis não configurado')
+
+  redis = new Redis({ url, token })
   return redis
 }
 
