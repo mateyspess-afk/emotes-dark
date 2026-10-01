@@ -15,7 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Requisição muito grande' }, { status: 413 })
     }
     const presence = validatePresence(JSON.parse(body) as Record<string, unknown>)
-    await savePresence(presence)
+    try {
+      await savePresence(presence)
+    } catch {
+      return NextResponse.json({ error: 'Armazenamento temporariamente indisponível' }, { status: 503 })
+    }
     return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof SyntaxError ? 'JSON inválido' : error instanceof Error ? error.message : 'Dados inválidos'

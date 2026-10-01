@@ -20,7 +20,6 @@ export type Presence = {
   jobId: string
   sessionId: string
   lastSeen: number
-  command?: CommandPacket
 }
 
 const limits = {
@@ -78,7 +77,6 @@ export function validatePresence(input: Record<string, unknown>): Presence {
     jobId: cleanText(input.jobId, 'jobId'),
     sessionId,
     lastSeen: Date.now(),
-    command: parseCommandPacket(sessionId),
   }
 }
 
@@ -90,29 +88,32 @@ function presenceKey(presence: Pick<Presence, 'gameId' | 'placeId' | 'jobId' | '
   return `${PREFIX}${serverKey(presence.gameId, presence.placeId, presence.jobId)}:${presence.userId}`
 }
 
+function serverIndexKey(gameId: string, placeId: string, jobId: string) {
+  return `${PREFIX}index:${serverKey(gameId, placeId, jobId)}`
+}
+
 export async function savePresence(presence: Presence) {
   const client = getRedis()
   const key = presenceKey(presence)
-  const existing = await client.get<Presence>(key)
-  if (presence.command?.nonce && existing?.command?.nonce === presence.command.nonce) {
-    presence.command = existing.command
-  }
   await client.set(key, presence, { px: PRESENCE_TTL_MS })
+  await client.sadd(serverIndexKey(presence.gameId, presence.placeId, presence.jobId), key)
+  await client.expire(serverIndexKey(presence.gameId, presence.placeId, presence.jobId), Math.ceil(PRESENCE_TTL_MS / 1000))
 }
 
 export async function activePresences(gameId: string, placeId: string, jobId: string) {
   const client = getRedis()
-  const match = `${PREFIX}${serverKey(gameId, placeId, jobId)}:*`
-  const keys: string[] = []
-  let cursor = 0
-  do {
-    const result = await client.scan(cursor, { match, count: 100 })
-    cursor = result[0]
-    keys.push(...result[1])
-  } while (cursor !== 0)
+  const indexKey = serverIndexKey(gameId, placeId, jobId)
+  const keys = await client.smembers<string[]>(indexKey)
   if (!keys.length) return []
-  const values = await client.mget<Presence[]>(...keys)
-  return values.filter((presence): presence is Presence => Boolean(presence && Date.now() - presence.lastSeen < PRESENCE_TTL_MS))
+  const values = await client.mget<(Presence | null)[]>(...keys)
+  const active: Presence[] = []
+  const stale: string[] = []
+  values.forEach((presence, index) => {
+    if (presence && isPresenceActive(presence.lastSeen)) active.push(presence)
+    else stale.push(keys[index])
+  })
+  if (stale.length) await client.srem(indexKey, ...stale)
+  return active
 }
 
 export function isPresenceActive(lastSeen: number, now = Date.now()) {
