@@ -91,7 +91,7 @@ async function withStorageTimeout<T>(operation: Promise<T>): Promise<T> {
 
 export async function savePresence(presence: Presence) {
   await withStorageTimeout(put(presencePath(presence), JSON.stringify(presence), {
-    access: 'private',
+    access: 'public',
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: 'application/json',
@@ -103,7 +103,7 @@ export async function activePresences(gameId: string, placeId: string, jobId: st
   const now = Date.now()
   const clients: Presence[] = []
   await Promise.all(blobs.map(async (blob) => {
-    const result = await withStorageTimeout(get(blob.pathname, { access: 'private' }))
+    const result = await withStorageTimeout(get(blob.pathname, { access: 'public' }))
     if (!result || result.statusCode === 304) return
     const text = await new Response(result.stream).text()
     let presence: Presence
