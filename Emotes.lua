@@ -2451,7 +2451,15 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(PERIODIC_COMMUNITY_NOTICE_INTERVAL)
+        local synchronizedTime = os.time()
+        local clockOk, serverTime = pcall(function()
+            return workspace:GetServerTimeNow()
+        end)
+        if clockOk and type(serverTime) == "number" then
+            synchronizedTime = serverTime
+        end
+        local secondsUntilNextNotice = PERIODIC_COMMUNITY_NOTICE_INTERVAL - (synchronizedTime % PERIODIC_COMMUNITY_NOTICE_INTERVAL)
+        task.wait(secondsUntilNextNotice)
         local ok, title, content = pcall(getPeriodicCommunityNotice)
         if ok then
             local payload = { Title = title, Content = content, Duration = 18 }
