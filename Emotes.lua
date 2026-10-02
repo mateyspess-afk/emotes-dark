@@ -8,7 +8,7 @@
 STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
 BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
-SUGGESTION_WEBHOOK_URL = "" -- Configure locally only; do not commit a real webhook URL.
+SUGGESTION_WEBHOOK_URL = "https://discord.com/api/webhooks/1555403046375137340/KW7qSObHz1TEQect1ugSwAenlly-tIR5fBzqYhswXlQt9_OAtc-s836NAPrRf4V3KbtS" -- Configure locally only; do not commit a real webhook URL.
 SUGGESTION_WEBHOOK_ENV_NAME = "EMOTES_DARK_SUGGESTION_WEBHOOK"
 BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
 SUGGESTION_COOLDOWN_SECONDS = 5 * 60 * 60 -- 5 horas, separado dos reports de bug
