@@ -2428,6 +2428,7 @@ emotesDarkNotify = function(data)
 end
 getgenv().Notify = emotesDarkNotify
 
+do
 local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 6 * 60 * 60
 local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
     title = "Emote Dark | Notice",
@@ -2472,6 +2473,7 @@ task.spawn(function()
         end
     end
 end)
+end
 do
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
