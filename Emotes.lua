@@ -271,11 +271,13 @@ end
 function emotesDarkGetRequest()
     local env = emotesDarkExecutorEnv()
     local candidates = {
+        request, -- Delta exposes its HTTP function as a global in some builds.
         http_request,
         emotesDarkReadField(syn, "request"),
         emotesDarkReadField(http, "request"),
         emotesDarkReadField(fluxus, "request"),
         emotesDarkReadField(env, "request"),
+        emotesDarkReadField(env, "http_request"),
         emotesDarkReadField(_G, "request"),
     }
     for _, candidate in ipairs(candidates) do
@@ -2424,17 +2426,31 @@ end
 LoadConfig()
 
 local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
-emotesDarkNotify = function(data)
-    if Config.NotifyEnabled and type(rawNotify) == "function" then
-        pcall(rawNotify, data)
+local function emotesDarkSendNotification(data, force)
+    if not force and not Config.NotifyEnabled then return false end
+
+    if type(rawNotify) == "function" then
+        local ok = pcall(rawNotify, data)
+        if ok then return true end
     end
+
+    return pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = tostring(data and data.Title or "Emote Dark"),
+            Text = tostring(data and (data.Content or data.Text) or ""),
+            Duration = tonumber(data and data.Duration) or 5,
+        })
+    end)
+end
+emotesDarkNotify = function(data)
+    emotesDarkSendNotification(data, false)
 end
 getgenv().Notify = emotesDarkNotify
 
 local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 6 * 60 * 60
 local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
-    title = "Dark | Community reminder",
-    content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
+    title = "Emote Dark | Notice",
+    content = "Emote Dark is running. This notice repeats every 6 hours."
 }
 
 local function getPeriodicCommunityNotice()
@@ -2456,11 +2472,11 @@ task.spawn(function()
         task.wait(PERIODIC_COMMUNITY_NOTICE_INTERVAL)
         local ok, title, content = pcall(getPeriodicCommunityNotice)
         if ok then
-            emotesDarkNotify({
+            emotesDarkSendNotification({
                 Title = title,
                 Content = content,
                 Duration = 18,
-            })
+            }, true)
         else
             warn("[EmotesDark] Failed to show periodic community reminder: " .. tostring(title))
         end
