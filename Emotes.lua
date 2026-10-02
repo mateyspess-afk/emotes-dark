@@ -123,19 +123,27 @@ local function emotesDarkDetectLanguage(skipCountryLookup)
     end
 
     local countryLanguage
-    if not localeLanguage and not skipCountryLookup and player then
+    if not skipCountryLookup and player and not emotesDarkCountryDetectionInFlight then
+        emotesDarkCountryDetectionInFlight = true
         pcall(function()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
+        emotesDarkCountryDetectionInFlight = false
     end
     countryLanguage = countryLanguages[countryCode]
-    local language = localeLanguage or countryLanguage or "en"
+    local language = countryLanguage or localeLanguage or "en"
 
-    if countryCode ~= "" or localeLanguage then
+    if countryCode ~= "" then
         emotesDarkLanguageCache = language
     end
     return language
 end
+
+task.defer(function()
+    if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
+        pcall(emotesDarkDetectLanguage)
+    end
+end)
 
 local emotesDarkTranslateText
 local emotesDarkTranslateNotificationText
@@ -1109,8 +1117,105 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     return translated, true
 end
 
+local EMOTES_DARK_LOCAL_NOTIFICATION_TRANSLATIONS = {
+    pt = {
+        ["Error"] = "Erro", ["Success"] = "Sucesso", ["Theme"] = "Tema",
+        ["Dark | Error"] = "Dark | Erro", ["Dark | Clean"] = "Dark | Limpeza", ["Dark | Cleaned"] = "Dark | Limpeza concluída",
+        ["Dark | Animation"] = "Dark | Animação", ["Dark | Page"] = "Dark | Página", ["Dark | Saved"] = "Dark | Salvo",
+        ["Dark | Animation Error"] = "Dark | Erro de animação", ["Dark | Random"] = "Dark | Aleatório",
+        ["Dark | Auto Reload Animation"] = "Dark | Recarga automática", ["Dark | Emote Freeze"] = "Dark | Congelamento de emote",
+        ["Dark | Speed Emote"] = "Dark | Velocidade do emote", ["Dark | Favorite Tab"] = "Dark | Aba de favoritos",
+        ["Dark | HUD Editor"] = "Dark | Editor de HUD", ["Dark | Favorite System"] = "Dark | Sistema de favoritos",
+        ["The Discord invite has been copied"] = "O convite do Discord foi copiado.", ["No favorites to check!"] = "Não há favoritos para verificar!",
+        ["Link copied to clipboard!"] = "Link copiado para a área de transferência!", ["Data imported successfully!"] = "Dados importados com sucesso!",
+        ["Backup type mismatch!"] = "Tipo de backup incompatível!", ["Invalid JSON"] = "JSON inválido",
+        ["Invalid JSON Format!"] = "Formato de JSON inválido!", ["Invalid Backup JSON Format!"] = "Formato de JSON de backup inválido!",
+        ["Invalid Emote Page JSON"] = "JSON da página de emotes inválido", ["Failed to save color!"] = "Falha ao salvar a cor!",
+        ["Cannot overwrite 'Default' theme."] = "Não é possível substituir o tema 'Default'.",
+        ["Cannot modify Default theme. Create a new one!"] = "Não é possível modificar o tema Default. Crie um novo!",
+        ["Cannot modify Default theme!"] = "Não é possível modificar o tema Default!",
+        ["Cannot edit Default Animation set. Create a new one!"] = "Não é possível editar o conjunto Default de animações. Crie um novo!",
+        ["Script loading..."] = "Carregando script...", ["Loading please wait..."] = "Carregando, aguarde...", ["Emotes loaded"] = "Emotes carregados",
+        checkingFavorites = "Verificando %s favoritos...",
+    },
+    es = {
+        ["Error"] = "Error", ["Success"] = "Éxito", ["Theme"] = "Tema",
+        ["Dark | Error"] = "Dark | Error", ["Dark | Clean"] = "Dark | Limpieza", ["Dark | Cleaned"] = "Dark | Limpieza completada",
+        ["Dark | Animation"] = "Dark | Animación", ["Dark | Page"] = "Dark | Página", ["Dark | Saved"] = "Dark | Guardado",
+        ["Dark | Animation Error"] = "Dark | Error de animación", ["Dark | Random"] = "Dark | Aleatorio",
+        ["Dark | Auto Reload Animation"] = "Dark | Recarga automática", ["Dark | Emote Freeze"] = "Dark | Congelar emote",
+        ["Dark | Speed Emote"] = "Dark | Velocidad del emote", ["Dark | Favorite Tab"] = "Dark | Pestaña de favoritos",
+        ["Dark | HUD Editor"] = "Dark | Editor de HUD", ["Dark | Favorite System"] = "Dark | Sistema de favoritos",
+        ["The Discord invite has been copied"] = "Se copió la invitación de Discord.", ["No favorites to check!"] = "¡No hay favoritos que revisar!",
+        ["Link copied to clipboard!"] = "¡Enlace copiado al portapapeles!", ["Data imported successfully!"] = "¡Datos importados correctamente!",
+        ["Backup type mismatch!"] = "¡El tipo de copia de seguridad no coincide!", ["Invalid JSON"] = "JSON no válido",
+        ["Invalid JSON Format!"] = "¡Formato JSON no válido!", ["Invalid Backup JSON Format!"] = "¡Formato JSON de copia de seguridad no válido!",
+        ["Invalid Emote Page JSON"] = "JSON de página de emotes no válido", ["Failed to save color!"] = "¡No se pudo guardar el color!",
+        ["Cannot overwrite 'Default' theme."] = "No se puede sobrescribir el tema 'Default'.",
+        ["Cannot modify Default theme. Create a new one!"] = "No se puede modificar el tema Default. ¡Crea uno nuevo!",
+        ["Cannot modify Default theme!"] = "¡No se puede modificar el tema Default!",
+        ["Cannot edit Default Animation set. Create a new one!"] = "No se puede editar el conjunto Default. ¡Crea uno nuevo!",
+        ["Script loading..."] = "Cargando script...", ["Loading please wait..."] = "Cargando, espera...", ["Emotes loaded"] = "Emotes cargados",
+        checkingFavorites = "Revisando %s favoritos...",
+    },
+    fr = {
+        ["Error"] = "Erreur", ["Success"] = "Réussite", ["Theme"] = "Thème",
+        ["Dark | Error"] = "Dark | Erreur", ["Dark | Clean"] = "Dark | Nettoyage", ["Dark | Cleaned"] = "Dark | Nettoyage terminé",
+        ["Dark | Animation"] = "Dark | Animation", ["Dark | Page"] = "Dark | Page", ["Dark | Saved"] = "Dark | Enregistré",
+        ["Dark | Animation Error"] = "Dark | Erreur d’animation", ["Dark | Random"] = "Dark | Aléatoire",
+        ["Dark | Auto Reload Animation"] = "Dark | Rechargement automatique", ["Dark | Emote Freeze"] = "Dark | Gel de l’emote",
+        ["Dark | Speed Emote"] = "Dark | Vitesse de l’emote", ["Dark | Favorite Tab"] = "Dark | Onglet Favoris",
+        ["Dark | HUD Editor"] = "Dark | Éditeur HUD", ["Dark | Favorite System"] = "Dark | Favoris",
+        ["The Discord invite has been copied"] = "L’invitation Discord a été copiée.", ["No favorites to check!"] = "Aucun favori à vérifier !",
+        ["Link copied to clipboard!"] = "Lien copié dans le presse-papiers !", ["Data imported successfully!"] = "Données importées avec succès !",
+        ["Backup type mismatch!"] = "Le type de sauvegarde ne correspond pas !", ["Invalid JSON"] = "JSON invalide",
+        ["Invalid JSON Format!"] = "Format JSON invalide !", ["Invalid Backup JSON Format!"] = "Format JSON de sauvegarde invalide !",
+        ["Invalid Emote Page JSON"] = "JSON de page d’emotes invalide", ["Failed to save color!"] = "Échec de l’enregistrement de la couleur !",
+        ["Cannot overwrite 'Default' theme."] = "Impossible de remplacer le thème 'Default'.",
+        ["Cannot modify Default theme. Create a new one!"] = "Impossible de modifier le thème Default. Créez-en un nouveau !",
+        ["Cannot modify Default theme!"] = "Impossible de modifier le thème Default !",
+        ["Cannot edit Default Animation set. Create a new one!"] = "Impossible de modifier le jeu d’animations Default. Créez-en un nouveau !",
+        ["Script loading..."] = "Chargement du script...", ["Loading please wait..."] = "Chargement, veuillez patienter...", ["Emotes loaded"] = "Emotes chargés",
+        checkingFavorites = "Vérification de %s favoris...",
+    },
+    de = {
+        ["Error"] = "Fehler", ["Success"] = "Erfolg", ["Theme"] = "Design",
+        ["Dark | Error"] = "Dark | Fehler", ["Dark | Clean"] = "Dark | Bereinigung", ["Dark | Cleaned"] = "Dark | Bereinigung abgeschlossen",
+        ["Dark | Animation"] = "Dark | Animation", ["Dark | Page"] = "Dark | Seite", ["Dark | Saved"] = "Dark | Gespeichert",
+        ["Dark | Animation Error"] = "Dark | Animationsfehler", ["Dark | Random"] = "Dark | Zufall",
+        ["Dark | Auto Reload Animation"] = "Dark | Automatisches Neuladen", ["Dark | Emote Freeze"] = "Dark | Emote einfrieren",
+        ["Dark | Speed Emote"] = "Dark | Emote-Geschwindigkeit", ["Dark | Favorite Tab"] = "Dark | Favoriten-Tab",
+        ["Dark | HUD Editor"] = "Dark | HUD-Editor", ["Dark | Favorite System"] = "Dark | Favoritensystem",
+        ["The Discord invite has been copied"] = "Die Discord-Einladung wurde kopiert.", ["No favorites to check!"] = "Keine Favoriten zum Überprüfen!",
+        ["Link copied to clipboard!"] = "Link in die Zwischenablage kopiert!", ["Data imported successfully!"] = "Daten erfolgreich importiert!",
+        ["Backup type mismatch!"] = "Der Backup-Typ stimmt nicht überein!", ["Invalid JSON"] = "Ungültiges JSON",
+        ["Invalid JSON Format!"] = "Ungültiges JSON-Format!", ["Invalid Backup JSON Format!"] = "Ungültiges Backup-JSON-Format!",
+        ["Invalid Emote Page JSON"] = "Ungültiges Emote-Seiten-JSON", ["Failed to save color!"] = "Farbe konnte nicht gespeichert werden!",
+        ["Cannot overwrite 'Default' theme."] = "Das 'Default'-Design kann nicht überschrieben werden.",
+        ["Cannot modify Default theme. Create a new one!"] = "Das Default-Design kann nicht geändert werden. Erstelle ein neues!",
+        ["Cannot modify Default theme!"] = "Das Default-Design kann nicht geändert werden!",
+        ["Cannot edit Default Animation set. Create a new one!"] = "Das Default-Animationsset kann nicht geändert werden. Erstelle ein neues!",
+        ["Script loading..."] = "Skript wird geladen...", ["Loading please wait..."] = "Wird geladen, bitte warten...", ["Emotes loaded"] = "Emotes geladen",
+        checkingFavorites = "%s Favoriten werden überprüft...",
+    },
+}
+
+local function emotesDarkTranslateNotificationLocally(sourceText, targetLanguage)
+    local translations = EMOTES_DARK_LOCAL_NOTIFICATION_TRANSLATIONS[targetLanguage]
+    if not translations then return nil end
+    local known = translations[sourceText]
+    if known then return known end
+    local favoriteCount = sourceText:match("^Checking (%d+) favorites%.%.%.$")
+    if favoriteCount and translations.checkingFavorites then
+        return string.format(translations.checkingFavorites, favoriteCount)
+    end
+    return nil
+end
+
 emotesDarkTranslateNotificationText = function(sourceText, targetLanguage)
     sourceText = tostring(sourceText or "")
+    local localTranslation = emotesDarkTranslateNotificationLocally(sourceText, targetLanguage)
+    if localTranslation then return localTranslation end
     if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
 
     local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
@@ -1132,10 +1237,10 @@ emotesDarkTranslateNotificationPayload = function(payload)
     if type(payload) ~= "table" then return payload end
     local language = emotesDarkDetectLanguage(true)
     if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
-        emotesDarkCountryDetectionInFlight = true
         task.defer(function()
-            pcall(emotesDarkDetectLanguage)
-            emotesDarkCountryDetectionInFlight = false
+            if not emotesDarkLanguageCache then
+                pcall(emotesDarkDetectLanguage)
+            end
         end)
     end
     if not language or language == "" or language == "en" then return payload end
