@@ -118,24 +118,14 @@ local function emotesDarkDetectLanguage()
     local localeLanguage = nil
     for _, localeId in ipairs({ playerLocaleId, robloxLocaleId, systemLocaleId }) do
         local candidate = localeId:match("^([a-z][a-z])")
-        if candidate and candidate ~= "en" then
+        if candidate then
             localeLanguage = candidate
             break
-        end
-        if candidate and not localeLanguage then
-            localeLanguage = candidate
         end
     end
 
     local countryLanguage = countryLanguages[countryCode]
-    local language
-    if countryLanguage and countryLanguage ~= "en" then
-        language = countryLanguage
-    elseif localeLanguage and localeLanguage ~= "en" then
-        language = localeLanguage
-    else
-        language = countryLanguage or localeLanguage or "en"
-    end
+    local language = localeLanguage or countryLanguage or "en"
 
     if countryCode ~= "" or localeLanguage then
         emotesDarkLanguageCache = language
@@ -203,19 +193,30 @@ local function getBugReportTranslation(language)
     end
 
     local translated = {}
+    local translationSucceeded = true
     for key, value in pairs(source) do
         if type(value) == "string" then
-            translated[key] = emotesDarkTranslateText(value, language)
+            local translatedValue, succeeded = emotesDarkTranslateText(value, language)
+            translated[key] = translatedValue
+            if succeeded ~= true then translationSucceeded = false end
         elseif type(value) == "table" then
             translated[key] = {}
             for nestedKey, nestedValue in pairs(value) do
-                translated[key][nestedKey] = type(nestedValue) == "string" and emotesDarkTranslateText(nestedValue, language) or nestedValue
+                if type(nestedValue) == "string" then
+                    local translatedValue, succeeded = emotesDarkTranslateText(nestedValue, language)
+                    translated[key][nestedKey] = translatedValue
+                    if succeeded ~= true then translationSucceeded = false end
+                else
+                    translated[key][nestedKey] = nestedValue
+                end
             end
         else
             translated[key] = value
         end
     end
-    emotesDarkBugTranslationCache[language] = translated
+    if translationSucceeded then
+        emotesDarkBugTranslationCache[language] = translated
+    end
     return translated
 end
 
@@ -1038,11 +1039,11 @@ local emotesDarkTranslatedTextCache = {}
 
 emotesDarkTranslateText = function(sourceText, targetLanguage)
     sourceText = tostring(sourceText or "")
-    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
+    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText, true end
 
     local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
     local cachedTranslation = emotesDarkTranslatedTextCache[cacheKey]
-    if cachedTranslation then return cachedTranslation end
+    if cachedTranslation then return cachedTranslation, true end
 
     local request = emotesDarkGetRequest()
 
@@ -1056,7 +1057,7 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     local okEncode = pcall(function()
         encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
     end)
-    if not okEncode or encodedText == "" then return sourceText end
+    if not okEncode or encodedText == "" then return sourceText, false end
 
     local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
     local body
@@ -1076,11 +1077,11 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
         local fallbackOk, fallbackBody = pcall(emotesDarkDownload, url)
         if fallbackOk then body = emotesDarkUsableBody(fallbackBody) end
     end
-    if not body then return sourceText end
+    if not body then return sourceText, false end
     local decodedOk, decoded = pcall(function()
         return game:GetService("HttpService"):JSONDecode(body)
     end)
-    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText end
+    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText, false end
 
     local parts = {}
     for _, segment in ipairs(decoded[1]) do
@@ -1089,17 +1090,17 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
         end
     end
     local translated = table.concat(parts)
-    if translated == "" then return sourceText end
+    if translated == "" then return sourceText, false end
     for _, formatToken in ipairs(formatTokens) do
         local tokenStart, tokenEnd = translated:find(formatToken.token, 1, true)
         if not tokenStart or translated:find(formatToken.token, tokenEnd + 1, true) then
-            return sourceText
+            return sourceText, false
         end
         translated = translated:gsub(formatToken.token, function() return formatToken.format end, 1)
     end
 
     emotesDarkTranslatedTextCache[cacheKey] = translated
-    return translated
+    return translated, true
 end
 end
 
