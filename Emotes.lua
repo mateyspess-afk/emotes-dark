@@ -2431,8 +2431,8 @@ getgenv().Notify = emotesDarkNotify
 do
 local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 30 * 60
 local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
-    title = "Emote Dark | Notice",
-    content = "Emote Dark is active."
+    title = "Dark | Community reminder",
+    content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
 }
 
 local function getPeriodicCommunityNotice()
