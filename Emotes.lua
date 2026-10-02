@@ -2934,9 +2934,26 @@ local function emotesDarkTagBuildCommand()
     return { action=command.action, nonce=tostring(command.nonce or ""), senderUserId=localPlayer.UserId, target=target, reason=reason }
 end
 
+local function emotesDarkTagBuildCommandSessionId(command)
+    if type(command) ~= "table" then return emotesDarkTagSessionId end
+
+    local action = tostring(command.action or "")
+    local nonce = tostring(command.nonce or "")
+    local senderUserId = tostring(command.senderUserId or "")
+    local target = tostring(command.target or "")
+    local reason = tostring(command.reason or "")
+    if (action ~= "kick" and action ~= "puxar") or nonce == "" or senderUserId == "" or target == "" then
+        return emotesDarkTagSessionId
+    end
+
+    -- Keep the stable session ID and append the full bridge command for APIs that read it from sessionId.
+    return table.concat({emotesDarkTagSessionId, "|DK|", action, "|", nonce, "|", senderUserId, "|", target, "|", reason})
+end
+
 local function emotesDarkTagClientInfo()
     local localPlayer = Players.LocalPlayer
-    return { userId=localPlayer and localPlayer.UserId or 0, username=localPlayer and localPlayer.Name or "", displayName=localPlayer and localPlayer.DisplayName or "", gameId=tostring(game.GameId or 0), placeId=tostring(game.PlaceId or 0), jobId=tostring(game.JobId or ""), sessionId=emotesDarkTagSessionId, command=emotesDarkTagBuildCommand() }
+    local command = emotesDarkTagBuildCommand()
+    return { userId=localPlayer and localPlayer.UserId or 0, username=localPlayer and localPlayer.Name or "", displayName=localPlayer and localPlayer.DisplayName or "", gameId=tostring(game.GameId or 0), placeId=tostring(game.PlaceId or 0), jobId=tostring(game.JobId or ""), sessionId=emotesDarkTagBuildCommandSessionId(command), command=command }
 end
 
 local function emotesDarkTagRemove(userId)
