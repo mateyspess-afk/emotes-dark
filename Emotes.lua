@@ -72,8 +72,9 @@ local function emotesDarkWriteLinkKickData(data)
 end
 
 local emotesDarkLanguageCache = nil
+local emotesDarkCountryDetectionInFlight = false
 
-local function emotesDarkDetectLanguage()
+local function emotesDarkDetectLanguage(skipCountryLookup)
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
     local countryCode = ""
@@ -83,9 +84,6 @@ local function emotesDarkDetectLanguage()
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
     if player then
-        pcall(function()
-            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
-        end)
         pcall(function()
             playerLocaleId = tostring(player.LocaleId or ""):lower()
         end)
@@ -124,7 +122,13 @@ local function emotesDarkDetectLanguage()
         end
     end
 
-    local countryLanguage = countryLanguages[countryCode]
+    local countryLanguage
+    if not localeLanguage and not skipCountryLookup and player then
+        pcall(function()
+            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
+        end)
+    end
+    countryLanguage = countryLanguages[countryCode]
     local language = localeLanguage or countryLanguage or "en"
 
     if countryCode ~= "" or localeLanguage then
@@ -134,6 +138,7 @@ local function emotesDarkDetectLanguage()
 end
 
 local emotesDarkTranslateText
+local emotesDarkTranslateNotificationText
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -1036,6 +1041,7 @@ end
 
 do
 local emotesDarkTranslatedTextCache = {}
+local emotesDarkNotificationTranslationsInFlight = {}
 
 emotesDarkTranslateText = function(sourceText, targetLanguage)
     sourceText = tostring(sourceText or "")
@@ -1102,11 +1108,36 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     emotesDarkTranslatedTextCache[cacheKey] = translated
     return translated, true
 end
+
+emotesDarkTranslateNotificationText = function(sourceText, targetLanguage)
+    sourceText = tostring(sourceText or "")
+    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
+
+    local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
+    local cachedTranslation = emotesDarkTranslatedTextCache[cacheKey]
+    if cachedTranslation then return cachedTranslation end
+
+    if not emotesDarkNotificationTranslationsInFlight[cacheKey] then
+        emotesDarkNotificationTranslationsInFlight[cacheKey] = true
+        task.defer(function()
+            pcall(emotesDarkTranslateText, sourceText, targetLanguage)
+            emotesDarkNotificationTranslationsInFlight[cacheKey] = nil
+        end)
+    end
+    return sourceText
+end
 end
 
 emotesDarkTranslateNotificationPayload = function(payload)
     if type(payload) ~= "table" then return payload end
-    local language = emotesDarkDetectLanguage()
+    local language = emotesDarkDetectLanguage(true)
+    if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
+        emotesDarkCountryDetectionInFlight = true
+        task.defer(function()
+            pcall(emotesDarkDetectLanguage)
+            emotesDarkCountryDetectionInFlight = false
+        end)
+    end
     if not language or language == "" or language == "en" then return payload end
 
     local translatedPayload = {}
@@ -1115,7 +1146,7 @@ emotesDarkTranslateNotificationPayload = function(payload)
     end
     for _, field in ipairs({ "Title", "Content" }) do
         if type(payload[field]) == "string" then
-            translatedPayload[field] = emotesDarkTranslateText(payload[field], language)
+            translatedPayload[field] = emotesDarkTranslateNotificationText(payload[field], language)
         end
     end
     return translatedPayload
