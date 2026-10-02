@@ -2429,7 +2429,7 @@ end
 getgenv().Notify = emotesDarkNotify
 
 do
-local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 6 * 60 * 60
+local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 30 * 60
 local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
     title = "Emote Dark | Notice",
     content = "Emote Dark is active."
