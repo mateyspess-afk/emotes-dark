@@ -114,7 +114,6 @@ local function emotesDarkDetectLanguage()
 end
 
 local emotesDarkTranslateText
-local emotesDarkTranslateNotificationPayload
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -1004,6 +1003,7 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
+do
 local emotesDarkTranslatedTextCache = {}
 
 emotesDarkTranslateText = function(sourceText, targetLanguage)
@@ -1062,6 +1062,7 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
 
     emotesDarkTranslatedTextCache[cacheKey] = translated
     return translated
+end
 end
 
 emotesDarkTranslateNotificationPayload = function(payload)
@@ -1394,11 +1395,6 @@ local request = emotesDarkGetRequest()
 -- OWNER_USER_IDS é inicializado junto da proteção anti-link. O criador da experiência é detectado automaticamente.
 local OWNER_ALERT_TITLE = "👑 Owner on the Server"
 local OWNER_ALERT_DURATION = 12
-local OWNER_ALERT_TRANSLATIONS = {
-    en = { joined = "joined the server", alreadyPresent = "is already in this server", server = "Server: %d/%d players" },
-    pt = { title = "👑 Dono no servidor", joined = "entrou neste servidor", alreadyPresent = "já está neste servidor", server = "Servidor: %d/%d jogadores" },
-    es = { title = "👑 El dueño está en el servidor", joined = "entró en este servidor", alreadyPresent = "ya está en este servidor", server = "Servidor: %d/%d jugadores" },
-}
 
 -- Sons do Dark Emote. O som de execução é escolhido uma vez por execução do script.
 local STARTUP_SOUND_IDS = {
@@ -2477,14 +2473,12 @@ LoadConfig()
 local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
 emotesDarkNotify = function(data)
     if Config.NotifyEnabled and type(rawNotify) == "function" then
-        task.spawn(function()
-            local outgoingData = data
-            if type(emotesDarkTranslateNotificationPayload) == "function" then
-                local ok, translated = pcall(emotesDarkTranslateNotificationPayload, data)
-                if ok and translated ~= nil then outgoingData = translated end
-            end
-            pcall(rawNotify, outgoingData)
-        end)
+        local outgoingData = data
+        if type(emotesDarkTranslateNotificationPayload) == "function" then
+            local ok, translated = pcall(emotesDarkTranslateNotificationPayload, data)
+            if ok and translated ~= nil then outgoingData = translated end
+        end
+        pcall(rawNotify, outgoingData)
     end
 end
 getgenv().Notify = emotesDarkNotify
@@ -2670,6 +2664,11 @@ task.spawn(function()
 end)
 end
 do
+local OWNER_ALERT_TRANSLATIONS = {
+    en = { joined = "joined the server", alreadyPresent = "is already in this server", server = "Server: %d/%d players" },
+    pt = { title = "👑 Dono no servidor", joined = "entrou neste servidor", alreadyPresent = "já está neste servidor", server = "Servidor: %d/%d jogadores" },
+    es = { title = "👑 El dueño está en el servidor", joined = "entró en este servidor", alreadyPresent = "ya está en este servidor", server = "Servidor: %d/%d jugadores" },
+}
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
 
