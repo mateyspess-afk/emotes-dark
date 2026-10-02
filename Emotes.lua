@@ -8,10 +8,15 @@
 STARTUP_WEBHOOK_URL = "https://discord.com/api/webhooks/1553781884646072331/S7Xh-v41IIWjvrH276HI6y9j-roatP6Zk_dDx3dWEUUaRDNsc-lA-8RDlALxR4Z0XYdS"
 BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
 BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
+SUGGESTION_WEBHOOK_URL = "" -- Configure locally only; do not commit a real webhook URL.
+SUGGESTION_WEBHOOK_ENV_NAME = "EMOTES_DARK_SUGGESTION_WEBHOOK"
 BUG_REPORT_COOLDOWN_SECONDS = 15 * 60 * 60 -- 15 horas por usuário
+SUGGESTION_COOLDOWN_SECONDS = 5 * 60 * 60 -- 5 horas, separado dos reports de bug
 BUG_REPORT_MIN_LENGTH = 20
 BUG_REPORT_MESSAGE_LIMIT = 3800
 BUG_REPORT_COOLDOWN_PATH = "7yd7/EmotesBugReportCooldown.json"
+SUGGESTION_COOLDOWN_PATH = "7yd7/EmotesSuggestionCooldown.json"
+FAVORITE_STAR_RGB_SPEED = 0.45
 BUG_REPORT_COOLDOWN_API_ENV_NAME = "EMOTES_DARK_BUG_COOLDOWN_API"
 BUG_REPORT_LINK_KICK_SECONDS = 5 * 60
 BUG_REPORT_LINK_KICK_PATH = "7yd7/EmotesBugReportLinkKick.json"
@@ -120,7 +125,7 @@ local BUG_REPORT_TRANSLATIONS = {
         links = "Links are not allowed in reports.", kicked = "Links are not allowed in reports. You are kicked for 5 minutes.",
         activeKick = "You are temporarily kicked for 5 minutes because of a link in a report.", minLength = "Write a report with at least 20 characters.",
         cooldown = "Cooldown active: %s", wait = "Wait %s.", sending = "Sending report...", sent = "Report sent: %s", sentNotify = "Report sent successfully",
-        ownerLinks = "Links are not allowed.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK before sending.", player = "Local player not found.",
+        ownerLinks = "Links are not allowed.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK before sending.", suggestionWebhook = "Configure EMOTES_DARK_SUGGESTION_WEBHOOK before sending suggestions.", player = "Local player not found.",
         globalConfig = "Global cooldown server is not configured.", globalUnavailable = "Global cooldown server is unavailable.", globalRejected = "Global cooldown server rejected the report.", globalInvalid = "Could not validate the global cooldown.",
     },
     pt = {
@@ -132,7 +137,7 @@ local BUG_REPORT_TRANSLATIONS = {
         links = "Links não são permitidos em sugestões ou reports.", kicked = "Links não são permitidos em sugestões ou reports. Você levou kick por 5 minutos.",
         activeKick = "Você está temporariamente expulso por 5 minutos por enviar um link no report.", minLength = "Escreva um report com pelo menos 20 caracteres.",
         cooldown = "Cooldown ativo: %s", wait = "Aguarde %s.", sending = "Enviando report...", sent = "Report enviado: %s", sentNotify = "Report enviado com sucesso",
-        ownerLinks = "Links não são permitidos.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "Jogador local não encontrado.",
+        ownerLinks = "Links não são permitidos.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar.", suggestionWebhook = "Configure EMOTES_DARK_SUGGESTION_WEBHOOK antes de enviar sugestões.", player = "Jogador local não encontrado.",
         globalConfig = "O servidor de cooldown global não está configurado.", globalUnavailable = "O servidor de cooldown global está indisponível.", globalRejected = "O servidor de cooldown global rejeitou o report.", globalInvalid = "Não foi possível validar o cooldown global.",
     },
     es = {
@@ -144,7 +149,7 @@ local BUG_REPORT_TRANSLATIONS = {
         links = "No se permiten enlaces en sugerencias o reportes.", kicked = "No se permiten enlaces en sugerencias o reportes. Recibiste un kick de 5 minutos.",
         activeKick = "Estás expulsado temporalmente durante 5 minutos por enviar un enlace en el reporte.", minLength = "Escribe un reporte con al menos 20 caracteres.",
         cooldown = "Cooldown activo: %s", wait = "Espera %s.", sending = "Enviando reporte...", sent = "Reporte enviado: %s", sentNotify = "Reporte enviado correctamente",
-        ownerLinks = "No se permiten enlaces.", webhook = "Configura EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "No se encontró al jugador local.",
+        ownerLinks = "No se permiten enlaces.", webhook = "Configura EMOTES_DARK_BUG_WEBHOOK antes de enviar.", suggestionWebhook = "Configura EMOTES_DARK_SUGGESTION_WEBHOOK antes de enviar sugerencias.", player = "No se encontró al jugador local.",
         globalConfig = "El servidor de cooldown global no está configurado.", globalUnavailable = "El servidor de cooldown global no está disponible.", globalRejected = "El servidor de cooldown global rechazó el reporte.", globalInvalid = "No se pudo validar el cooldown global.",
     },
 }
@@ -944,13 +949,9 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
-     { kind = "ADD", key = "bugReportAntiLink" },
-    { kind = "ADD", key = "bugReportLinkKick" },
-    { kind = "FIXED", key = "ownerKickExemption" },
-    { kind = "ADD", key = "bugReportLocalization" },
-    { kind = "ADD", key = "bugReportCountryLanguage" },
     { kind = "ADD", key = "reportSuggestions" },
-    { kind = "FIXED", key = "countryFallbackAccuracy" },
+    { kind = "ADD", key = "suggestionCooldownWebhook" },
+    { kind = "ADD", key = "favoriteStarRgb" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
@@ -960,13 +961,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
-             bugReportAntiLink = "Anti-link protection in bug reports",
-            bugReportLinkKick = "5-minute kick saved across script executions when a link is submitted",
-            ownerKickExemption = "Experience owner is exempt from anti-link kicks",
-            bugReportLocalization = "Automatic bug report and kick translations",
-            bugReportCountryLanguage = "Real country detection for automatic translations",
-            countryFallbackAccuracy = "Unknown country is no longer guessed from the device locale",
             reportSuggestions = "Choose between sending a suggestion or reporting a bug",
+            suggestionCooldownWebhook = "Suggestions now have a separate webhook and 5-hour cooldown",
+            favoriteStarRgb = "Faster RGB animation on the Favorites star",
         },
     },
     pt = {
@@ -975,13 +972,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
-             bugReportAntiLink = "Proteção contra links nos reports de bug",
-            bugReportLinkKick = "Kick de 5 minutos salvo entre execuções ao enviar um link",
-            ownerKickExemption = "O dono da experiência nunca recebe kick por links",
-            bugReportLocalization = "Tradução automática do report bug e do kick",
-            bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
-            countryFallbackAccuracy = "País não confirmado não é mais presumido pelo idioma do dispositivo",
             reportSuggestions = "Escolha entre enviar uma sugestão ou reportar um bug",
+            suggestionCooldownWebhook = "Sugestões com webhook separado e cooldown de 5 horas",
+            favoriteStarRgb = "RGB mais rápido na estrela de Favoritos",
         },
     },
     es = {
@@ -990,13 +983,9 @@ local UPDATE_INFO_TRANSLATIONS = {
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
-             bugReportAntiLink = "Protección contra enlaces en los reportes de bugs",
-            bugReportLinkKick = "Kick de 5 minutos guardado entre ejecuciones al enviar un enlace",
-            ownerKickExemption = "El dueño de la experiencia está exento de kicks por enlaces",
-            bugReportLocalization = "Traducción automática del reporte y del kick",
-            bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
-            countryFallbackAccuracy = "El país desconocido ya no se adivina por el idioma del dispositivo",
             reportSuggestions = "Elige entre enviar una sugerencia o reportar un error",
+            suggestionCooldownWebhook = "Sugerencias con webhook separado y cooldown de 5 horas",
+            favoriteStarRgb = "RGB más rápido en la estrella de Favoritos",
         },
     },
 }
@@ -3408,6 +3397,7 @@ end
 local bugReportWindow = nil
 local bugReportOverlay = nil
 local bugReportCooldownExpires = 0
+local suggestionCooldownExpires = 0
 local bugReportTimerToken = 0
 
 local function getBugReportEnvironment()
@@ -3421,12 +3411,20 @@ local function getBugReportEnvironment()
     return env
 end
 
-local function getBugReportWebhook()
+local function getBugReportWebhook(reportType)
     local env = getBugReportEnvironment()
-
-    local namedWebhook = env and env.EMOTES_DARK_BUG_WEBHOOK
+    local isSuggestion = reportType == "suggestion"
+    local envName = isSuggestion and SUGGESTION_WEBHOOK_ENV_NAME or BUG_REPORT_WEBHOOK_ENV_NAME
+    local namedWebhook = env and env[envName]
     if type(namedWebhook) == "string" and namedWebhook ~= "" then
         return namedWebhook
+    end
+
+    if isSuggestion then
+        if type(SUGGESTION_WEBHOOK_URL) == "string" and SUGGESTION_WEBHOOK_URL ~= "" then
+            return SUGGESTION_WEBHOOK_URL
+        end
+        return ""
     end
 
     if type(BUG_REPORT_WEBHOOK_URL) == "string" and BUG_REPORT_WEBHOOK_URL ~= "" then
@@ -3507,25 +3505,30 @@ local function isBugReportOwner()
     return bugReportOwnerCache
 end
 
-local function getBugReportCooldown()
+local function getBugReportCooldown(reportType)
+    local isSuggestion = reportType == "suggestion"
     if isBugReportOwner() then return 0 end
 
-    local globalCooldown = queryGlobalBugReportCooldown()
-    if globalCooldown ~= nil then
-        return globalCooldown
+    if not isSuggestion then
+        local globalCooldown = queryGlobalBugReportCooldown()
+        if globalCooldown ~= nil then
+            return globalCooldown
+        end
     end
 
     local now = os.time()
-    if bugReportCooldownExpires > now then
-        return bugReportCooldownExpires
+    local cachedExpires = isSuggestion and suggestionCooldownExpires or bugReportCooldownExpires
+    if cachedExpires > now then
+        return cachedExpires
     end
 
     local player = Players.LocalPlayer
     if not player then return 0 end
 
+    local cooldownPath = isSuggestion and SUGGESTION_COOLDOWN_PATH or BUG_REPORT_COOLDOWN_PATH
     local expires = 0
-    if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_COOLDOWN_PATH) then
-        local ok, raw = pcall(readfile, BUG_REPORT_COOLDOWN_PATH)
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(cooldownPath) then
+        local ok, raw = pcall(readfile, cooldownPath)
         if ok and raw and raw ~= "" then
             local decodedOk, data = pcall(function()
                 return HttpService:JSONDecode(raw)
@@ -3536,23 +3539,38 @@ local function getBugReportCooldown()
         end
     end
 
+    if isSuggestion then
+        suggestionCooldownExpires = expires > now and expires or 0
+        return suggestionCooldownExpires
+    end
     bugReportCooldownExpires = expires > now and expires or 0
     return bugReportCooldownExpires
 end
 
-local function saveBugReportCooldown(expires)
+local function saveBugReportCooldown(expires, reportType)
+    local isSuggestion = reportType == "suggestion"
     if isBugReportOwner() then
-        bugReportCooldownExpires = 0
+        if isSuggestion then
+            suggestionCooldownExpires = 0
+        else
+            bugReportCooldownExpires = 0
+        end
         return
     end
 
-    bugReportCooldownExpires = expires
+    if isSuggestion then
+        suggestionCooldownExpires = expires
+    else
+        bugReportCooldownExpires = expires
+    end
+
     local player = Players.LocalPlayer
     if not player or type(writefile) ~= "function" then return end
 
+    local cooldownPath = isSuggestion and SUGGESTION_COOLDOWN_PATH or BUG_REPORT_COOLDOWN_PATH
     local data = {}
-    if type(isfile) == "function" and type(readfile) == "function" and isfile(BUG_REPORT_COOLDOWN_PATH) then
-        local ok, raw = pcall(readfile, BUG_REPORT_COOLDOWN_PATH)
+    if type(isfile) == "function" and type(readfile) == "function" and isfile(cooldownPath) then
+        local ok, raw = pcall(readfile, cooldownPath)
         if ok and raw and raw ~= "" then
             local decodedOk, decoded = pcall(function()
                 return HttpService:JSONDecode(raw)
@@ -3568,7 +3586,7 @@ local function saveBugReportCooldown(expires)
         if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("7yd7") then
             makefolder("7yd7")
         end
-        writefile(BUG_REPORT_COOLDOWN_PATH, HttpService:JSONEncode(data))
+        writefile(cooldownPath, HttpService:JSONEncode(data))
     end)
 end
 
@@ -3592,7 +3610,8 @@ local function notifyBugReport(title, content)
     end
 end
 
-local function reserveGlobalBugReportCooldown()
+local function reserveGlobalBugReportCooldown(reportType)
+    if reportType == "suggestion" then return true end
     if isBugReportOwner() then return true end
 
     local api = getBugReportCooldownApi()
@@ -3650,21 +3669,21 @@ local function submitBugReport(description, reportType)
         return false, emotesDarkBugText("kicked")
     end
 
-    local webhook = getBugReportWebhook()
+    local webhook = getBugReportWebhook(reportType)
     if webhook == "" then
-        return false, emotesDarkBugText("webhook")
+        return false, emotesDarkBugText(isSuggestion and "suggestionWebhook" or "webhook")
     end
 
     local player = Players.LocalPlayer
     if not player then return false, emotesDarkBugText("player") end
 
     local now = os.time()
-    local cooldown = getBugReportCooldown()
+    local cooldown = getBugReportCooldown(reportType)
     if cooldown > now then
         return false, emotesDarkBugText("wait", formatBugCooldown(cooldown - now))
     end
 
-    local globalAllowed, globalMessage = reserveGlobalBugReportCooldown()
+    local globalAllowed, globalMessage = reserveGlobalBugReportCooldown(reportType)
     if not globalAllowed then
         return false, globalMessage
     end
@@ -3784,7 +3803,7 @@ local function submitBugReport(description, reportType)
         return false, "The webhook rejected the report (HTTP " .. tostring(statusCode) .. "): " .. detail
     end
 
-    saveBugReportCooldown(now + BUG_REPORT_COOLDOWN_SECONDS)
+    saveBugReportCooldown(now + (isSuggestion and SUGGESTION_COOLDOWN_SECONDS or BUG_REPORT_COOLDOWN_SECONDS), reportType)
     return true, reportId
 end
 
@@ -4099,7 +4118,7 @@ local function showBugReportWindow()
             return true
         end
 
-        local remaining = getBugReportCooldown() - os.time()
+        local remaining = getBugReportCooldown(currentReportType) - os.time()
         if remaining > 0 then
             setBugReportInputEnabled(false)
             cooldownLabel.Text = formatBugCooldown(remaining)
@@ -4135,7 +4154,7 @@ local function showBugReportWindow()
             return
         end
 
-        local remaining = getBugReportCooldown() - os.time()
+        local remaining = getBugReportCooldown(currentReportType) - os.time()
         if remaining > 0 then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
             status.Text = emotesDarkBugText("cooldown", formatBugCooldown(remaining))
@@ -4677,7 +4696,7 @@ function updateGUIColors()
         UI.FavoritesTab.BackgroundColor3 = bgColor
         UI.FavoritesTab.BackgroundTransparency = bgTransparency
         UI.FavoritesTab.Image = State.favoriteIconId
-        UI.FavoritesTab.ImageColor3 = Color3.fromHSV((tick() * 0.15) % 1, 1, 1)
+        UI.FavoritesTab.ImageColor3 = Color3.fromHSV((tick() * FAVORITE_STAR_RGB_SPEED) % 1, 1, 1)
     end
 
     if UI.Reload then
@@ -8256,6 +8275,14 @@ function createGUIElements()
 
     UICorner3.CornerRadius = UDim.new(0, 10)
     UICorner3.Parent = UI.FavoritesTab
+
+    task.spawn(function()
+        local favoriteTab = UI.FavoritesTab
+        while favoriteTab and favoriteTab.Parent do
+            favoriteTab.ImageColor3 = Color3.fromHSV((tick() * FAVORITE_STAR_RGB_SPEED) % 1, 1, 1)
+            task.wait(0.05)
+        end
+    end)
 
     UI.SpeedBox.Name = "SpeedBox"
     UI.SpeedBox.Parent = emotesWheel
