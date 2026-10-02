@@ -949,18 +949,19 @@ end
 local emotesDarkUpdateConfirmed = false
 
 local UPDATE_INFO_ITEMS = {
+    { kind = "ADD", key = "periodicCommunityNotice" },
     { kind = "ADD", key = "reportSuggestions" },
     { kind = "ADD", key = "suggestionCooldownWebhook" },
-    { kind = "ADD", key = "favoriteStarRgb" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on October 1, 2026",
+        updated = "Updated on October 2, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
+            periodicCommunityNotice = "Automatic reminders every 6 hours, translated to your detected language, with Discord, bug report, and suggestion guidance",
             reportSuggestions = "Choose between sending a suggestion or reporting a bug",
             suggestionCooldownWebhook = "Suggestions now have a separate webhook and 5-hour cooldown",
             favoriteStarRgb = "Faster RGB animation on the Favorites star",
@@ -968,10 +969,11 @@ local UPDATE_INFO_TRANSLATIONS = {
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 1º de outubro de 2026",
+        updated = "Atualizado em 2 de outubro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
+            periodicCommunityNotice = "Avisos automáticos a cada 6 horas, traduzidos para o idioma detectado, com orientações sobre Discord, bugs e sugestões",
             reportSuggestions = "Escolha entre enviar uma sugestão ou reportar um bug",
             suggestionCooldownWebhook = "Sugestões com webhook separado e cooldown de 5 horas",
             favoriteStarRgb = "RGB mais rápido na estrela de Favoritos",
@@ -979,10 +981,11 @@ local UPDATE_INFO_TRANSLATIONS = {
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 1 de octubre de 2026",
+        updated = "Actualizado el 2 de octubre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
+            periodicCommunityNotice = "Avisos automáticos cada 6 horas, traducidos al idioma detectado, con información sobre Discord, errores y sugerencias",
             reportSuggestions = "Elige entre enviar una sugerencia o reportar un error",
             suggestionCooldownWebhook = "Sugerencias con webhook separado y cooldown de 5 horas",
             favoriteStarRgb = "RGB más rápido en la estrella de Favoritos",
@@ -2427,6 +2430,42 @@ emotesDarkNotify = function(data)
     end
 end
 getgenv().Notify = emotesDarkNotify
+
+local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 6 * 60 * 60
+local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
+    title = "Dark | Community reminder",
+    content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
+}
+
+local function getPeriodicCommunityNotice()
+    local language = emotesDarkDetectLanguage()
+    local source = PERIODIC_COMMUNITY_NOTICE_SOURCE
+    if not language or language == "" or language == "en" then
+        return source.title, source.content
+    end
+
+    local translate = emotesDarkTranslateText
+    if type(translate) ~= "function" then
+        return source.title, source.content
+    end
+    return translate(source.title, language), translate(source.content, language)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(PERIODIC_COMMUNITY_NOTICE_INTERVAL)
+        local ok, title, content = pcall(getPeriodicCommunityNotice)
+        if ok then
+            emotesDarkNotify({
+                Title = title,
+                Content = content,
+                Duration = 18,
+            })
+        else
+            warn("[EmotesDark] Failed to show periodic community reminder: " .. tostring(title))
+        end
+    end
+end)
 
 do
 local ownerAlertSeen = {}
