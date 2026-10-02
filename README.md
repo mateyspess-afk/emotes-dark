@@ -49,15 +49,18 @@ O script tenta usar `Humanoid:PlayEmoteAndGetAnimTrackById` primeiro e usa `Anim
 
 Esta versão foi reestruturada a partir da ideia do script de referência indicado pelo autor do repositório. O código foi reescrito em uma arquitetura menor, sem copiar o arquivo monolítico original.
 
-## Relatório de bugs
+## Relatórios de bugs e sugestões
 
-O relatório envia o nome da experiência pelo Universe ID e a mensagem digitada em dois lugares do webhook: no conteúdo principal e no embed. Para configurar o destino sem colocar o webhook no repositório, defina antes de executar:
+Configure destinos independentes para reports de bugs e sugestões antes de executar o script:
 
 ```lua
 getgenv().EMOTES_DARK_BUG_WEBHOOK = "https://discord.com/api/webhooks/..."
+getgenv().EMOTES_DARK_SUGGESTION_WEBHOOK = "https://discord.com/api/webhooks/..."
 ```
 
-O script não inclui webhook secreto no código publicado.
+As sugestões têm cooldown independente de 5 horas, salvo localmente em 7yd7/EmotesSuggestionCooldown.json. Reports de bugs mantêm o cooldown atual de 15 horas e o serviço global opcional.
+
+Também é possível preencher SUGGESTION_WEBHOOK_URL em uma cópia local privada. Não publique URLs reais de webhook em um repositório público.
 
 
 ## Nametag de usuários do script
