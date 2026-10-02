@@ -2429,31 +2429,49 @@ end
 getgenv().Notify = emotesDarkNotify
 
 local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 6 * 60 * 60
+local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
+    title = "Emote Dark | Notice",
+    content = "Emote Dark is active."
+}
+
+local function getPeriodicCommunityNotice()
+    local language = emotesDarkDetectLanguage()
+    local source = PERIODIC_COMMUNITY_NOTICE_SOURCE
+    if not language or language == "" or language == "en" then
+        return source.title, source.content
+    end
+
+    local translate = emotesDarkTranslateText
+    if type(translate) ~= "function" then
+        return source.title, source.content
+    end
+    return translate(source.title, language), translate(source.content, language)
+end
+
 task.spawn(function()
     while true do
         task.wait(PERIODIC_COMMUNITY_NOTICE_INTERVAL)
-
-        local payload = {
-            Title = "Emote Dark | Aviso",
-            Content = "Emote Dark está ativo.",
-            Duration = 18,
-        }
-        local delivered = false
-        if type(rawNotify) == "function" then
-            delivered = pcall(rawNotify, payload)
-        end
-        if not delivered then
-            pcall(function()
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = payload.Title,
-                    Text = payload.Content,
-                    Duration = payload.Duration,
-                })
-            end)
+        local ok, title, content = pcall(getPeriodicCommunityNotice)
+        if ok then
+            local payload = { Title = title, Content = content, Duration = 18 }
+            local delivered = false
+            if type(rawNotify) == "function" then
+                delivered = pcall(rawNotify, payload)
+            end
+            if not delivered then
+                pcall(function()
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = payload.Title,
+                        Text = payload.Content,
+                        Duration = payload.Duration,
+                    })
+                end)
+            end
+        else
+            warn("[EmotesDark] Failed to show periodic notice: " .. tostring(title))
         end
     end
 end)
-
 do
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
