@@ -77,22 +77,30 @@ local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
     local countryCode = ""
-    local localeId = ""
+    local playerLocaleId = ""
+    local robloxLocaleId = ""
+    local systemLocaleId = ""
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
     if player then
         pcall(function()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
+        pcall(function()
+            playerLocaleId = tostring(player.LocaleId or ""):lower()
+        end)
+        if playerLocaleId == "" then
+            pcall(function()
+                playerLocaleId = tostring(player:GetLocaleId() or ""):lower()
+            end)
+        end
     end
     pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+        robloxLocaleId = tostring(localizationService.RobloxLocaleId or ""):lower()
     end)
-    if localeId == "" then
-        pcall(function()
-            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-        end)
-    end
+    pcall(function()
+        systemLocaleId = tostring(localizationService.SystemLocaleId or ""):lower()
+    end)
 
     local countryLanguages = {
         AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
@@ -107,9 +115,31 @@ local function emotesDarkDetectLanguage()
         BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
     }
 
-    local localeLanguage = localeId:match("^([a-z][a-z])")
-    local language = countryLanguages[countryCode] or localeLanguage or "en"
-    emotesDarkLanguageCache = language
+    local localeLanguage = nil
+    for _, localeId in ipairs({ playerLocaleId, robloxLocaleId, systemLocaleId }) do
+        local candidate = localeId:match("^([a-z][a-z])")
+        if candidate and candidate ~= "en" then
+            localeLanguage = candidate
+            break
+        end
+        if candidate and not localeLanguage then
+            localeLanguage = candidate
+        end
+    end
+
+    local countryLanguage = countryLanguages[countryCode]
+    local language
+    if countryLanguage and countryLanguage ~= "en" then
+        language = countryLanguage
+    elseif localeLanguage and localeLanguage ~= "en" then
+        language = localeLanguage
+    else
+        language = countryLanguage or localeLanguage or "en"
+    end
+
+    if countryCode ~= "" or localeLanguage then
+        emotesDarkLanguageCache = language
+    end
     return language
 end
 
@@ -1015,7 +1045,6 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     if cachedTranslation then return cachedTranslation end
 
     local request = emotesDarkGetRequest()
-    if type(request) ~= "function" then return sourceText end
 
     local formatTokens = {}
     local encodedSource = sourceText:gsub("%%([sd])", function(formatType)
@@ -1030,14 +1059,23 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     if not okEncode or encodedText == "" then return sourceText end
 
     local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
-    local okRequest, response = pcall(request, {
-        Url = url,
-        Method = "GET",
-        Headers = { ["Accept"] = "application/json" },
-    })
-    if not okRequest then return sourceText end
-
-    local body = emotesDarkUsableBody(emotesDarkResponseBody(response))
+    local body
+    if type(request) == "function" then
+        local okRequest, response = pcall(request, {
+            Url = url,
+            Method = "GET",
+            Headers = { ["Accept"] = "application/json" },
+        })
+        local statusCode = tonumber(response and (response.StatusCode or response.Status or response.status_code or response.statusCode))
+        local responseBody = okRequest and emotesDarkUsableBody(emotesDarkResponseBody(response)) or nil
+        if responseBody and (not statusCode or statusCode < 400) then
+            body = responseBody
+        end
+    end
+    if not body then
+        local fallbackOk, fallbackBody = pcall(emotesDarkDownload, url)
+        if fallbackOk then body = emotesDarkUsableBody(fallbackBody) end
+    end
     if not body then return sourceText end
     local decodedOk, decoded = pcall(function()
         return game:GetService("HttpService"):JSONDecode(body)
@@ -2489,6 +2527,16 @@ local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
     title = "Dark | Community reminder",
     content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
 }
+local PERIODIC_COMMUNITY_NOTICE_FALLBACKS = {
+    pt = {
+        title = "Dark | Lembrete da comunidade",
+        content = "Se o script parar de funcionar, use o botão do Discord no menu para copiar nosso convite. Atualizamos o convite diariamente. Encontrou um bug? Abra a janela de Relatar bugs e envie os detalhes. Sugestões ajudam nossa equipe a melhorar o script."
+    },
+    es = {
+        title = "Dark | Aviso de la comunidad",
+        content = "Si el script deja de funcionar, usa el botón de Discord del menú para copiar nuestra invitación. La actualizamos a diario. ¿Encontraste un error? Abre la ventana de Reportar errores y envía los detalles. Las sugerencias ayudan a nuestro equipo a mejorar el script."
+    },
+}
 
 local noticeSequence = 0
 
@@ -2500,10 +2548,19 @@ local function getPeriodicCommunityNotice()
     end
 
     local translate = emotesDarkTranslateText
-    if type(translate) ~= "function" then
-        return source.title, source.content
+    local title = source.title
+    local content = source.content
+    if type(translate) == "function" then
+        title = translate(source.title, language)
+        content = translate(source.content, language)
     end
-    return translate(source.title, language), translate(source.content, language)
+
+    local fallback = PERIODIC_COMMUNITY_NOTICE_FALLBACKS[language]
+    if fallback then
+        if title == source.title then title = fallback.title end
+        if content == source.content then content = fallback.content end
+    end
+    return title, content
 end
 
 local function showThemedCommunityNotice(titleText, contentText, duration)
