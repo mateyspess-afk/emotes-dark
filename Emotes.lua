@@ -2435,6 +2435,8 @@ local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
     content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
 }
 
+local noticeSequence = 0
+
 local function getPeriodicCommunityNotice()
     local language = emotesDarkDetectLanguage()
     local source = PERIODIC_COMMUNITY_NOTICE_SOURCE
@@ -2447,6 +2449,140 @@ local function getPeriodicCommunityNotice()
         return source.title, source.content
     end
     return translate(source.title, language), translate(source.content, language)
+end
+
+local function showThemedCommunityNotice(titleText, contentText, duration)
+    local theme = State.EmoteTheme
+    local background = (theme and theme.Background) or Color3.fromRGB(28, 30, 32)
+    local accent = (theme and theme.Accent) or Color3.fromRGB(0, 255, 150)
+    local textColor = (theme and theme.ImageColor) or Color3.fromRGB(255, 255, 255)
+
+    local alertGui = CoreGui:FindFirstChild("EmotesDarkOwnerAlerts")
+    if not alertGui then
+        alertGui = Instance.new("ScreenGui")
+        alertGui.Name = "EmotesDarkOwnerAlerts"
+        alertGui.IgnoreGuiInset = true
+        alertGui.ResetOnSpawn = false
+        alertGui.DisplayOrder = 10001
+        alertGui.Parent = CoreGui
+
+        local stack = Instance.new("Frame")
+        stack.Name = "Stack"
+        stack.AnchorPoint = Vector2.new(1, 0)
+        stack.Position = UDim2.new(1, -24, 0, 24)
+        stack.Size = UDim2.fromOffset(360, 420)
+        stack.BackgroundTransparency = 1
+        stack.Parent = alertGui
+
+        local layout = Instance.new("UIListLayout")
+        layout.Padding = UDim.new(0, 8)
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Parent = stack
+    end
+
+    local stack = alertGui:FindFirstChild("Stack")
+    if not stack then return end
+
+    noticeSequence = noticeSequence + 1
+    local message = tostring(contentText or "")
+    local estimatedLines = math.max(3, math.ceil(#message / 40))
+    local bodyHeight = math.min(128, estimatedLines * 16)
+
+    local card = Instance.new("Frame")
+    card.Name = "CommunityNotice_" .. tostring(noticeSequence)
+    card.LayoutOrder = -1000 + noticeSequence
+    card.Size = UDim2.new(1, 0, 0, bodyHeight + 50)
+    card.BackgroundColor3 = background
+    card.BackgroundTransparency = 1
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Parent = stack
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = accent
+    stroke.Thickness = 1.5
+    stroke.Transparency = 1
+    stroke.Parent = card
+
+    local accentBar = Instance.new("Frame")
+    accentBar.Name = "AccentBar"
+    accentBar.Size = UDim2.new(0, 4, 1, -20)
+    accentBar.Position = UDim2.fromOffset(10, 10)
+    accentBar.BackgroundColor3 = accent
+    accentBar.BackgroundTransparency = 1
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = card
+
+    local accentCorner = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(1, 0)
+    accentCorner.Parent = accentBar
+
+    local icon = Instance.new("TextLabel")
+    icon.Name = "Icon"
+    icon.BackgroundTransparency = 1
+    icon.Position = UDim2.fromOffset(28, 12)
+    icon.Size = UDim2.fromOffset(32, 32)
+    icon.Font = Enum.Font.GothamBold
+    icon.Text = "!"
+    icon.TextColor3 = accent
+    icon.TextSize = 22
+    icon.TextTransparency = 1
+    icon.Parent = card
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.fromOffset(68, 10)
+    title.Size = UDim2.new(1, -82, 0, 22)
+    title.Font = Enum.Font.GothamBold
+    title.Text = tostring(titleText or "Dark | Community reminder")
+    title.TextColor3 = accent
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextTransparency = 1
+    title.Parent = card
+
+    local content = Instance.new("TextLabel")
+    content.Name = "Content"
+    content.BackgroundTransparency = 1
+    content.Position = UDim2.fromOffset(68, 34)
+    content.Size = UDim2.new(1, -82, 0, bodyHeight)
+    content.Font = Enum.Font.Gotham
+    content.Text = message
+    content.TextColor3 = textColor
+    content.TextSize = 12
+    content.TextWrapped = true
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.TextTransparency = 1
+    content.Parent = card
+
+    local fadeIn = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    TweenService:Create(card, fadeIn, { BackgroundTransparency = 0.08 }):Play()
+    TweenService:Create(stroke, fadeIn, { Transparency = 0.35 }):Play()
+    TweenService:Create(accentBar, fadeIn, { BackgroundTransparency = 0 }):Play()
+    TweenService:Create(icon, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(title, fadeIn, { TextTransparency = 0 }):Play()
+    TweenService:Create(content, fadeIn, { TextTransparency = 0.08 }):Play()
+
+    task.delay(duration or 18, function()
+        if not card.Parent then return end
+        local fadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(card, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(stroke, fadeOut, { Transparency = 1 }):Play()
+        TweenService:Create(accentBar, fadeOut, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(icon, fadeOut, { TextTransparency = 1 }):Play()
+        TweenService:Create(title, fadeOut, { TextTransparency = 1 }):Play()
+        TweenService:Create(content, fadeOut, { TextTransparency = 1 }):Play()
+        task.wait(0.22)
+        if card then card:Destroy() end
+    end)
 end
 
 task.spawn(function()
@@ -2462,22 +2598,12 @@ task.spawn(function()
         task.wait(secondsUntilNextNotice)
         local ok, title, content = pcall(getPeriodicCommunityNotice)
         if ok then
-            local payload = { Title = title, Content = content, Duration = 18 }
-            local delivered = false
-            if type(rawNotify) == "function" then
-                delivered = pcall(rawNotify, payload)
-            end
-            if not delivered then
-                pcall(function()
-                    game:GetService("StarterGui"):SetCore("SendNotification", {
-                        Title = payload.Title,
-                        Text = payload.Content,
-                        Duration = payload.Duration,
-                    })
-                end)
+            local shown, showError = pcall(showThemedCommunityNotice, title, content, 18)
+            if not shown then
+                warn("[EmotesDark] Failed to show periodic notice: " .. tostring(showError))
             end
         else
-            warn("[EmotesDark] Failed to show periodic notice: " .. tostring(title))
+            warn("[EmotesDark] Failed to translate periodic notice: " .. tostring(title))
         end
     end
 end)
