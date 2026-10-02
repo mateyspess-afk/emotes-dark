@@ -114,8 +114,11 @@ local BUG_REPORT_TRANSLATIONS = {
     en = {
         title = "REPORT A BUG", hint = "Explain what happened and how to reproduce it. Minimum: 20 characters.",
         placeholder = "E.g.: opening emote X freezes the animation and the button stops responding...", send = "SEND REPORT",
-        links = "Links are not allowed in bug reports.", kicked = "Links are not allowed in bug reports. You are kicked for 5 minutes.",
-        activeKick = "You are temporarily kicked for 5 minutes because of a link in a bug report.", minLength = "Describe the bug with at least 20 characters.",
+        suggestionsTab = "SUGGESTIONS", bugsTab = "BUG REPORTS", suggestionTitle = "SUGGESTION",
+        suggestionHint = "Describe your suggestion. Minimum: 20 characters.", suggestionPlaceholder = "E.g.: add a way to save more favorite emotes...", suggestionSend = "SEND SUGGESTION",
+        suggestionSent = "Suggestion sent: %s", suggestionSentNotify = "Suggestion sent successfully",
+        links = "Links are not allowed in reports.", kicked = "Links are not allowed in reports. You are kicked for 5 minutes.",
+        activeKick = "You are temporarily kicked for 5 minutes because of a link in a report.", minLength = "Write a report with at least 20 characters.",
         cooldown = "Cooldown active: %s", wait = "Wait %s.", sending = "Sending report...", sent = "Report sent: %s", sentNotify = "Report sent successfully",
         ownerLinks = "Links are not allowed.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK before sending.", player = "Local player not found.",
         globalConfig = "Global cooldown server is not configured.", globalUnavailable = "Global cooldown server is unavailable.", globalRejected = "Global cooldown server rejected the report.", globalInvalid = "Could not validate the global cooldown.",
@@ -123,8 +126,11 @@ local BUG_REPORT_TRANSLATIONS = {
     pt = {
         title = "REPORTAR BUG", hint = "Explique o que aconteceu e como reproduzir. Mínimo: 20 caracteres.",
         placeholder = "Ex.: abrir o emote X congela a animação e o botão para de responder...", send = "ENVIAR REPORT",
-        links = "Links não são permitidos nos reports de bug.", kicked = "Links não são permitidos. Você levou kick por 5 minutos.",
-        activeKick = "Você está temporariamente expulso por 5 minutos por enviar um link no report.", minLength = "Descreva o bug com pelo menos 20 caracteres.",
+        suggestionsTab = "SUGESTÕES", bugsTab = "REPORTAR BUGS", suggestionTitle = "SUGESTÃO",
+        suggestionHint = "Descreva sua sugestão. Mínimo: 20 caracteres.", suggestionPlaceholder = "Ex.: adicionar uma forma de salvar mais emotes favoritos...", suggestionSend = "ENVIAR SUGESTÃO",
+        suggestionSent = "Sugestão enviada: %s", suggestionSentNotify = "Sugestão enviada com sucesso",
+        links = "Links não são permitidos em sugestões ou reports.", kicked = "Links não são permitidos em sugestões ou reports. Você levou kick por 5 minutos.",
+        activeKick = "Você está temporariamente expulso por 5 minutos por enviar um link no report.", minLength = "Escreva um report com pelo menos 20 caracteres.",
         cooldown = "Cooldown ativo: %s", wait = "Aguarde %s.", sending = "Enviando report...", sent = "Report enviado: %s", sentNotify = "Report enviado com sucesso",
         ownerLinks = "Links não são permitidos.", webhook = "Configure EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "Jogador local não encontrado.",
         globalConfig = "O servidor de cooldown global não está configurado.", globalUnavailable = "O servidor de cooldown global está indisponível.", globalRejected = "O servidor de cooldown global rejeitou o report.", globalInvalid = "Não foi possível validar o cooldown global.",
@@ -132,8 +138,11 @@ local BUG_REPORT_TRANSLATIONS = {
     es = {
         title = "REPORTAR BUG", hint = "Explica qué ocurrió y cómo reproducirlo. Mínimo: 20 caracteres.",
         placeholder = "Ej.: abrir el emote X congela la animación y el botón deja de responder...", send = "ENVIAR REPORTE",
-        links = "No se permiten enlaces en los reportes de bugs.", kicked = "No se permiten enlaces. Recibiste un kick de 5 minutos.",
-        activeKick = "Estás expulsado temporalmente durante 5 minutos por enviar un enlace en el reporte.", minLength = "Describe el bug con al menos 20 caracteres.",
+        suggestionsTab = "SUGERENCIAS", bugsTab = "REPORTAR BUGS", suggestionTitle = "SUGERENCIA",
+        suggestionHint = "Describe tu sugerencia. Mínimo: 20 caracteres.", suggestionPlaceholder = "Ej.: agregar una forma de guardar más emotes favoritos...", suggestionSend = "ENVIAR SUGERENCIA",
+        suggestionSent = "Sugerencia enviada: %s", suggestionSentNotify = "Sugerencia enviada correctamente",
+        links = "No se permiten enlaces en sugerencias o reportes.", kicked = "No se permiten enlaces en sugerencias o reportes. Recibiste un kick de 5 minutos.",
+        activeKick = "Estás expulsado temporalmente durante 5 minutos por enviar un enlace en el reporte.", minLength = "Escribe un reporte con al menos 20 caracteres.",
         cooldown = "Cooldown activo: %s", wait = "Espera %s.", sending = "Enviando reporte...", sent = "Reporte enviado: %s", sentNotify = "Reporte enviado correctamente",
         ownerLinks = "No se permiten enlaces.", webhook = "Configura EMOTES_DARK_BUG_WEBHOOK antes de enviar.", player = "No se encontró al jugador local.",
         globalConfig = "El servidor de cooldown global no está configurado.", globalUnavailable = "El servidor de cooldown global no está disponible.", globalRejected = "El servidor de cooldown global rechazó el reporte.", globalInvalid = "No se pudo validar el cooldown global.",
@@ -940,13 +949,14 @@ local UPDATE_INFO_ITEMS = {
     { kind = "FIXED", key = "ownerKickExemption" },
     { kind = "ADD", key = "bugReportLocalization" },
     { kind = "ADD", key = "bugReportCountryLanguage" },
+    { kind = "ADD", key = "reportSuggestions" },
     { kind = "FIXED", key = "countryFallbackAccuracy" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on September 29, 2026",
+        updated = "Updated on October 1, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
@@ -956,11 +966,12 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLocalization = "Automatic bug report and kick translations",
             bugReportCountryLanguage = "Real country detection for automatic translations",
             countryFallbackAccuracy = "Unknown country is no longer guessed from the device locale",
+            reportSuggestions = "Choose between sending a suggestion or reporting a bug",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 29 de setembro de 2026",
+        updated = "Atualizado em 1º de outubro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
@@ -970,11 +981,12 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLocalization = "Tradução automática do report bug e do kick",
             bugReportCountryLanguage = "Detecção real do país para escolher a tradução automática",
             countryFallbackAccuracy = "País não confirmado não é mais presumido pelo idioma do dispositivo",
+            reportSuggestions = "Escolha entre enviar uma sugestão ou reportar um bug",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 29 de septiembre de 2026",
+        updated = "Actualizado el 1 de octubre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
@@ -984,6 +996,7 @@ local UPDATE_INFO_TRANSLATIONS = {
             bugReportLocalization = "Traducción automática del reporte y del kick",
             bugReportCountryLanguage = "Detección real del país para elegir la traducción automática",
             countryFallbackAccuracy = "El país desconocido ya no se adivina por el idioma del dispositivo",
+            reportSuggestions = "Elige entre enviar una sugerencia o reportar un error",
         },
     },
 }
@@ -1167,7 +1180,7 @@ local function showUpdateInfoWindow()
     list.Parent = modal
 
     local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 5)
+    listLayout.Padding = UDim.new(0, 3)
     listLayout.FillDirection = Enum.FillDirection.Vertical
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Parent = list
@@ -1178,7 +1191,7 @@ local function showUpdateInfoWindow()
         local row = Instance.new("Frame")
         row.Name = "Change_" .. tostring(index)
         row.LayoutOrder = index
-        row.Size = UDim2.new(1, 0, 0, 35)
+        row.Size = UDim2.new(1, 0, 0, 26)
         row.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         row.BackgroundTransparency = 1
         row.BorderSizePixel = 0
@@ -3625,7 +3638,8 @@ local function reserveGlobalBugReportCooldown()
     return true
 end
 
-local function submitBugReport(description)
+local function submitBugReport(description, reportType)
+    local isSuggestion = reportType == "suggestion"
     if emotesDarkContainsLink(description) then
         local player = Players.LocalPlayer
         local ownerExempt = emotesDarkIsLinkKickExempt(player)
@@ -3696,7 +3710,7 @@ local function submitBugReport(description)
             inline = false,
         },
         {
-            name = "📝 Bug message",
+            name = isSuggestion and "💡 Suggestion" or "📝 Bug message",
             value = auditTruncate(reportMessage, MAX_FIELD_LENGTH),
             inline = false,
         },
@@ -3718,11 +3732,11 @@ local function submitBugReport(description)
     }
 
     local embed = {
-        title = "New Bug Report: Mobile • Emote Dark",
+        title = isSuggestion and "New Suggestion: Mobile • Emote Dark" or "New Bug Report: Mobile • Emote Dark",
         description = reportMessage,
         color = 16755200,
         timestamp = DateTime.now():ToIsoDate(),
-        footer = { text = "Emote Dark Bug Reports • " .. gameName .. " | Today at " .. os.date("%H:%M") },
+        footer = { text = (isSuggestion and "Emote Dark Suggestions • " or "Emote Dark Bug Reports • ") .. gameName .. " | Today at " .. os.date("%H:%M") },
         fields = fields,
     }
 
@@ -3736,8 +3750,8 @@ local function submitBugReport(description)
     end
 
     local payload = {
-        username = "Emote Dark • Bug Reports",
-        content = auditTruncate(string.format("Game: %s\nBug report: %s", gameName, reportMessage), 1900),
+        username = isSuggestion and "Emote Dark • Suggestions" or "Emote Dark • Bug Reports",
+        content = auditTruncate(string.format("Game: %s\n%s: %s", gameName, isSuggestion and "Suggestion" or "Bug report", reportMessage), 1900),
         allowed_mentions = { parse = {} },
         embeds = { embed },
     }
@@ -3833,6 +3847,29 @@ local function showBugReportWindow()
     title.ZIndex = 7002
     title.Active = true
 
+    local function createBugReportTab(name, position, textKey)
+        local button = Instance.new("TextButton")
+        button.Name = name
+        button.Parent = card
+        button.Position = position
+        button.Size = UDim2.new(0.5, -21, 0, 26)
+        button.BackgroundColor3 = Color3.fromRGB(37, 38, 45)
+        button.BorderSizePixel = 0
+        button.Font = Enum.Font.GothamBold
+        button.Text = emotesDarkBugText(textKey)
+        button.TextColor3 = Color3.fromRGB(235, 235, 240)
+        button.TextSize = 9
+        button.ZIndex = 7002
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = button
+        return button
+    end
+
+    local suggestionTab = createBugReportTab("SuggestionTab", UDim2.new(0, 18, 0, 42), "suggestionsTab")
+    local bugTab = createBugReportTab("BugReportTab", UDim2.new(0.5, 3, 0, 42), "bugsTab")
+
     local close = Instance.new("TextButton")
     close.Parent = card
     close.BackgroundTransparency = 1
@@ -3859,7 +3896,7 @@ local function showBugReportWindow()
     local hint = Instance.new("TextLabel")
     hint.Parent = card
     hint.BackgroundTransparency = 1
-    hint.Position = UDim2.new(0, 18, 0, 45)
+    hint.Position = UDim2.new(0, 18, 0, 75)
     hint.Size = UDim2.new(1, -36, 0, 30)
     hint.Font = Enum.Font.Gotham
     hint.Text = emotesDarkBugText("hint")
@@ -3872,8 +3909,8 @@ local function showBugReportWindow()
     local textBox = Instance.new("TextBox")
     textBox.Parent = card
     textBox.BackgroundColor3 = Color3.fromRGB(37, 38, 45)
-    textBox.Position = UDim2.new(0, 18, 0, 80)
-    textBox.Size = UDim2.new(1, -36, 0, 84)
+    textBox.Position = UDim2.new(0, 18, 0, 109)
+    textBox.Size = UDim2.new(1, -36, 0, 74)
     textBox.ClearTextOnFocus = false
     textBox.Font = Enum.Font.Gotham
     textBox.MultiLine = true
@@ -3905,7 +3942,7 @@ local function showBugReportWindow()
     local status = Instance.new("TextLabel")
     status.Parent = card
     status.BackgroundTransparency = 1
-    status.Position = UDim2.new(0, 18, 0, 168)
+    status.Position = UDim2.new(0, 18, 0, 188)
     status.Size = UDim2.new(1, -36, 0, 26)
     status.Font = Enum.Font.Gotham
     status.Text = ""
@@ -3926,14 +3963,41 @@ local function showBugReportWindow()
     send.TextSize = 10
     send.ZIndex = 7002
 
+    local currentReportType = "bug"
+    local reportTranslation = getBugReportTranslation(emotesDarkDetectLanguage()) or BUG_REPORT_TRANSLATIONS.en
+    local function applyBugReportMode(translation)
+        translation = translation or reportTranslation or BUG_REPORT_TRANSLATIONS.en
+        reportTranslation = translation
+        local isSuggestion = currentReportType == "suggestion"
+        title.Text = translation[isSuggestion and "suggestionTitle" or "title"] or title.Text
+        hint.Text = translation[isSuggestion and "suggestionHint" or "hint"] or hint.Text
+        textBox.PlaceholderText = translation[isSuggestion and "suggestionPlaceholder" or "placeholder"] or textBox.PlaceholderText
+        send.Text = translation[isSuggestion and "suggestionSend" or "send"] or send.Text
+        suggestionTab.Text = translation.suggestionsTab or suggestionTab.Text
+        bugTab.Text = translation.bugsTab or bugTab.Text
+        suggestionTab.BackgroundColor3 = isSuggestion and Color3.fromRGB(255, 193, 7) or Color3.fromRGB(37, 38, 45)
+        suggestionTab.TextColor3 = isSuggestion and Color3.fromRGB(30, 30, 35) or Color3.fromRGB(235, 235, 240)
+        bugTab.BackgroundColor3 = isSuggestion and Color3.fromRGB(37, 38, 45) or Color3.fromRGB(255, 193, 7)
+        bugTab.TextColor3 = isSuggestion and Color3.fromRGB(235, 235, 240) or Color3.fromRGB(30, 30, 35)
+    end
+
+    suggestionTab.MouseButton1Click:Connect(function()
+        currentReportType = "suggestion"
+        status.Text = ""
+        applyBugReportMode()
+    end)
+    bugTab.MouseButton1Click:Connect(function()
+        currentReportType = "bug"
+        status.Text = ""
+        applyBugReportMode()
+    end)
+    applyBugReportMode()
+
     task.spawn(function()
         local language = emotesDarkDetectLanguage()
         local translation = getBugReportTranslation(language)
         if not title.Parent then return end
-        title.Text = translation.title or title.Text
-        hint.Text = translation.hint or hint.Text
-        textBox.PlaceholderText = translation.placeholder or textBox.PlaceholderText
-        send.Text = translation.send or send.Text
+        applyBugReportMode(translation)
     end)
 
     local sendCorner = Instance.new("UICorner")
@@ -4082,11 +4146,14 @@ local function showBugReportWindow()
         send.Active = false
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
         status.Text = emotesDarkBugText("sending")
-        local success, result = submitBugReport(description)
+        local reportType = currentReportType
+        local success, result = submitBugReport(description, reportType)
         if success then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
-            status.Text = emotesDarkBugText("sent", tostring(result))
-            notifyBugReport("Dark | Bug report", emotesDarkBugText("sentNotify"))
+            local sentKey = reportType == "suggestion" and "suggestionSent" or "sent"
+            local notifyKey = reportType == "suggestion" and "suggestionSentNotify" or "sentNotify"
+            status.Text = emotesDarkBugText(sentKey, tostring(result))
+            notifyBugReport(reportType == "suggestion" and "Dark | Suggestion" or "Dark | Bug report", emotesDarkBugText(notifyKey))
             refreshCooldown()
         else
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
