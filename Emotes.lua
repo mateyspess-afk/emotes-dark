@@ -76,44 +76,16 @@ local emotesDarkLanguageCache = nil
 local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
-    local countryCode = ""
     local localeId = ""
-    local localizationService = game:GetService("LocalizationService")
-    local player = game:GetService("Players").LocalPlayer
-    if player then
-        pcall(function()
-            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
-        end)
-    end
     pcall(function()
-        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
+        localeId = tostring(game:GetService("LocalizationService").RobloxLocaleId or ""):lower()
     end)
-    if localeId == "" then
-        pcall(function()
-            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
-        end)
-    end
-
-    local countryLanguages = {
-        AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
-        AR="es", BO="es", CL="es", CO="es", CR="es", CU="es", DO="es", EC="es", ES="es", GT="es", HN="es", MX="es", NI="es", PA="es", PE="es", PR="es", PY="es", SV="es", UY="es", VE="es",
-        AE="en", AG="en", AU="en", BB="en", BS="en", BZ="en", CA="en", DM="en", FJ="en", GB="en", GD="en", GG="en", GH="en", GI="en", GM="en", GU="en", GY="en", IE="en", IM="en", JM="en", KN="en", KY="en", LC="en", LR="en", MH="en", MT="en", MU="en", MW="en", MY="en", NG="en", NZ="en", PH="en", PK="en", SG="en", SL="en", SS="en", SZ="en", TC="en", TT="en", TV="en", UG="en", US="en", VC="en", VG="en", VI="en", ZA="en", ZM="en", ZW="en",
-        BF="fr", BI="fr", BJ="fr", CD="fr", CF="fr", CG="fr", CI="fr", CM="fr", DJ="fr", DZ="fr", FR="fr", GA="fr", GF="fr", GN="fr", GP="fr", HT="fr", KM="fr", LU="fr", MC="fr", MG="fr", ML="fr", MQ="fr", NC="fr", NE="fr", PF="fr", RE="fr", RW="fr", SC="fr", SN="fr", TD="fr", TG="fr", VU="fr", WF="fr", YT="fr",
-        AT="de", CH="de", DE="de", LI="de",
-        IT="it", SM="it", VA="it",
-        JP="ja", KR="ko", CN="zh", HK="zh", MO="zh", TW="zh",
-        BY="ru", KG="ru", KZ="ru", RU="ru", TJ="ru", TM="ru", UA="uk", PL="pl", CZ="cs", SK="sk", BG="bg", RS="sr", HR="hr", SI="sl",
-        BH="ar", EG="ar", IQ="ar", JO="ar", KW="ar", LB="ar", LY="ar", MA="ar", OM="ar", QA="ar", SA="ar", SD="ar", SY="ar", TN="ar", YE="ar",
-        BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
-    }
-
-    local localeLanguage = localeId:match("^([a-z][a-z])")
-    local language = countryLanguages[countryCode] or localeLanguage or "en"
-    emotesDarkLanguageCache = language
-    return language
+    emotesDarkLanguageCache = localeId:match("^([a-z]+)") or "en"
+    return emotesDarkLanguageCache
 end
 
 local emotesDarkTranslateText
+local emotesDarkTranslateNotificationPayload
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -286,10 +258,14 @@ end
 
 function emotesDarkNotify(payload)
     local notify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
+    local outgoing = payload
+    if type(emotesDarkTranslateNotificationPayload) == "function" then
+        outgoing = emotesDarkTranslateNotificationPayload(payload)
+    end
     if type(notify) == "function" then
-        pcall(notify, payload)
-    elseif payload and payload.Content then
-        warn("[EmotesDark] " .. tostring(payload.Content))
+        pcall(notify, outgoing)
+    elseif outgoing and outgoing.Content then
+        warn("[EmotesDark] " .. tostring(outgoing.Content))
     end
 end
 
@@ -998,7 +974,7 @@ local emotesDarkTranslationCache = {}
 
 emotesDarkTranslateText = function(sourceText, targetLanguage)
     if type(sourceText) ~= "string" then return sourceText end
-    local language = tostring(targetLanguage or ""):lower():match("^([a-z][a-z])")
+    local language = tostring(targetLanguage or ""):lower():match("^([a-z]+)")
     if not language or language == "en" or sourceText == "" then return sourceText end
 
     local languageCache = emotesDarkTranslationCache[language]
@@ -1047,6 +1023,25 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     return translated
 end
 
+emotesDarkTranslateNotificationPayload = function(payload)
+    if type(payload) ~= "table" then return payload end
+    local skipTranslation = payload._EmotesDarkNoTranslate == true
+    local language = emotesDarkDetectLanguage()
+    if not skipTranslation and language == "en" then return payload end
+
+    local outgoing = {}
+    for key, value in pairs(payload) do
+        if key ~= "_EmotesDarkNoTranslate" then
+            if not skipTranslation and (key == "Title" or key == "Content") and type(value) == "string" and type(emotesDarkTranslateText) == "function" then
+                outgoing[key] = emotesDarkTranslateText(value, language)
+            else
+                outgoing[key] = value
+            end
+        end
+    end
+    return outgoing
+end
+
 local emotesDarkUiTranslationQueue = {}
 local emotesDarkUiTranslationWorkerActive = false
 local emotesDarkUiTranslationStates = setmetatable({}, {__mode = "k"})
@@ -1060,7 +1055,7 @@ local function emotesDarkShouldTranslateUiText(instance, text)
 
     local ancestor = instance
     while ancestor do
-        if ancestor.Name == "BugReportCard" then return false end
+        if ancestor.Name == "BugReportCard" or ancestor.Name == "MusicControlCard" then return false end
         ancestor = ancestor.Parent
     end
 
@@ -2564,18 +2559,7 @@ LoadConfig()
 local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
 emotesDarkNotify = function(data)
     if Config.NotifyEnabled and type(rawNotify) == "function" then
-        local outgoing = data
-        local language = emotesDarkDetectLanguage()
-        if language ~= "en" and type(data) == "table" then
-            outgoing = {}
-            for key, value in pairs(data) do
-                if (key == "Title" or key == "Content") and type(value) == "string" then
-                    outgoing[key] = emotesDarkTranslateText(value, language)
-                else
-                    outgoing[key] = value
-                end
-            end
-        end
+        local outgoing = emotesDarkTranslateNotificationPayload(data)
         pcall(rawNotify, outgoing)
     end
 end
@@ -2691,7 +2675,7 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     content.Position = UDim2.fromOffset(68, 34)
     content.Size = UDim2.new(1, -82, 0, 38)
     content.Font = Enum.Font.Gotham
-    content.Text = string.format("%s (@%s) %s\nServidor: %d/%d jogadores", displayName, username, status, playerCount, maxPlayers)
+    content.Text = string.format("%s (@%s) %s\nPlayers: %d/%d", displayName, username, status, playerCount, maxPlayers)
     content.TextColor3 = palette.text
     content.TextSize = 12
     content.TextWrapped = true
@@ -2951,7 +2935,7 @@ local function announceOwner(player, alreadyPresent)
     local displayName = player.DisplayName ~= "" and player.DisplayName or player.Name
     local playerCount = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers
-    local status = alreadyPresent and "já está neste servidor" or "entrou no mesmo servidor"
+    local status = alreadyPresent and "is already in this server" or "joined this server"
     local ok = pcall(function()
         showThemedOwnerAlert(displayName, player.Name, status, playerCount, maxPlayers)
     end)
@@ -4025,8 +4009,16 @@ local MUSIC_CONTROL_TRANSLATIONS = {
 }
 
 local function getMusicControlTranslation()
-    local language = tostring(emotesDarkDetectLanguage() or "en"):lower():match("^([a-z][a-z])") or "en"
-    return MUSIC_CONTROL_TRANSLATIONS[language] or MUSIC_CONTROL_TRANSLATIONS.en
+    local language = tostring(emotesDarkDetectLanguage() or "en"):lower():match("^([a-z]+)") or "en"
+    local known = MUSIC_CONTROL_TRANSLATIONS[language]
+    if known then return known end
+
+    local source = MUSIC_CONTROL_TRANSLATIONS.en
+    local translated = {}
+    for key, value in pairs(source) do
+        translated[key] = emotesDarkTranslateText(value, language)
+    end
+    return translated
 end
 
 local musicSound = SoundService:FindFirstChild("EmotesDarkMusicPlayer")
@@ -7455,7 +7447,8 @@ BtnImportFavorites.MouseButton1Click:Connect(function() HandleImportPrompt("Favo
 emotesDarkExecutorEnv().Notify({
     Title = 'Dark | Emote',
     Content = '⚠️ Script loading...',
-    Duration = 5
+    Duration = 5,
+    _EmotesDarkNoTranslate = true
 })
 
 end
