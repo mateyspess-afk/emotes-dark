@@ -4705,60 +4705,75 @@ local function showBugReportWindow()
     send.MouseButton1Click:Connect(function()
         if bugReportSubmissionInProgress then return end
         bugReportSubmissionInProgress = true
+        local reportType = currentReportType
+
+        -- Apply the lock before any validation or HTTP work, then return control to the UI.
         send.Active = false
         send.AutoButtonColor = false
         send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
-
-        local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
-        if emotesDarkContainsLink(description) then
-            status.TextColor3 = Color3.fromRGB(255, 105, 105)
-            local ownerExempt = emotesDarkIsLinkKickExempt(Players.LocalPlayer)
-            status.Text = ownerExempt and emotesDarkBugText("ownerLinks") or emotesDarkBugText("kicked")
-            emotesDarkRegisterLinkKick(Players.LocalPlayer)
-            bugReportSubmissionInProgress = false
-            refreshCooldown()
-            return
-        end
-
-        if #description < BUG_REPORT_MIN_LENGTH then
-            status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = emotesDarkBugText("minLength")
-            bugReportSubmissionInProgress = false
-            refreshCooldown()
-            return
-        end
-
-        local remaining = getBugReportCooldown(currentReportType) - os.time()
-        if remaining > 0 then
-            status.TextColor3 = Color3.fromRGB(255, 105, 105)
-            status.Text = emotesDarkBugText("cooldown", formatBugCooldown(remaining))
-            bugReportSubmissionInProgress = false
-            refreshCooldown()
-            return
-        end
-
-        send.Active = false
+        setBugReportInputEnabled(false)
+        suggestionTab.Active = false
+        bugTab.Active = false
+        pcall(function()
+            send.Interactable = false
+            suggestionTab.Interactable = false
+            bugTab.Interactable = false
+        end)
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
         status.Text = emotesDarkBugText("sending")
-        local reportType = currentReportType
-        local submitCallOk, success, result = pcall(submitBugReport, description, reportType)
-        if not submitCallOk then
-            result = tostring(success)
-            success = false
-        end
-        bugReportSubmissionInProgress = false
-        if success then
-            status.TextColor3 = Color3.fromRGB(160, 220, 170)
-            local sentKey = reportType == "suggestion" and "suggestionSent" or "sent"
-            local notifyKey = reportType == "suggestion" and "suggestionSentNotify" or "sentNotify"
-            status.Text = emotesDarkBugText(sentKey, tostring(result))
-            notifyBugReport(reportType == "suggestion" and "Dark | Suggestion" or "Dark | Bug report", emotesDarkBugText(notifyKey))
-            refreshCooldown()
-        else
-            status.TextColor3 = Color3.fromRGB(255, 150, 150)
-            status.Text = tostring(result)
-            refreshCooldown()
-        end
+
+        task.defer(function()
+            -- Give Roblox a frame to render the disabled state before synchronous requests.
+            task.wait()
+            local processingOk, processingError = pcall(function()
+                local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+                if emotesDarkContainsLink(description) then
+                    status.TextColor3 = Color3.fromRGB(255, 105, 105)
+                    local ownerExempt = emotesDarkIsLinkKickExempt(Players.LocalPlayer)
+                    status.Text = ownerExempt and emotesDarkBugText("ownerLinks") or emotesDarkBugText("kicked")
+                    emotesDarkRegisterLinkKick(Players.LocalPlayer)
+                    return
+                end
+
+                if #description < BUG_REPORT_MIN_LENGTH then
+                    status.TextColor3 = Color3.fromRGB(255, 150, 150)
+                    status.Text = emotesDarkBugText("minLength")
+                    return
+                end
+
+                local remaining = getBugReportCooldown(reportType) - os.time()
+                if remaining > 0 then
+                    status.TextColor3 = Color3.fromRGB(255, 105, 105)
+                    status.Text = emotesDarkBugText("cooldown", formatBugCooldown(remaining))
+                    return
+                end
+
+                local success, result = submitBugReport(description, reportType)
+                if success then
+                    status.TextColor3 = Color3.fromRGB(160, 220, 170)
+                    local sentKey = reportType == "suggestion" and "suggestionSent" or "sent"
+                    local notifyKey = reportType == "suggestion" and "suggestionSentNotify" or "sentNotify"
+                    status.Text = emotesDarkBugText(sentKey, tostring(result))
+                    notifyBugReport(reportType == "suggestion" and "Dark | Suggestion" or "Dark | Bug report", emotesDarkBugText(notifyKey))
+                else
+                    status.TextColor3 = Color3.fromRGB(255, 150, 150)
+                    status.Text = tostring(result)
+                end
+            end)
+
+            bugReportSubmissionInProgress = false
+            pcall(function()
+                suggestionTab.Active = true
+                bugTab.Active = true
+                suggestionTab.Interactable = true
+                bugTab.Interactable = true
+            end)
+            if not processingOk and status.Parent then
+                status.TextColor3 = Color3.fromRGB(255, 150, 150)
+                status.Text = tostring(processingError)
+            end
+            pcall(refreshCooldown)
+        end)
     end)
 
     refreshCooldown()
