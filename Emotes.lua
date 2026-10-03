@@ -994,19 +994,32 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
+local emotesDarkTranslationCache = {}
+
 emotesDarkTranslateText = function(sourceText, targetLanguage)
-    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
+    if type(sourceText) ~= "string" then return sourceText end
+    local language = tostring(targetLanguage or ""):lower():match("^([a-z][a-z])")
+    if not language or language == "en" or sourceText == "" then return sourceText end
+
+    local languageCache = emotesDarkTranslationCache[language]
+    if not languageCache then
+        languageCache = {}
+        emotesDarkTranslationCache[language] = languageCache
+    end
+    local cached = languageCache[sourceText]
+    if type(cached) == "string" then return cached end
+
     local request = emotesDarkGetRequest()
     if type(request) ~= "function" then return sourceText end
 
-    local encodedSource = tostring(sourceText):gsub("%%s", "__EMOTES_VALUE__")
+    local encodedSource = sourceText:gsub("%%s", "__EMOTES_VALUE__")
     local encodedText = ""
     local okEncode = pcall(function()
         encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
     end)
     if not okEncode or encodedText == "" then return sourceText end
 
-    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
+    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. language .. "&dt=t&q=" .. encodedText
     local okRequest, response = pcall(request, {
         Url = url,
         Method = "GET",
@@ -1029,7 +1042,125 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     end
     local translated = table.concat(parts)
     if translated == "" then return sourceText end
-    return translated:gsub("__EMOTES_VALUE__", "%%s")
+    translated = translated:gsub("__EMOTES_VALUE__", "%%s")
+    languageCache[sourceText] = translated
+    return translated
+end
+
+local emotesDarkUiTranslationQueue = {}
+local emotesDarkUiTranslationWorkerActive = false
+local emotesDarkUiTranslationStates = setmetatable({}, {__mode = "k"})
+local emotesDarkUiTranslationRoots = setmetatable({}, {__mode = "k"})
+
+local function emotesDarkShouldTranslateUiText(instance, text)
+    if type(text) ~= "string" or #text < 3 or #text > 700 then return false end
+    local trimmed = text:match("^%s*(.-)%s*$") or ""
+    if trimmed == "" or trimmed:match("^[%d%p%s]+$") then return false end
+    if trimmed:find("https?://") or trimmed:find("rbxassetid://", 1, true) then return false end
+
+    local ancestor = instance
+    while ancestor do
+        if ancestor.Name == "BugReportCard" then return false end
+        ancestor = ancestor.Parent
+    end
+
+    if instance:IsA("TextLabel") or instance:IsA("TextButton") then
+        local ok, richText = pcall(function() return instance.RichText end)
+        if ok and richText then return false end
+    end
+    return true
+end
+
+local function emotesDarkRunUiTranslationQueue()
+    if emotesDarkUiTranslationWorkerActive then return end
+    emotesDarkUiTranslationWorkerActive = true
+    task.spawn(function()
+        while #emotesDarkUiTranslationQueue > 0 do
+            local job = table.remove(emotesDarkUiTranslationQueue, 1)
+            local state = emotesDarkUiTranslationStates[job.instance]
+            if state and state.pending[job.property] == job.source then
+                state.pending[job.property] = nil
+                local okCurrent, isCurrent = pcall(function()
+                    return job.instance.Parent ~= nil
+                        and job.instance:IsDescendantOf(job.root)
+                        and job.instance[job.property] == job.source
+                end)
+                if okCurrent and isCurrent then
+                    local translated = emotesDarkTranslateText(job.source, job.language)
+                    local okStillCurrent, stillCurrent = pcall(function()
+                        return job.instance.Parent ~= nil
+                            and job.instance:IsDescendantOf(job.root)
+                            and job.instance[job.property] == job.source
+                    end)
+                    if okStillCurrent and stillCurrent and type(translated) == "string" and translated ~= "" then
+                        state.applied[job.property] = translated
+                        local okWrite = pcall(function() job.instance[job.property] = translated end)
+                        if not okWrite then state.applied[job.property] = nil end
+                    end
+                end
+            end
+            task.wait(0.08)
+        end
+        emotesDarkUiTranslationWorkerActive = false
+    end)
+end
+
+local function emotesDarkQueueUiTranslation(instance, property, root)
+    local language = emotesDarkDetectLanguage()
+    if language == "en" then return end
+    local okRead, source = pcall(function() return instance[property] end)
+    if not okRead or not emotesDarkShouldTranslateUiText(instance, source) then return end
+
+    local state = emotesDarkUiTranslationStates[instance]
+    if not state then
+        state = { applied = {}, pending = {}, watchedRoots = setmetatable({}, {__mode = "k"}) }
+        emotesDarkUiTranslationStates[instance] = state
+    end
+    if state.applied[property] == source or state.pending[property] == source then return end
+
+    state.pending[property] = source
+    table.insert(emotesDarkUiTranslationQueue, {
+        instance = instance,
+        property = property,
+        root = root,
+        source = source,
+        language = language,
+    })
+    emotesDarkRunUiTranslationQueue()
+end
+
+local function emotesDarkWatchUiInstance(instance, root)
+    if not (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")) then return end
+    local state = emotesDarkUiTranslationStates[instance]
+    if not state then
+        state = { applied = {}, pending = {}, watchedRoots = setmetatable({}, {__mode = "k"}) }
+        emotesDarkUiTranslationStates[instance] = state
+    end
+    if state.watchedRoots[root] then return end
+    state.watchedRoots[root] = true
+
+    if instance:IsA("TextBox") then
+        instance:GetPropertyChangedSignal("PlaceholderText"):Connect(function()
+            emotesDarkQueueUiTranslation(instance, "PlaceholderText", root)
+        end)
+        emotesDarkQueueUiTranslation(instance, "PlaceholderText", root)
+    else
+        instance:GetPropertyChangedSignal("Text"):Connect(function()
+            emotesDarkQueueUiTranslation(instance, "Text", root)
+        end)
+        emotesDarkQueueUiTranslation(instance, "Text", root)
+    end
+end
+
+local function emotesDarkAttachAutoTranslationRoot(root)
+    if typeof(root) ~= "Instance" or emotesDarkUiTranslationRoots[root] then return end
+    emotesDarkUiTranslationRoots[root] = true
+    for _, instance in ipairs(root:GetDescendants()) do
+        emotesDarkWatchUiInstance(instance, root)
+    end
+    root.DescendantAdded:Connect(function(instance)
+        emotesDarkWatchUiInstance(instance, root)
+    end)
 end
 
 local function getUpdateInfoTranslation(language)
@@ -2423,7 +2554,19 @@ LoadConfig()
 local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
 emotesDarkNotify = function(data)
     if Config.NotifyEnabled and type(rawNotify) == "function" then
-        pcall(rawNotify, data)
+        local outgoing = data
+        local language = emotesDarkDetectLanguage()
+        if language ~= "en" and type(data) == "table" then
+            outgoing = {}
+            for key, value in pairs(data) do
+                if (key == "Title" or key == "Content") and type(value) == "string" then
+                    outgoing[key] = emotesDarkTranslateText(value, language)
+                else
+                    outgoing[key] = value
+                end
+            end
+        end
+        pcall(rawNotify, outgoing)
     end
 end
 getgenv().Notify = emotesDarkNotify
@@ -2472,6 +2615,8 @@ local function showThemedOwnerAlert(displayName, username, status, playerCount, 
     if not stack then return end
 
     ownerAlertOrder = ownerAlertOrder + 1
+    emotesDarkAttachAutoTranslationRoot(alertGui)
+
     local card = Instance.new("Frame")
     card.Name = "OwnerAlert_" .. tostring(ownerAlertOrder)
     card.LayoutOrder = ownerAlertOrder
@@ -3299,6 +3444,10 @@ if type(SettingsLib) ~= "table" or type(SettingsLib.CreateTab) ~= "function" the
     return
 end
 
+if typeof(SettingsLib.UI) == "Instance" then
+    emotesDarkAttachAutoTranslationRoot(SettingsLib.UI)
+end
+
 local ToggleContainer = Instance.new("Frame")
 ToggleContainer.Name = "open/Close"
 ToggleContainer.Parent = SettingsLib.UI
@@ -3834,6 +3983,7 @@ local function showBugReportWindow()
     bugReportOverlay = overlay
 
     local card = Instance.new("Frame")
+    card.Name = "BugReportCard"
     card.Parent = SettingsLib.UI
     card.AnchorPoint = Vector2.new(0, 0.5)
     card.Position = UDim2.new(0.08, 0, 0.5, 0)
@@ -12061,6 +12211,7 @@ task.spawn(function()
         local robloxGui = game:GetService("CoreGui"):FindFirstChild("RobloxGui")
         local emotesMenu = robloxGui and robloxGui:FindFirstChild("EmotesMenu")
         if emotesMenu then
+            emotesDarkAttachAutoTranslationRoot(emotesMenu)
             local children = emotesMenu:FindFirstChild("Children")
             local main = children and children:FindFirstChild("Main")
             local wheel = main and main:FindFirstChild("EmotesWheel")
