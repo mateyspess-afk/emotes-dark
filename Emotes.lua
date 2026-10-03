@@ -72,33 +72,27 @@ local function emotesDarkWriteLinkKickData(data)
 end
 
 local emotesDarkLanguageCache = nil
-local emotesDarkCountryDetectionInFlight = false
 
-local function emotesDarkDetectLanguage(skipCountryLookup)
+local function emotesDarkDetectLanguage()
     if emotesDarkLanguageCache then return emotesDarkLanguageCache end
 
     local countryCode = ""
-    local playerLocaleId = ""
-    local robloxLocaleId = ""
-    local systemLocaleId = ""
+    local localeId = ""
     local localizationService = game:GetService("LocalizationService")
     local player = game:GetService("Players").LocalPlayer
     if player then
         pcall(function()
-            playerLocaleId = tostring(player.LocaleId or ""):lower()
+            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
-        if playerLocaleId == "" then
-            pcall(function()
-                playerLocaleId = tostring(player:GetLocaleId() or ""):lower()
-            end)
-        end
     end
     pcall(function()
-        robloxLocaleId = tostring(localizationService.RobloxLocaleId or ""):lower()
+        localeId = tostring(localizationService.RobloxLocaleId or ""):lower()
     end)
-    pcall(function()
-        systemLocaleId = tostring(localizationService.SystemLocaleId or ""):lower()
-    end)
+    if localeId == "" then
+        pcall(function()
+            localeId = tostring(localizationService.SystemLocaleId or ""):lower()
+        end)
+    end
 
     local countryLanguages = {
         AO="pt", BR="pt", CV="pt", GW="pt", MZ="pt", PT="pt", ST="pt", TL="pt",
@@ -113,32 +107,13 @@ local function emotesDarkDetectLanguage(skipCountryLookup)
         BD="bn", IN="hi", NP="ne", ID="id", TR="tr", NL="nl", RO="ro", HU="hu", GR="el", IL="he", IR="fa", VN="vi", TH="th", SE="sv", DK="da", NO="no", FI="fi", EE="et", LV="lv", LT="lt", IS="is", AL="sq", AM="hy", AZ="az", GE="ka", MN="mn", KH="km", LA="lo", MM="my", LK="si", UZ="uz",
     }
 
-    local localeLanguage = nil
-    for _, localeId in ipairs({ playerLocaleId, robloxLocaleId, systemLocaleId }) do
-        local candidate = localeId:match("^([a-z][a-z])")
-        if candidate then
-            localeLanguage = candidate
-            break
-        end
-    end
-
-    local countryLanguage
-    if not localeLanguage and not skipCountryLookup and player then
-        pcall(function()
-            countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
-        end)
-    end
-    countryLanguage = countryLanguages[countryCode]
-    local language = localeLanguage or countryLanguage or "en"
-
-    if countryCode ~= "" or localeLanguage then
-        emotesDarkLanguageCache = language
-    end
+    local localeLanguage = localeId:match("^([a-z][a-z])")
+    local language = countryLanguages[countryCode] or localeLanguage or "en"
+    emotesDarkLanguageCache = language
     return language
 end
 
 local emotesDarkTranslateText
-local emotesDarkTranslateNotificationText
 
 local BUG_REPORT_TRANSLATIONS = {
     en = {
@@ -198,30 +173,19 @@ local function getBugReportTranslation(language)
     end
 
     local translated = {}
-    local translationSucceeded = true
     for key, value in pairs(source) do
         if type(value) == "string" then
-            local translatedValue, succeeded = emotesDarkTranslateText(value, language)
-            translated[key] = translatedValue
-            if succeeded ~= true then translationSucceeded = false end
+            translated[key] = emotesDarkTranslateText(value, language)
         elseif type(value) == "table" then
             translated[key] = {}
             for nestedKey, nestedValue in pairs(value) do
-                if type(nestedValue) == "string" then
-                    local translatedValue, succeeded = emotesDarkTranslateText(nestedValue, language)
-                    translated[key][nestedKey] = translatedValue
-                    if succeeded ~= true then translationSucceeded = false end
-                else
-                    translated[key][nestedKey] = nestedValue
-                end
+                translated[key][nestedKey] = type(nestedValue) == "string" and emotesDarkTranslateText(nestedValue, language) or nestedValue
             end
         else
             translated[key] = value
         end
     end
-    if translationSucceeded then
-        emotesDarkBugTranslationCache[language] = translated
-    end
+    emotesDarkBugTranslationCache[language] = translated
     return translated
 end
 
@@ -322,15 +286,10 @@ end
 
 function emotesDarkNotify(payload)
     local notify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
-    local outgoingPayload = payload
-    if type(emotesDarkTranslateNotificationPayload) == "function" then
-        local ok, translated = pcall(emotesDarkTranslateNotificationPayload, payload)
-        if ok and translated ~= nil then outgoingPayload = translated end
-    end
     if type(notify) == "function" then
-        pcall(notify, outgoingPayload)
-    elseif outgoingPayload and outgoingPayload.Content then
-        warn("[EmotesDark] " .. tostring(outgoingPayload.Content))
+        pcall(notify, payload)
+    elseif payload and payload.Content then
+        warn("[EmotesDark] " .. tostring(payload.Content))
     end
 end
 
@@ -993,44 +952,40 @@ local UPDATE_INFO_ITEMS = {
     { kind = "ADD", key = "reportSuggestions" },
     { kind = "ADD", key = "suggestionCooldownWebhook" },
     { kind = "ADD", key = "favoriteStarRgb" },
-    { kind = "ADD", key = "notificationCardTranslation" },
 }
 
 local UPDATE_INFO_TRANSLATIONS = {
     en = {
         title = "Emote Dark | Update Information",
-        updated = "Updated on October 2, 2026",
+        updated = "Updated on October 1, 2026",
         confirm = "Confirm",
         prefixes = { ADD = "+ Add:", FIXED = "✓ Fixed:", REMOVED = "− Removed:" },
         items = {
             reportSuggestions = "Choose between sending a suggestion or reporting a bug",
             suggestionCooldownWebhook = "Suggestions now have a separate webhook and 5-hour cooldown",
             favoriteStarRgb = "Faster RGB animation on the Favorites star",
-            notificationCardTranslation = "Notification cards now translate automatically based on the player's country",
         },
     },
     pt = {
         title = "Emote Dark | Informações de atualizações",
-        updated = "Atualizado em 2 de outubro de 2026",
+        updated = "Atualizado em 1º de outubro de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Adicionado:", FIXED = "✓ Corrigido:", REMOVED = "− Removido:" },
         items = {
             reportSuggestions = "Escolha entre enviar uma sugestão ou reportar um bug",
             suggestionCooldownWebhook = "Sugestões com webhook separado e cooldown de 5 horas",
             favoriteStarRgb = "RGB mais rápido na estrela de Favoritos",
-            notificationCardTranslation = "Cartões de notificação traduzidos automaticamente conforme o país do jogador",
         },
     },
     es = {
         title = "Emote Dark | Información de actualizaciones",
-        updated = "Actualizado el 2 de octubre de 2026",
+        updated = "Actualizado el 1 de octubre de 2026",
         confirm = "Confirmar",
         prefixes = { ADD = "+ Añadido:", FIXED = "✓ Corregido:", REMOVED = "− Eliminado:" },
         items = {
             reportSuggestions = "Elige entre enviar una sugerencia o reportar un error",
             suggestionCooldownWebhook = "Sugerencias con webhook separado y cooldown de 5 horas",
             favoriteStarRgb = "RGB más rápido en la estrella de Favoritos",
-            notificationCardTranslation = "Las tarjetas de notificación ahora se traducen automáticamente según el país del jugador",
         },
     },
 }
@@ -1039,55 +994,32 @@ local function detectUpdateInfoLanguage()
     return emotesDarkDetectLanguage()
 end
 
-do
-local emotesDarkTranslatedTextCache = {}
-local emotesDarkNotificationTranslationsInFlight = {}
-
 emotesDarkTranslateText = function(sourceText, targetLanguage)
-    sourceText = tostring(sourceText or "")
-    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText, true end
-
-    local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
-    local cachedTranslation = emotesDarkTranslatedTextCache[cacheKey]
-    if cachedTranslation then return cachedTranslation, true end
-
+    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
     local request = emotesDarkGetRequest()
+    if type(request) ~= "function" then return sourceText end
 
-    local formatTokens = {}
-    local encodedSource = sourceText:gsub("%%([sd])", function(formatType)
-        local token = "__EMOTES_FORMAT_" .. tostring(#formatTokens + 1) .. "__"
-        table.insert(formatTokens, { token = token, format = "%" .. formatType })
-        return token
-    end)
+    local encodedSource = tostring(sourceText):gsub("%%s", "__EMOTES_VALUE__")
     local encodedText = ""
     local okEncode = pcall(function()
         encodedText = game:GetService("HttpService"):UrlEncode(encodedSource)
     end)
-    if not okEncode or encodedText == "" then return sourceText, false end
+    if not okEncode or encodedText == "" then return sourceText end
 
-    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
-    local body
-    if type(request) == "function" then
-        local okRequest, response = pcall(request, {
-            Url = url,
-            Method = "GET",
-            Headers = { ["Accept"] = "application/json" },
-        })
-        local statusCode = tonumber(response and (response.StatusCode or response.Status or response.status_code or response.statusCode))
-        local responseBody = okRequest and emotesDarkUsableBody(emotesDarkResponseBody(response)) or nil
-        if responseBody and (not statusCode or statusCode < 400) then
-            body = responseBody
-        end
-    end
-    if not body then
-        local fallbackOk, fallbackBody = pcall(emotesDarkDownload, url)
-        if fallbackOk then body = emotesDarkUsableBody(fallbackBody) end
-    end
-    if not body then return sourceText, false end
+    local url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" .. tostring(targetLanguage) .. "&dt=t&q=" .. encodedText
+    local okRequest, response = pcall(request, {
+        Url = url,
+        Method = "GET",
+        Headers = { ["Accept"] = "application/json" },
+    })
+    if not okRequest then return sourceText end
+
+    local body = emotesDarkUsableBody(emotesDarkResponseBody(response))
+    if not body then return sourceText end
     local decodedOk, decoded = pcall(function()
         return game:GetService("HttpService"):JSONDecode(body)
     end)
-    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText, false end
+    if not decodedOk or type(decoded) ~= "table" or type(decoded[1]) ~= "table" then return sourceText end
 
     local parts = {}
     for _, segment in ipairs(decoded[1]) do
@@ -1096,60 +1028,8 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
         end
     end
     local translated = table.concat(parts)
-    if translated == "" then return sourceText, false end
-    for _, formatToken in ipairs(formatTokens) do
-        local tokenStart, tokenEnd = translated:find(formatToken.token, 1, true)
-        if not tokenStart or translated:find(formatToken.token, tokenEnd + 1, true) then
-            return sourceText, false
-        end
-        translated = translated:gsub(formatToken.token, function() return formatToken.format end, 1)
-    end
-
-    emotesDarkTranslatedTextCache[cacheKey] = translated
-    return translated, true
-end
-
-emotesDarkTranslateNotificationText = function(sourceText, targetLanguage)
-    sourceText = tostring(sourceText or "")
-    if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
-
-    local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
-    local cachedTranslation = emotesDarkTranslatedTextCache[cacheKey]
-    if cachedTranslation then return cachedTranslation end
-
-    if not emotesDarkNotificationTranslationsInFlight[cacheKey] then
-        emotesDarkNotificationTranslationsInFlight[cacheKey] = true
-        task.defer(function()
-            pcall(emotesDarkTranslateText, sourceText, targetLanguage)
-            emotesDarkNotificationTranslationsInFlight[cacheKey] = nil
-        end)
-    end
-    return sourceText
-end
-end
-
-emotesDarkTranslateNotificationPayload = function(payload)
-    if type(payload) ~= "table" then return payload end
-    local language = emotesDarkDetectLanguage(true)
-    if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
-        emotesDarkCountryDetectionInFlight = true
-        task.defer(function()
-            pcall(emotesDarkDetectLanguage)
-            emotesDarkCountryDetectionInFlight = false
-        end)
-    end
-    if not language or language == "" or language == "en" then return payload end
-
-    local translatedPayload = {}
-    for key, value in pairs(payload) do
-        translatedPayload[key] = value
-    end
-    for _, field in ipairs({ "Title", "Content" }) do
-        if type(payload[field]) == "string" then
-            translatedPayload[field] = emotesDarkTranslateNotificationText(payload[field], language)
-        end
-    end
-    return translatedPayload
+    if translated == "" then return sourceText end
+    return translated:gsub("__EMOTES_VALUE__", "%%s")
 end
 
 local function getUpdateInfoTranslation(language)
@@ -2543,221 +2423,12 @@ LoadConfig()
 local rawNotify = emotesDarkReadField(emotesDarkExecutorEnv(), "Notify")
 emotesDarkNotify = function(data)
     if Config.NotifyEnabled and type(rawNotify) == "function" then
-        local outgoingData = data
-        if type(emotesDarkTranslateNotificationPayload) == "function" then
-            local ok, translated = pcall(emotesDarkTranslateNotificationPayload, data)
-            if ok and translated ~= nil then outgoingData = translated end
-        end
-        pcall(rawNotify, outgoingData)
+        pcall(rawNotify, data)
     end
 end
 getgenv().Notify = emotesDarkNotify
 
 do
-local PERIODIC_COMMUNITY_NOTICE_INTERVAL = 30 * 60
-local PERIODIC_COMMUNITY_NOTICE_SOURCE = {
-    title = "Dark | Community reminder",
-    content = "If the script stops working, use the Discord button in the menu to copy our invite. We update it daily. Found a bug? Open the Bug Reports window and send the details. Suggestions help our team improve the script."
-}
-local PERIODIC_COMMUNITY_NOTICE_FALLBACKS = {
-    pt = {
-        title = "Dark | Lembrete da comunidade",
-        content = "Se o script parar de funcionar, use o botão do Discord no menu para copiar nosso convite. Atualizamos o convite diariamente. Encontrou um bug? Abra a janela de Relatar bugs e envie os detalhes. Sugestões ajudam nossa equipe a melhorar o script."
-    },
-    es = {
-        title = "Dark | Aviso de la comunidad",
-        content = "Si el script deja de funcionar, usa el botón de Discord del menú para copiar nuestra invitación. La actualizamos a diario. ¿Encontraste un error? Abre la ventana de Reportar errores y envía los detalles. Las sugerencias ayudan a nuestro equipo a mejorar el script."
-    },
-}
-
-local noticeSequence = 0
-
-local function getPeriodicCommunityNotice()
-    local language = emotesDarkDetectLanguage()
-    local source = PERIODIC_COMMUNITY_NOTICE_SOURCE
-    if not language or language == "" or language == "en" then
-        return source.title, source.content
-    end
-
-    local translate = emotesDarkTranslateText
-    local title = source.title
-    local content = source.content
-    if type(translate) == "function" then
-        title = translate(source.title, language)
-        content = translate(source.content, language)
-    end
-
-    local fallback = PERIODIC_COMMUNITY_NOTICE_FALLBACKS[language]
-    if fallback then
-        if title == source.title then title = fallback.title end
-        if content == source.content then content = fallback.content end
-    end
-    return title, content
-end
-
-local function showThemedCommunityNotice(titleText, contentText, duration)
-    local theme = State.EmoteTheme
-    local background = (theme and theme.Background) or Color3.fromRGB(28, 30, 32)
-    local accent = (theme and theme.Accent) or Color3.fromRGB(0, 255, 150)
-    local textColor = (theme and theme.ImageColor) or Color3.fromRGB(255, 255, 255)
-
-    local alertGui = CoreGui:FindFirstChild("EmotesDarkOwnerAlerts")
-    if not alertGui then
-        alertGui = Instance.new("ScreenGui")
-        alertGui.Name = "EmotesDarkOwnerAlerts"
-        alertGui.IgnoreGuiInset = true
-        alertGui.ResetOnSpawn = false
-        alertGui.DisplayOrder = 10001
-        alertGui.Parent = CoreGui
-
-        local stack = Instance.new("Frame")
-        stack.Name = "Stack"
-        stack.AnchorPoint = Vector2.new(1, 0)
-        stack.Position = UDim2.new(1, -24, 0, 24)
-        stack.Size = UDim2.fromOffset(360, 420)
-        stack.BackgroundTransparency = 1
-        stack.Parent = alertGui
-
-        local layout = Instance.new("UIListLayout")
-        layout.Padding = UDim.new(0, 8)
-        layout.FillDirection = Enum.FillDirection.Vertical
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Parent = stack
-    end
-
-    local stack = alertGui:FindFirstChild("Stack")
-    if not stack then return end
-
-    noticeSequence = noticeSequence + 1
-    local message = tostring(contentText or "")
-    local estimatedLines = math.max(3, math.ceil(#message / 40))
-    local bodyHeight = math.min(128, estimatedLines * 16)
-
-    local card = Instance.new("Frame")
-    card.Name = "CommunityNotice_" .. tostring(noticeSequence)
-    card.LayoutOrder = -1000 + noticeSequence
-    card.Size = UDim2.new(1, 0, 0, bodyHeight + 50)
-    card.BackgroundColor3 = background
-    card.BackgroundTransparency = 1
-    card.BorderSizePixel = 0
-    card.ClipsDescendants = true
-    card.Parent = stack
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = card
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = accent
-    stroke.Thickness = 1.5
-    stroke.Transparency = 1
-    stroke.Parent = card
-
-    local accentBar = Instance.new("Frame")
-    accentBar.Name = "AccentBar"
-    accentBar.Size = UDim2.new(0, 4, 1, -20)
-    accentBar.Position = UDim2.fromOffset(10, 10)
-    accentBar.BackgroundColor3 = accent
-    accentBar.BackgroundTransparency = 1
-    accentBar.BorderSizePixel = 0
-    accentBar.Parent = card
-
-    local accentCorner = Instance.new("UICorner")
-    accentCorner.CornerRadius = UDim.new(1, 0)
-    accentCorner.Parent = accentBar
-
-    local icon = Instance.new("TextLabel")
-    icon.Name = "Icon"
-    icon.BackgroundTransparency = 1
-    icon.Position = UDim2.fromOffset(28, 12)
-    icon.Size = UDim2.fromOffset(32, 32)
-    icon.Font = Enum.Font.GothamBold
-    icon.Text = "!"
-    icon.TextColor3 = accent
-    icon.TextSize = 22
-    icon.TextTransparency = 1
-    icon.Parent = card
-
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(68, 10)
-    title.Size = UDim2.new(1, -82, 0, 22)
-    title.Font = Enum.Font.GothamBold
-    title.Text = tostring(titleText or "Dark | Community reminder")
-    title.TextColor3 = accent
-    title.TextSize = 15
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.TextTransparency = 1
-    title.Parent = card
-
-    local content = Instance.new("TextLabel")
-    content.Name = "Content"
-    content.BackgroundTransparency = 1
-    content.Position = UDim2.fromOffset(68, 34)
-    content.Size = UDim2.new(1, -82, 0, bodyHeight)
-    content.Font = Enum.Font.Gotham
-    content.Text = message
-    content.TextColor3 = textColor
-    content.TextSize = 12
-    content.TextWrapped = true
-    content.TextXAlignment = Enum.TextXAlignment.Left
-    content.TextYAlignment = Enum.TextYAlignment.Top
-    content.TextTransparency = 1
-    content.Parent = card
-
-    local fadeIn = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    TweenService:Create(card, fadeIn, { BackgroundTransparency = 0.08 }):Play()
-    TweenService:Create(stroke, fadeIn, { Transparency = 0.35 }):Play()
-    TweenService:Create(accentBar, fadeIn, { BackgroundTransparency = 0 }):Play()
-    TweenService:Create(icon, fadeIn, { TextTransparency = 0 }):Play()
-    TweenService:Create(title, fadeIn, { TextTransparency = 0 }):Play()
-    TweenService:Create(content, fadeIn, { TextTransparency = 0.08 }):Play()
-
-    task.delay(duration or 18, function()
-        if not card.Parent then return end
-        local fadeOut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-        TweenService:Create(card, fadeOut, { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(stroke, fadeOut, { Transparency = 1 }):Play()
-        TweenService:Create(accentBar, fadeOut, { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(icon, fadeOut, { TextTransparency = 1 }):Play()
-        TweenService:Create(title, fadeOut, { TextTransparency = 1 }):Play()
-        TweenService:Create(content, fadeOut, { TextTransparency = 1 }):Play()
-        task.wait(0.22)
-        if card then card:Destroy() end
-    end)
-end
-
-task.spawn(function()
-    while true do
-        local synchronizedTime = os.time()
-        local clockOk, serverTime = pcall(function()
-            return workspace:GetServerTimeNow()
-        end)
-        if clockOk and type(serverTime) == "number" then
-            synchronizedTime = serverTime
-        end
-        local secondsUntilNextNotice = PERIODIC_COMMUNITY_NOTICE_INTERVAL - (synchronizedTime % PERIODIC_COMMUNITY_NOTICE_INTERVAL)
-        task.wait(secondsUntilNextNotice)
-        local ok, title, content = pcall(getPeriodicCommunityNotice)
-        if ok then
-            local shown, showError = pcall(showThemedCommunityNotice, title, content, 18)
-            if not shown then
-                warn("[EmotesDark] Failed to show periodic notice: " .. tostring(showError))
-            end
-        else
-            warn("[EmotesDark] Failed to translate periodic notice: " .. tostring(title))
-        end
-    end
-end)
-end
-do
-local OWNER_ALERT_TRANSLATIONS = {
-    en = { joined = "joined the server", alreadyPresent = "is already in this server", server = "Server: %d/%d players" },
-    pt = { title = "👑 Dono no servidor", joined = "entrou neste servidor", alreadyPresent = "já está neste servidor", server = "Servidor: %d/%d jogadores" },
-    es = { title = "👑 El dueño está en el servidor", joined = "entró en este servidor", alreadyPresent = "ya está en este servidor", server = "Servidor: %d/%d jugadores" },
-}
 local ownerAlertSeen = {}
 local ownerAlertOrder = 0
 
@@ -2770,27 +2441,7 @@ local function getOwnerAlertPalette()
     }
 end
 
-local function getOwnerAlertTranslations(language)
-    local known = OWNER_ALERT_TRANSLATIONS[language]
-    if known then
-        local translations = {}
-        for key, value in pairs(OWNER_ALERT_TRANSLATIONS.en) do
-            translations[key] = known[key] or emotesDarkTranslateText(value, language)
-        end
-        translations.title = known.title or emotesDarkTranslateText(OWNER_ALERT_TITLE, language)
-        return translations
-    end
-
-    local source = OWNER_ALERT_TRANSLATIONS.en
-    local translations = { title = emotesDarkTranslateText(OWNER_ALERT_TITLE, language) }
-    for key, value in pairs(source) do
-        translations[key] = emotesDarkTranslateText(value, language)
-    end
-    return translations
-end
-
-local function showThemedOwnerAlert(displayName, username, isAlreadyPresent, playerCount, maxPlayers)
-    local translations = getOwnerAlertTranslations(emotesDarkDetectLanguage())
+local function showThemedOwnerAlert(displayName, username, status, playerCount, maxPlayers)
     local palette = getOwnerAlertPalette()
     local alertGui = CoreGui:FindFirstChild("EmotesDarkOwnerAlerts")
     if not alertGui then
@@ -2872,7 +2523,7 @@ local function showThemedOwnerAlert(displayName, username, isAlreadyPresent, pla
     title.Position = UDim2.fromOffset(68, 10)
     title.Size = UDim2.new(1, -82, 0, 22)
     title.Font = Enum.Font.GothamBold
-    title.Text = translations.title
+    title.Text = OWNER_ALERT_TITLE
     title.TextColor3 = palette.accent
     title.TextSize = 15
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -2885,9 +2536,7 @@ local function showThemedOwnerAlert(displayName, username, isAlreadyPresent, pla
     content.Position = UDim2.fromOffset(68, 34)
     content.Size = UDim2.new(1, -82, 0, 38)
     content.Font = Enum.Font.Gotham
-    local statusText = isAlreadyPresent and translations.alreadyPresent or translations.joined
-    local serverText = string.format(translations.server, playerCount, maxPlayers)
-    content.Text = string.format("%s (@%s) %s\n%s", displayName, username, statusText, serverText)
+    content.Text = string.format("%s (@%s) %s\nServidor: %d/%d jogadores", displayName, username, status, playerCount, maxPlayers)
     content.TextColor3 = palette.text
     content.TextSize = 12
     content.TextWrapped = true
@@ -3149,7 +2798,7 @@ local function announceOwner(player, alreadyPresent)
     local maxPlayers = Players.MaxPlayers
     local status = alreadyPresent and "já está neste servidor" or "entrou no mesmo servidor"
     local ok = pcall(function()
-        showThemedOwnerAlert(displayName, player.Name, alreadyPresent, playerCount, maxPlayers)
+        showThemedOwnerAlert(displayName, player.Name, status, playerCount, maxPlayers)
     end)
     if not alreadyPresent then
         pcall(playOwnerSound)
