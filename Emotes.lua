@@ -123,27 +123,19 @@ local function emotesDarkDetectLanguage(skipCountryLookup)
     end
 
     local countryLanguage
-    if not skipCountryLookup and player and not emotesDarkCountryDetectionInFlight then
-        emotesDarkCountryDetectionInFlight = true
+    if not localeLanguage and not skipCountryLookup and player then
         pcall(function()
             countryCode = tostring(localizationService:GetCountryRegionForPlayerAsync(player) or ""):upper()
         end)
-        emotesDarkCountryDetectionInFlight = false
     end
     countryLanguage = countryLanguages[countryCode]
-    local language = countryLanguage or localeLanguage or "en"
+    local language = localeLanguage or countryLanguage or "en"
 
-    if countryCode ~= "" then
+    if countryCode ~= "" or localeLanguage then
         emotesDarkLanguageCache = language
     end
     return language
 end
-
-task.defer(function()
-    if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
-        pcall(emotesDarkDetectLanguage)
-    end
-end)
 
 local emotesDarkTranslateText
 local emotesDarkTranslateNotificationText
@@ -1117,44 +1109,8 @@ emotesDarkTranslateText = function(sourceText, targetLanguage)
     return translated, true
 end
 
-local EMOTES_DARK_LOCAL_NOTIFICATION_TRANSLATIONS = {
-    pt = {
-        ["Error"] = "Erro", ["Success"] = "Sucesso", ["Theme"] = "Tema",
-        ["Dark | Error"] = "Dark | Erro", ["Dark | Clean"] = "Dark | Limpeza", ["Dark | Cleaned"] = "Dark | Limpeza concluída",
-        ["Dark | Animation"] = "Dark | Animação", ["Dark | Page"] = "Dark | Página", ["Dark | Saved"] = "Dark | Salvo",
-        ["Dark | Animation Error"] = "Dark | Erro de animação", ["Dark | Random"] = "Dark | Aleatório",
-        ["Dark | Auto Reload Animation"] = "Dark | Recarga automática", ["Dark | Emote Freeze"] = "Dark | Congelamento de emote",
-        ["Dark | Speed Emote"] = "Dark | Velocidade do emote", ["Dark | Favorite Tab"] = "Dark | Aba de favoritos",
-        ["Dark | HUD Editor"] = "Dark | Editor de HUD", ["Dark | Favorite System"] = "Dark | Sistema de favoritos",
-        ["The Discord invite has been copied"] = "O convite do Discord foi copiado.", ["No favorites to check!"] = "Não há favoritos para verificar!",
-        ["Link copied to clipboard!"] = "Link copiado para a área de transferência!", ["Data imported successfully!"] = "Dados importados com sucesso!",
-        ["Backup type mismatch!"] = "Tipo de backup incompatível!", ["Invalid JSON"] = "JSON inválido",
-        ["Invalid JSON Format!"] = "Formato de JSON inválido!", ["Invalid Backup JSON Format!"] = "Formato de JSON de backup inválido!",
-        ["Invalid Emote Page JSON"] = "JSON da página de emotes inválido", ["Failed to save color!"] = "Falha ao salvar a cor!",
-        ["Cannot overwrite 'Default' theme."] = "Não é possível substituir o tema 'Default'.",
-        ["Cannot modify Default theme. Create a new one!"] = "Não é possível modificar o tema Default. Crie um novo!",
-        ["Cannot modify Default theme!"] = "Não é possível modificar o tema Default!",
-        ["Cannot edit Default Animation set. Create a new one!"] = "Não é possível editar o conjunto Default de animações. Crie um novo!",
-        checkingFavorites = "Verificando %s favoritos...",
-    },
-}
-
-local function emotesDarkTranslateNotificationLocally(sourceText, targetLanguage)
-    local translations = EMOTES_DARK_LOCAL_NOTIFICATION_TRANSLATIONS[targetLanguage]
-    if not translations then return nil end
-    local known = translations[sourceText]
-    if known then return known end
-    local favoriteCount = sourceText:match("^Checking (%d+) favorites%.%.%.$")
-    if favoriteCount and translations.checkingFavorites then
-        return string.format(translations.checkingFavorites, favoriteCount)
-    end
-    return nil
-end
-
 emotesDarkTranslateNotificationText = function(sourceText, targetLanguage)
     sourceText = tostring(sourceText or "")
-    local localTranslation = emotesDarkTranslateNotificationLocally(sourceText, targetLanguage)
-    if localTranslation then return localTranslation end
     if not targetLanguage or targetLanguage == "" or targetLanguage == "en" then return sourceText end
 
     local cacheKey = tostring(targetLanguage) .. "\0" .. sourceText
@@ -1174,18 +1130,12 @@ end
 
 emotesDarkTranslateNotificationPayload = function(payload)
     if type(payload) ~= "table" then return payload end
-    local notificationContent = tostring(payload.Content or "")
-    if notificationContent:find("Script loading...", 1, true)
-        or notificationContent:find("Loading please wait...", 1, true)
-        or notificationContent:find("Emotes loaded", 1, true) then
-        return payload
-    end
     local language = emotesDarkDetectLanguage(true)
     if not emotesDarkLanguageCache and not emotesDarkCountryDetectionInFlight then
+        emotesDarkCountryDetectionInFlight = true
         task.defer(function()
-            if not emotesDarkLanguageCache then
-                pcall(emotesDarkDetectLanguage)
-            end
+            pcall(emotesDarkDetectLanguage)
+            emotesDarkCountryDetectionInFlight = false
         end)
     end
     if not language or language == "" or language == "en" then return payload end
