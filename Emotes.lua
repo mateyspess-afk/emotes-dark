@@ -4382,7 +4382,10 @@ do
     end
 end
 
-local TogglesUI = {}
+local TogglesUI, ApplyFavoriteButtonVisual, themes, currentThemeName
+
+do
+TogglesUI = {}
 local GeneralTab = SettingsLib.CreateTab("General", 1)
 TogglesUI.NotifyEnabled = SettingsLib.AddToggle(GeneralTab, "Show Notifications", "Receive alerts and feedback", Config.NotifyEnabled, function(v)
     Config.NotifyEnabled = v
@@ -4761,7 +4764,7 @@ function DeepCopy(t)
     return copy
 end
 
-local ApplyFavoriteButtonVisual
+ApplyFavoriteButtonVisual = nil
 function updateGUIColors()
     local backgroundOverlay = getBackgroundOverlay()
     if not backgroundOverlay then
@@ -5239,8 +5242,8 @@ if not State.CustomAnimations.Sets[State.currentCustomAnimationName] then
     State.currentCustomAnimationName = "Default" 
 end
 
-local themes = LoadThemes()
-local currentThemeName = Config.SelectedTheme or themes.Selected or "Default"
+themes = LoadThemes()
+currentThemeName = Config.SelectedTheme or themes.Selected or "Default"
 if not themes[currentThemeName] then currentThemeName = "Default" end
 
 local themeDropdown
@@ -7042,6 +7045,8 @@ emotesDarkExecutorEnv().Notify({
     Content = '⚠️ Script loading...',
     Duration = 5
 })
+
+end
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
