@@ -4669,6 +4669,7 @@ local function showBugReportWindow()
             setBugReportInputEnabled(false)
             send.Active = false
             send.AutoButtonColor = false
+            pcall(function() send.Interactable = false end)
             send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
             return true
         end
@@ -4678,6 +4679,7 @@ local function showBugReportWindow()
             cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
             send.AutoButtonColor = true
+            pcall(function() send.Interactable = true end)
             send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
             return true
         end
@@ -4689,6 +4691,7 @@ local function showBugReportWindow()
             cooldownLabel.TextColor3 = Color3.fromRGB(255, 105, 105)
             send.Active = false
             send.AutoButtonColor = false
+            pcall(function() send.Interactable = false end)
             send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
         else
             setBugReportInputEnabled(true)
@@ -4696,6 +4699,7 @@ local function showBugReportWindow()
             cooldownLabel.TextColor3 = Color3.fromRGB(130, 225, 155)
             send.Active = true
             send.AutoButtonColor = true
+            pcall(function() send.Interactable = true end)
             send.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
         end
         return true
