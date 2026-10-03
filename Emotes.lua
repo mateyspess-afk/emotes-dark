@@ -8730,7 +8730,7 @@ function setupEmoteClickDetection()
                 applyEmotesButtonsActiveState()
             end
 
-            task.wait(0.1)
+            task.wait(0.25)
         end
     end
 
@@ -9218,7 +9218,7 @@ function monitorAnimations(token)
 
         end
         
-        task.wait(0.1)
+        task.wait(0.25)
     end
 end
 
