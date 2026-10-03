@@ -3560,6 +3560,7 @@ local bugReportOverlay = nil
 local bugReportCooldownExpires = 0
 local suggestionCooldownExpires = 0
 local bugReportTimerToken = 0
+local bugReportSubmissionInProgress = false
 
 local function getBugReportEnvironment()
     local env = _G
@@ -4664,6 +4665,13 @@ local function showBugReportWindow()
     bugReportTimerToken = token
     local function refreshCooldown()
         if not overlay.Parent or bugReportTimerToken ~= token then return false end
+        if bugReportSubmissionInProgress then
+            setBugReportInputEnabled(false)
+            send.Active = false
+            send.AutoButtonColor = false
+            send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
+            return true
+        end
         if isBugReportOwner() then
             setBugReportInputEnabled(true)
             cooldownLabel.Text = "00h 00m 00s"
@@ -4695,18 +4703,28 @@ local function showBugReportWindow()
 
     close.MouseButton1Click:Connect(closeBugReportWindow)
     send.MouseButton1Click:Connect(function()
+        if bugReportSubmissionInProgress then return end
+        bugReportSubmissionInProgress = true
+        send.Active = false
+        send.AutoButtonColor = false
+        send.BackgroundColor3 = Color3.fromRGB(95, 55, 55)
+
         local description = textBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
         if emotesDarkContainsLink(description) then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
             local ownerExempt = emotesDarkIsLinkKickExempt(Players.LocalPlayer)
             status.Text = ownerExempt and emotesDarkBugText("ownerLinks") or emotesDarkBugText("kicked")
             emotesDarkRegisterLinkKick(Players.LocalPlayer)
+            bugReportSubmissionInProgress = false
+            refreshCooldown()
             return
         end
 
         if #description < BUG_REPORT_MIN_LENGTH then
             status.TextColor3 = Color3.fromRGB(255, 150, 150)
             status.Text = emotesDarkBugText("minLength")
+            bugReportSubmissionInProgress = false
+            refreshCooldown()
             return
         end
 
@@ -4714,6 +4732,7 @@ local function showBugReportWindow()
         if remaining > 0 then
             status.TextColor3 = Color3.fromRGB(255, 105, 105)
             status.Text = emotesDarkBugText("cooldown", formatBugCooldown(remaining))
+            bugReportSubmissionInProgress = false
             refreshCooldown()
             return
         end
@@ -4722,7 +4741,12 @@ local function showBugReportWindow()
         status.TextColor3 = Color3.fromRGB(190, 191, 200)
         status.Text = emotesDarkBugText("sending")
         local reportType = currentReportType
-        local success, result = submitBugReport(description, reportType)
+        local submitCallOk, success, result = pcall(submitBugReport, description, reportType)
+        if not submitCallOk then
+            result = tostring(success)
+            success = false
+        end
+        bugReportSubmissionInProgress = false
         if success then
             status.TextColor3 = Color3.fromRGB(160, 220, 170)
             local sentKey = reportType == "suggestion" and "suggestionSent" or "sent"
